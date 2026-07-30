@@ -1,0 +1,35 @@
+name: voice-rooms
+
+services:
+  backend:
+    build: .
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      HTTP_ADDR: ":8080"
+      DATABASE_PATH: /data/app.db
+      LIVEKIT_URL: ws://127.0.0.1:7880
+      LIVEKIT_PUBLIC_URL: ${LIVEKIT_PUBLIC_URL:-ws://localhost:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-devkey}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-secret}
+      ROOM_TTL: ${ROOM_TTL:-12h}
+      LIVEKIT_TOKEN_TTL: ${LIVEKIT_TOKEN_TTL:-30m}
+      SESSION_TTL: ${SESSION_TTL:-168h}
+      SESSION_IDLE_TTL: ${SESSION_IDLE_TTL:-24h}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      MAX_ROOM_PARTICIPANTS: ${MAX_ROOM_PARTICIPANTS:-16}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+    volumes:
+      - backend-data:/data
+    depends_on:
+      - livekit
+
+  livekit:
+    image: livekit/livekit-server:v1.13.4
+    restart: unless-stopped
+    network_mode: host
+    command: ["--dev", "--bind", "0.0.0.0"]
+    environment:
+      LIVEKIT_KEYS: "${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-secret}"
+volumes:
+  backend-data:

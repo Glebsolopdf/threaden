@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Блокнот</title>
+  <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="5" y="3" width="15" height="18" rx="2.5"/>
+    <path d="M9 7h7"/>
+    <path d="M9 11h7"/>
+    <path d="M9 15h5"/>
+    <path d="M5 7H3.5"/>
+    <path d="M5 12H3.5"/>
+    <path d="M5 17H3.5"/>
+  </g>
+</svg>

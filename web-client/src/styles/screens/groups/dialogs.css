@@ -1,0 +1,116 @@
+dialog:not(.delete-group-dialog):not(.account-dialog):not(.confirm-dialog),
+.app-dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: #181a20;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+dialog form { display: grid; width: min(23rem, 80vw); gap: 0.75rem; }
+dialog h2,
+dialog p { margin: 0; }
+dialog h2 { font-size: 1.05rem; }
+dialog p { color: var(--muted); font-size: 0.86rem; line-height: 1.45; }
+dialog menu { display: flex; justify-content: end; gap: 0.5rem; margin: 0; padding: 0; }
+dialog button {
+  min-height: 2.4rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--panel-hover);
+  cursor: pointer;
+}
+dialog button[data-state="loading"] { cursor: wait; opacity: 0.72; }
+dialog input,
+dialog select {
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--panel-soft);
+}
+dialog input:focus,
+dialog select:focus {
+  border-color: rgb(255 255 255 / 58%);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 10%);
+  outline: none;
+}
+#create-temporary {
+  justify-content: center;
+  color: var(--action-text);
+  background: var(--action-bg);
+  font-weight: 760;
+}
+
+.app-dialog--voice {
+  width: min(27rem, calc(100vw - 2rem));
+  background: linear-gradient(180deg, rgb(26 28 35 / 98%), rgb(17 18 23 / 98%));
+}
+
+.voice-create-form {
+  width: 100%;
+  gap: 1rem;
+  padding: 1.15rem;
+}
+
+.voice-create-form header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.voice-create-form h2 {
+  font-size: 1.1rem;
+}
+
+.voice-create-form label {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.voice-create-form input {
+  min-height: 2.8rem;
+  background: rgb(11 12 17 / 76%);
+}
+
+.voice-create-form menu {
+  justify-content: stretch;
+  gap: 0.65rem;
+  padding-top: 0.25rem;
+}
+
+.voice-create-form menu button {
+  flex: 1;
+  min-height: 2.65rem;
+  justify-content: center;
+  text-align: center;
+}
+
+#confirm-create-voice {
+  border-color: rgb(255 255 255 / 44%);
+  color: var(--action-text);
+  background: var(--positive);
+  font-weight: 800;
+}
+
+#confirm-create-voice:hover {
+  background: var(--positive);
+}
+
+@media (min-width: 32rem) {
+  .voice-create-form {
+    padding: 1.3rem;
+  }
+
+  .voice-create-form menu {
+    justify-content: end;
+  }
+
+  .voice-create-form menu button {
+    flex: 0 0 6.8rem;
+  }
+}

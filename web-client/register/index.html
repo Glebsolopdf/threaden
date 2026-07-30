@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111111" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles/main.css" />
+    <link rel="stylesheet" href="/src/styles/screens/auth/index.css" />
+    <title>Регистрация · threaden</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="screen home-page auth-page" aria-labelledby="register-title">
+        <a class="brand page-logo" href="/" aria-label="threaden, на главную">
+          <img src="/threaden-logo.svg" width="24" height="24" alt="" />
+          <span>threaden</span>
+        </a>
+        <header class="home-hero page-title">
+          <h1 id="register-title">Регистрация</h1>
+          <p>Создайте аккаунт, чтобы начать общение.</p>
+        </header>
+        <div class="join-card auth-card">
+          <form id="register-form" class="auth-form">
+            <label for="register-email">Email</label>
+            <input id="register-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+            <label for="register-password">Пароль</label>
+            <input id="register-password" type="password" autocomplete="new-password" placeholder="От 10 до 72 байт" minlength="10" maxlength="72" required />
+            <label for="register-password-confirm">Повтор пароля</label>
+            <input id="register-password-confirm" type="password" autocomplete="new-password" placeholder="Повторите пароль" minlength="10" maxlength="72" required />
+            <button id="register-button" class="button button--primary" type="submit">Зарегистрироваться</button>
+          </form>
+          <a class="text-link" href="/login/">Уже есть аккаунт</a>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/account/register.ts"></script>
+  </body>
+</html>

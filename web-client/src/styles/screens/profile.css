@@ -1,0 +1,219 @@
+.profile-edit-card {
+  width: min(100%, 25rem);
+  padding: 1.7rem;
+}
+
+.profile-edit-preview {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+
+.profile-edit-preview strong {
+  max-width: 100%;
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.profile-row {
+  display: grid;
+  grid-template-columns: 3.6rem minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.profile-avatar {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 50%;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--avatar-bg, #283a63) 86%, #fff 4%), var(--avatar-bg, #283a63));
+  overflow: hidden;
+  font-size: 1.5rem;
+}
+
+.profile-avatar::after {
+  position: absolute;
+  inset: -2px;
+  border: 2px solid transparent;
+  border-radius: inherit;
+  pointer-events: none;
+  content: "";
+}
+
+.profile-avatar--pending::after {
+  border-color: rgb(255 255 255 / 72%);
+  animation: avatar-ready 900ms ease-in-out infinite alternate;
+}
+
+.profile-avatar--uploading::after {
+  border-color: var(--positive);
+  border-top-color: transparent;
+  animation: avatar-spin 800ms linear infinite;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-avatar--large {
+  width: 6.2rem;
+  font-size: 2.2rem;
+}
+
+.avatar-picker-button {
+  position: absolute;
+  top: 4.35rem;
+  left: calc(50% + 1.5rem);
+  display: grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  place-items: center;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--panel-hover);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.avatar-picker-button img {
+  width: 1.15rem;
+  height: 1.15rem;
+  filter: invert(1);
+}
+
+.profile-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+  margin-top: 0.8rem;
+}
+
+.profile-danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  color: var(--danger-text);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.profile-danger-zone__delete {
+  display: grid;
+  width: 2.45rem;
+  min-height: 2.45rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+  background: var(--danger-soft);
+  cursor: pointer;
+}
+
+.profile-danger-zone__delete img {
+  width: 1.1rem;
+  height: 1.1rem;
+  filter: invert(30%) sepia(93%) saturate(1697%) hue-rotate(335deg) brightness(104%) contrast(89%);
+}
+
+.confirm-dialog {
+  width: min(calc(100% - 2rem), 23rem);
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 68%);
+  backdrop-filter: blur(8px);
+}
+
+.confirm-dialog__panel {
+  padding: 1.3rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgb(24 25 31 / 98%), rgb(16 17 22 / 98%));
+  box-shadow: var(--shadow);
+}
+
+.confirm-dialog__panel h2 {
+  margin-bottom: 0.55rem;
+  font-size: 1.15rem;
+}
+
+.confirm-dialog__panel p {
+  margin-bottom: 1.1rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.confirm-dialog__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.visually-hidden-file {
+  position: absolute;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.profile-row strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+#profile-name {
+  margin-bottom: 0.1rem;
+  color: var(--text);
+}
+
+#profile-email {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.upload-progress {
+  height: 0.45rem;
+  margin-top: 1rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-soft);
+}
+
+.upload-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--positive);
+  transition: width 160ms ease;
+}
+
+@keyframes avatar-ready {
+  to { box-shadow: 0 0 22px rgb(255 255 255 / 18%); }
+}
+
+@keyframes avatar-spin {
+  to { transform: rotate(360deg); }
+}

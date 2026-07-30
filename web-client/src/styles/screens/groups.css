@@ -1,0 +1,5 @@
+@import "./groups/shell.css";
+@import "./groups/chat.css";
+@import "./groups/voice-list.css";
+@import "./groups/voice-room.css";
+@import "./groups/dialogs.css";

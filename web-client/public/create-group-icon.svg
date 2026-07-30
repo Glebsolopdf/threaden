@@ -1,0 +1,16 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Создание группы</title>
+  <desc>Иконка группы пользователей со знаком плюс</desc>
+
+  <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z"
+        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M2.75 20C2.75 16.5482 5.54822 13.75 9 13.75C10.3163 13.75 11.5375 14.157 12.5443 14.8523"
+        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M15.5 10.75C17.2949 10.75 18.75 9.29493 18.75 7.5C18.75 5.70507 17.2949 4.25 15.5 4.25"
+        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M16.75 13.75V20.25M13.5 17H20"
+        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

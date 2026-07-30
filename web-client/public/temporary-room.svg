@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Временная комната</title>
+  <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Door / room -->
+    <path d="M4.5 20V5.5A2.5 2.5 0 0 1 7 3h8.5A2.5 2.5 0 0 1 18 5.5V11"/>
+    <path d="M4.5 20H12"/>
+    <circle cx="14.1" cy="9.7" r=".65" fill="currentColor" stroke="none"/>
+
+    <!-- Clock, matching the reference more closely -->
+    <circle cx="17" cy="17" r="4.5"/>
+    <circle cx="17" cy="17" r=".45" fill="currentColor" stroke="none"/>
+    <path d="M17 14.4V17h2.2"/>
+    <path d="M17 12.5v.65M17 20.85v.65M12.5 17h.65M20.85 17h.65"/>
+  </g>
+</svg>

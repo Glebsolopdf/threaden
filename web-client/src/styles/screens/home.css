@@ -1,0 +1,211 @@
+.hero-logo {
+  width: clamp(4rem, 9vw, 5rem);
+  height: clamp(4rem, 9vw, 5rem);
+  margin-bottom: 0.55rem;
+}
+
+.home-hero h1 {
+  margin-bottom: 0;
+  font-family: var(--logo-font);
+  font-size: clamp(2.5rem, 6vw, 3.35rem);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.join-card {
+  padding: 1.45rem 1.65rem 1.55rem;
+}
+
+.profile-summary {
+  padding: 1rem;
+}
+
+.profile-input {
+  font-weight: 700;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.auth-link {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.auth-link + .auth-link {
+  margin-top: 0.7rem;
+}
+
+.text-link {
+  display: block;
+  margin-top: 1.05rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.auth-page {
+  justify-content: center;
+  padding-top: 5rem;
+}
+
+.auth-page .home-hero {
+  margin-bottom: 0.25rem;
+}
+
+.auth-page .home-hero h1 {
+  font-family: var(--logo-font);
+  font-size: clamp(1.8rem, 4vw, 2.35rem);
+  font-weight: 700;
+}
+
+.auth-card {
+  width: min(100%, 23rem);
+  padding: 1.65rem;
+}
+
+.auth-card label:not(:first-child) {
+  margin-top: 0.3rem;
+}
+
+.auth-card .button {
+  margin-top: 0.55rem;
+}
+
+.auth-form + .prejoin-microphone {
+  margin-top: 1rem;
+}
+
+.text-button {
+  margin-top: 0.25rem;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.prejoin-microphone {
+  display: flex;
+  width: 100%;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--panel-hover);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.settings-action {
+  display: flex;
+  min-height: 2.8rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--panel-hover);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.settings-action.prejoin-microphone {
+  width: 100%;
+  min-height: 2.8rem;
+  margin: 0;
+}
+
+.settings-page-card {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.prejoin-microphone[data-enabled="true"] {
+  border-color: rgb(255 255 255 / 34%);
+  background: var(--positive-soft);
+}
+
+.prejoin-microphone img {
+  width: 1.15rem;
+  height: 1.15rem;
+  filter: invert(1);
+}
+
+.inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5.8rem;
+  gap: 0.65rem;
+}
+
+.code-input {
+  padding: 0.65rem 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  font-weight: 650;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0.95rem 0;
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+
+.divider::before,
+.divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+  content: "";
+}
+
+@media (max-width: 30rem) {
+  .hero-logo {
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .home-hero h1 {
+    font-size: 2.45rem;
+  }
+
+  .join-card {
+    padding: 1.15rem;
+  }
+
+  .inline-form {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-height: 42rem) and (max-width: 46rem) {
+  .home-page {
+    justify-content: flex-start;
+  }
+
+  .hero-logo {
+    width: 3.4rem;
+    height: 3.4rem;
+  }
+
+  .home-hero h1 {
+    font-size: 2.1rem;
+  }
+
+  .join-card {
+    margin-top: 0.85rem;
+  }
+}

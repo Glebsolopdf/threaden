@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>threaden</title>
+  <style>
+    html,body{min-height:100%;margin:0;background:#090a0d;color:#f4f4f5}
+    [hidden]{display:none!important}
+    .messenger{min-height:100vh;height:100dvh;background:#090a0d;overflow:hidden}
+    .rail img,.group-header img,.voice-room img,.room-widget img{width:1.25rem;height:1.25rem;object-fit:contain}
+    .rail-logo img{width:1.65rem;height:1.65rem}
+  </style>
+  <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+  <main class="messenger">
+    <button id="mobile-sidebar-button" class="mobile-sidebar-button" type="button" aria-label="Открыть навигацию" aria-expanded="false" aria-controls="rail list-panel"><span></span></button>
+    <div id="mobile-sidebar-backdrop" class="mobile-sidebar-backdrop" hidden></div>
+    <aside id="rail" class="rail" aria-label="Навигация">
+      <a class="rail-logo" href="/" aria-label="Группы"><img src="/threaden-logo.svg" alt=""></a>
+      <nav><button id="discover-button" class="rail-icon" aria-label="Поиск групп"><img src="/discover.svg" alt=""></button><button id="group-menu-button" class="rail-icon" aria-label="Создать группу"><img src="/create-group-icon.svg" alt=""></button><button id="temporary-button" class="rail-icon" aria-label="Временные комнаты"><img src="/temporary-room.svg" alt=""></button></nav>
+      <div class="rail-spacer"></div>
+      <button id="settings-button" class="rail-icon" type="button" aria-label="Настройки"><img src="/settings-icon.svg" alt=""></button>
+    </aside>
+    <aside id="list-panel" class="list-panel"><header><strong id="list-title">Группы</strong></header><input id="search" placeholder="Поиск" hidden><div id="group-list" class="group-list"></div><footer class="list-panel__profile"><button id="profile-bar" class="profile-popover" type="button" aria-label="Открыть профиль"><span id="profile-bar-avatar" class="avatar"></span><span id="profile-bar-name" class="profile-popover__name"></span><span id="connection-status" class="connection-status" data-state="good" aria-label="Хорошее соединение"><span class="connection-status__dot"></span></span></button></footer></aside>
+    <section id="workspace" class="workspace">
+      <div id="empty-state" class="empty-state">Выберите группу или откройте поиск</div>
+      <section id="group-view" hidden><header class="group-header"><button id="group-back-button" class="group-header__icon mobile-back" type="button" aria-label="Назад к группам"><img src="/back.svg" alt=""></button><div class="group-header__title"><strong id="group-name"></strong><small id="group-meta"></small></div><div id="group-voice-strip" class="group-voice-strip" hidden></div><button id="group-voice-button" class="group-header__icon" type="button" aria-label="Голосовые комнаты"><img src="/voicetalk.svg" alt=""></button><div class="group-menu"><button id="group-menu-actions-button" class="group-header__icon" type="button" aria-label="Меню группы" aria-expanded="false" aria-controls="group-menu-actions">⋯</button><div id="group-menu-actions" class="group-menu__dropdown" hidden><button id="group-settings-button" type="button">Настройки группы</button></div></div></header><div id="message-list" class="message-list"></div><form id="message-form" class="composer" autocomplete="off" hidden><input id="message-input" name="threaden-message-body" maxlength="4000" placeholder="Сообщение" autocomplete="off" autocorrect="off" spellcheck="true"><button type="submit" autocomplete="off">Отправить</button></form><div class="join-group-dock"><button id="join-group-button" type="button" hidden>Присоединиться к группе</button></div></section>
+      <section id="voice-room-view" class="voice-room" hidden aria-labelledby="voice-room-title">
+        <header class="voice-room__header">
+          <button id="voice-room-back" class="voice-room__icon-button" type="button" aria-label="Свернуть"><img src="/back.svg" alt=""></button>
+          <div class="voice-room__heading"><p id="voice-room-kicker">Временная комната</p><h2 id="voice-room-title">Голосовая комната</h2></div>
+          <div class="voice-room__summary" aria-live="polite"><span id="voice-room-count">Участники: 0</span><span id="voice-room-status" class="voice-status">Подключение…</span></div>
+          <div class="voice-room__meta"><span id="voice-room-detail">Готовим аудиосоединение</span><span id="voice-room-code-wrap" class="voice-room__code" hidden><span id="voice-room-code"></span><button id="voice-room-copy-code" type="button" aria-label="Скопировать код комнаты"><img src="/copy.svg" alt=""></button></span></div>
+          <button id="voice-room-leave" class="voice-room__leave" type="button"><img src="/exit.svg" alt=""><span>Выйти</span></button>
+        </header>
+        <div class="voice-room__content">
+          <section class="voice-room__people" aria-label="Участники голосовой комнаты"><ul id="voice-room-participants" class="voice-participants"></ul></section>
+          <section class="voice-room__controls" aria-label="Управление голосовой комнатой">
+            <button id="voice-room-mic" class="voice-room__icon-button" type="button" aria-pressed="false" aria-label="Включить микрофон"><img src="/microphone-off.svg" alt=""></button>
+            <button id="voice-room-audio" type="button" hidden>Включить звук</button>
+            <button id="voice-room-settings" class="voice-room__icon-button" type="button" aria-label="Настройки устройств" aria-expanded="false" aria-controls="voice-device-menu"><img src="/settings-icon.svg" alt=""></button>
+            <div id="voice-device-menu" class="voice-device-menu" hidden><label>Микрофон<select id="voice-input-device"><option value="">Системный микрофон</option></select></label><label>Динамики<select id="voice-output-device"><option value="">Системные динамики</option></select></label><label>Громкость<input id="voice-output-volume" type="range" min="0" max="100" value="100"></label><button id="voice-test-microphone" type="button">Проверить микрофон</button><label class="voice-device-menu__check"><input type="checkbox" disabled>Шумоподавление недоступно</label></div>
+          </section>
+        </div>
+      </section>
+      <section id="settings-view" hidden></section>
+      <section id="discover-view" hidden><header class="group-header"><button id="discover-back" class="group-header__icon" type="button" aria-label="Назад"><img src="/back.svg" alt=""></button><strong>Поиск групп</strong></header><input id="discover-search" placeholder="Поиск публичных групп"><div id="discover-list" class="group-list"></div></section>
+    </section>
+  </main>
+  <dialog id="create-dialog"><form id="create-group-form" method="dialog"><h2>Новая группа</h2><input id="create-name" type="text" placeholder="Название" required maxlength="80"><select id="create-visibility"><option value="public">Публичная</option><option value="private">Частная</option></select><menu><button id="cancel-create-group" type="button">Отмена</button><button value="default">Создать</button></menu></form></dialog>
+  <dialog id="temporary-dialog"><form id="temporary-room-form" method="dialog"><h2>Временная комната</h2><p>Создайте комнату на один разговор или войдите по коду.</p><button id="create-temporary" type="button">Создать комнату</button><label>Код комнаты<input id="temporary-code" type="text" maxlength="26" minlength="26" pattern="[A-HJ-NP-Z2-9]{26}" placeholder="26-значный код" autocomplete="off" spellcheck="false"></label><menu><button id="cancel-temporary" type="button">Отмена</button><button id="join-temporary" value="default">Войти</button></menu></form></dialog>
+  <dialog id="create-voice-dialog" class="app-dialog app-dialog--voice"><form id="create-voice-form" class="voice-create-form" method="dialog"><header><h2>Новая голосовая комната</h2><p>Задайте короткое название, которое будет понятно участникам группы.</p></header><label>Название<input id="create-voice-name" type="text" maxlength="80" placeholder="Например: Общий голос" autocomplete="off" required></label><menu><button id="cancel-create-voice" type="button">Отмена</button><button id="confirm-create-voice" value="default" type="submit">Создать</button></menu></form></dialog>
+  <dialog id="group-voice-dialog" class="group-voice-dialog" aria-labelledby="group-voice-title"><div class="group-voice-dialog__panel"><header><div><h2 id="group-voice-title">Голосовые комнаты</h2><p id="group-voice-meta"></p></div><button id="group-voice-back" type="button" aria-label="Закрыть">×</button></header><div id="voice-list" class="group-voice__list"></div><footer><button id="new-voice-button" class="themed-button" type="button">Создать комнату</button></footer></div></dialog>
+  <dialog id="group-info-dialog" class="group-info-dialog" aria-labelledby="group-info-name"><div class="group-info-dialog__panel"><header class="group-info-dialog__header"><span id="group-profile-avatar" class="avatar"></span><div class="group-info-dialog__title"><h2 id="group-info-name"></h2><p id="group-profile-meta"></p></div><button id="group-info-close" class="group-info-dialog__close" type="button" aria-label="Закрыть">×</button></header><nav class="group-info-dialog__actions" aria-label="Управление группой"><button id="group-info-voice" type="button"><img src="/voicetalk.svg" alt=""><span>Голосовые комнаты</span></button><button id="leave-group-button" type="button" hidden><img src="/exit.svg" alt=""><span>Покинуть группу</span></button><button id="delete-group-button" type="button" hidden><img src="/trash.svg" alt=""><span>Удалить группу</span></button></nav><div class="group-info-dialog__body"><section id="group-info-section" class="group-info-dialog__section"><div id="group-invite-row" class="group-invite-row" hidden><span>Приглашение</span><a id="group-invite-link" href=""></a><button id="copy-group-invite" type="button" aria-label="Скопировать приглашение"><img src="/copy.svg" alt=""></button></div><h3>Участники</h3><ul id="group-members" class="group-members"></ul></section></div></div></dialog>
+  <dialog id="delete-group-dialog" class="delete-group-dialog"><form method="dialog"><h2>Удалить группу?</h2><p>Это действие необратимо. Будут удалены сообщения, участники и голосовые комнаты.</p><menu><button value="cancel">Отмена</button><button id="confirm-delete-group" value="confirm" type="button">Удалить группу</button></menu></form></dialog>
+  <dialog id="account-dialog" class="account-dialog" aria-labelledby="account-dialog-title">
+    <div class="account-dialog__panel">
+      <aside class="account-dialog__nav" aria-label="Разделы аккаунта">
+        <strong id="account-dialog-title">Аккаунт</strong>
+        <button id="account-tab-profile" type="button" data-account-tab="profile">Профиль</button>
+        <button id="account-tab-settings" type="button" data-account-tab="settings">Настройки</button>
+        <button id="account-tab-customization" type="button" data-account-tab="customization">Кастомизация</button>
+      </aside>
+      <div class="account-dialog__content">
+        <header class="account-dialog__header"><strong id="account-dialog-heading">Профиль</strong><button id="account-dialog-close" type="button" aria-label="Закрыть">×</button></header>
+        <section id="account-profile-panel" class="account-dialog__section"><div class="profile-edit-preview"><span id="account-profile-avatar" class="profile-avatar profile-avatar--large"></span><label class="avatar-picker-button" for="account-avatar-file" aria-label="Выбрать аватар"><img src="/avatar-select.svg" alt=""></label><strong id="account-profile-email"></strong></div><form id="account-profile-form" class="auth-form"><label for="account-display-name">Имя</label><input id="account-display-name" class="profile-input" type="text" maxlength="50" autocomplete="name" required><input id="account-avatar-file" class="visually-hidden-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp"><div class="profile-actions"><button id="account-delete-avatar" class="button button--secondary" type="button">Удалить аватар</button><button id="account-logout" class="button button--secondary" type="button">Выйти с аккаунта</button><button id="account-save-profile" class="button button--primary" type="submit">Сохранить</button></div></form><div class="profile-danger-zone"><span>Опасная зона</span><button id="account-delete-profile" class="profile-danger-zone__delete" type="button" aria-label="Удалить аккаунт"><img src="/trash.svg" alt=""></button></div><div id="account-upload-progress" class="upload-progress" hidden><span id="account-upload-progress-bar"></span></div></section>
+        <section id="account-settings-panel" class="account-dialog__section" hidden><div class="settings-panel settings-panel--dialog"><section><h2>Звук</h2><label>Микрофон<select id="settings-input-device"><option value="">Системный микрофон</option></select></label><label>Динамики<select id="settings-output-device"><option value="">Системные динамики</option></select></label><label class="settings-toggle"><input id="settings-mic-default" type="checkbox"><span>Включать микрофон при входе в комнату</span></label><button id="settings-refresh-devices" type="button">Обновить устройства</button></section><section><h2>Интерфейс</h2><label class="settings-toggle"><input id="settings-debug-errors" type="checkbox"><span>Показывать DEBUG-ошибки</span></label></section></div></section>
+        <section id="account-customization-panel" class="account-dialog__section" hidden><div class="settings-panel settings-panel--dialog"><section><h2>Тема</h2><div id="client-customization-panel"></div></section></div></section>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="delete-profile-dialog" class="confirm-dialog"><form method="dialog" class="confirm-dialog__panel"><h2>Удалить аккаунт?</h2><p>Ваш профиль будет удалён навсегда. Отменить это действие невозможно.</p><div class="confirm-dialog__actions"><button class="button button--secondary" value="cancel" type="submit">Отмена</button><button id="confirm-delete-profile" class="button button--danger" value="confirm" type="submit">Удалить</button></div></form></dialog>
+  <section id="room-widget" class="room-widget" aria-label="Активная голосовая комната" hidden><div class="room-widget__handle" aria-hidden="true"></div><div id="widget-speakers" class="room-widget__speakers" aria-label="Последние говорившие"></div><div class="room-widget__summary"><strong id="widget-room-title"></strong><small id="widget-room-status"></small></div><button id="widget-microphone" class="room-widget__button" type="button" aria-label="Включить микрофон"><img src="/microphone-off.svg" alt=""></button><button id="widget-open-room" class="room-widget__button" type="button" aria-label="Вернуться в полноэкранный режим"><span class="room-widget__fullscreen-mark" aria-hidden="true"></span></button></section><div id="audio-container" hidden></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

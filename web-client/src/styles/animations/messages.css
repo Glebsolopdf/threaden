@@ -1,0 +1,29 @@
+.chat-message[data-animate="outgoing"] {
+  animation: message-outgoing 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.chat-message[data-animate="incoming"] {
+  animation: message-incoming 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes message-outgoing {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.45rem, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes message-incoming {
+  from {
+    opacity: 0;
+    transform: translate3d(-0.35rem, 0.35rem, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}

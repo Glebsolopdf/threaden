@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">OpenTalk logo</title>
+  <desc id="desc">Minimal speech bubble with an audio waveform</desc>
+
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Speech bubble -->
+    <path
+      d="M256 72
+         C154.38 72 72 143.63 72 232
+         C72 283.31 99.79 328.92 143.03 358.18
+         L124 430
+         L200.49 390.12
+         C218.29 394.03 236.87 396 256 396
+         C357.62 396 440 324.37 440 236
+         C440 147.63 357.62 72 256 72Z"
+      stroke-width="28"
+    />
+
+    <!-- Audio waveform -->
+    <path d="M160 248V220" stroke-width="24"/>
+    <path d="M208 276V192" stroke-width="24"/>
+    <path d="M256 304V164" stroke-width="24"/>
+    <path d="M304 276V192" stroke-width="24"/>
+    <path d="M352 248V220" stroke-width="24"/>
+  </g>
+</svg>

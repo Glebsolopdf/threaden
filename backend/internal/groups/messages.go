@@ -1,0 +1,56 @@
+package groups
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"time"
+
+	"voice-rooms/internal/abuse"
+	"voice-rooms/internal/model"
+)
+
+func (s *Service) Messages(ctx context.Context, id string, u *model.User, limit int) ([]model.GroupMessage, error) {
+	g, e := s.Get(ctx, id, u)
+	if e != nil {
+		return nil, e
+	}
+	_ = g
+	return s.store.Messages(ctx, id, s.now().Add(-7*24*time.Hour), limit)
+}
+
+func (s *Service) Send(ctx context.Context, id string, u model.User, body, idempotencyKey string) (model.GroupMessage, error) {
+	if !s.member(ctx, id, u.ID) {
+		return model.GroupMessage{}, ErrForbidden
+	}
+	body = strings.TrimSpace(body)
+	if body == "" || len([]rune(body)) > 4000 {
+		return model.GroupMessage{}, ErrInvalid
+	}
+	mid, e := s.ID("msg_")
+	if e != nil {
+		return model.GroupMessage{}, e
+	}
+	if s.guard != nil {
+		if e := s.guard.Check(ctx, id, u, body); e != nil {
+			if errors.Is(e, abuse.ErrMessageRateLimited) {
+				return model.GroupMessage{}, ErrLimited
+			}
+			return model.GroupMessage{}, ErrInvalid
+		}
+		var fresh bool
+		mid, fresh, e = s.guard.Reserve(ctx, id, u.ID, idempotencyKey, mid)
+		if e != nil {
+			return model.GroupMessage{}, e
+		}
+		if !fresh {
+			return s.store.Message(ctx, mid)
+		}
+	}
+	m := model.GroupMessage{ID: mid, GroupID: id, Author: u, Body: body, CreatedAt: s.now().UTC()}
+	if e = s.store.AddMessage(ctx, m); e != nil {
+		return m, e
+	}
+	s.publishGroup(ctx, id, "message_created", m)
+	return m, nil
+}

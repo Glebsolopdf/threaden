@@ -1,0 +1,61 @@
+.button,
+.icon-button,
+.rail-icon,
+.round-action,
+.group-row,
+.group-header button,
+.composer button,
+.primary-action,
+.join-group-dock button,
+.voice-room__header button,
+.voice-room__controls button,
+.group-voice__list button,
+dialog button,
+.settings-panel button,
+.room-widget__button {
+  transition:
+    background-color 160ms cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 160ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 160ms cubic-bezier(0.4, 0, 0.2, 1),
+    color 160ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 140ms ease,
+    transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+button:where(:not(:disabled)):active,
+.button:where(:not(:disabled)):active,
+.icon-button:where(:not(:disabled)):active {
+  transform: scale(0.96);
+}
+
+button:disabled,
+.button:disabled,
+.icon-button:disabled,
+button[aria-disabled="true"] {
+  cursor: not-allowed;
+  filter: saturate(0.72);
+  opacity: 0.55;
+  transform: none;
+}
+
+button[data-state="loading"],
+.button[data-state="loading"] {
+  cursor: wait;
+  opacity: 0.76;
+}
+
+button[data-state="loading"]::after,
+.button[data-state="loading"]::after {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-left: 0.45rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: control-loading 800ms linear infinite;
+  content: "";
+}
+
+@keyframes control-loading {
+  to { transform: rotate(1turn); }
+}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111111" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles/main.css" />
+    <link rel="stylesheet" href="/src/styles/screens/auth/index.css" />
+    <title>Вход · threaden</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="screen home-page auth-page" aria-labelledby="login-title">
+        <a class="brand page-logo" href="/" aria-label="threaden, на главную">
+          <img src="/threaden-logo.svg" width="24" height="24" alt="" />
+          <span>threaden</span>
+        </a>
+        <header class="home-hero page-title">
+          <h1 id="login-title">Вход</h1>
+          <p>Вокруг нас крутятся токены</p>
+        </header>
+        <div class="join-card auth-card">
+          <form id="login-form" class="auth-form">
+            <label for="login-email">Email</label>
+            <input id="login-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+            <label for="login-password">Пароль</label>
+            <input id="login-password" type="password" autocomplete="current-password" placeholder="Введите пароль" maxlength="72" required />
+            <button id="login-button" class="button button--primary" type="submit">Войти</button>
+          </form>
+          <a class="text-link" href="/register/">Создать аккаунт</a>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/account/login.ts"></script>
+  </body>
+</html>

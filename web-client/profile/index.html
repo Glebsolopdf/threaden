@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0e12" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles/main.css" />
+    <style>
+      html, body { min-height: 100%; margin: 0; background: #090a0d; color: #f4f4f5; }
+      .hero-logo { width: 5rem; height: 5rem; }
+    </style>
+    <title>Профиль · threaden</title>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="screen home-page auth-page top-page" aria-labelledby="profile-title">
+        <a class="brand page-logo" href="/">
+          <img src="/threaden-logo.svg" width="24" height="24" alt="" />
+          <span>threaden</span>
+        </a>
+        <div class="home-hero page-title">
+          <h1 id="profile-title">Профиль</h1>
+        </div>
+        <div class="join-card panel auth-card profile-edit-card">
+          <div class="profile-edit-preview">
+            <span id="profile-avatar-preview" class="profile-avatar profile-avatar--large">🙂</span>
+            <label class="avatar-picker-button" for="avatar-file" aria-label="Выбрать аватар">
+              <img src="/avatar-select.svg" alt="" />
+            </label>
+            <strong id="profile-email">mail@example.com</strong>
+          </div>
+          <form id="profile-form" class="auth-form">
+            <label for="display-name">Имя</label>
+            <input id="display-name" class="profile-input" type="text" maxlength="50" autocomplete="name" required />
+            <input id="avatar-file" class="visually-hidden-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp" />
+            <div class="profile-actions">
+              <button id="delete-avatar" class="button button--secondary" type="button">Удалить аватар</button>
+              <button id="save-profile" class="button button--primary" type="submit">Сохранить</button>
+            </div>
+          </form>
+          <div class="profile-danger-zone"><span>Опасная зона</span><button id="delete-profile" class="profile-danger-zone__delete" type="button" aria-label="Удалить аккаунт"><img src="/trash.svg" alt=""></button></div>
+          <div id="upload-progress" class="upload-progress" hidden>
+            <span id="upload-progress-bar"></span>
+          </div>
+          <a class="text-link" href="/">На главную</a>
+        </div>
+      </section>
+    </main>
+    <section id="room-widget" class="room-widget" aria-label="Активная голосовая комната" hidden>
+      <div class="room-widget__handle" aria-hidden="true"></div>
+      <div id="widget-speakers" class="room-widget__speakers" aria-label="Последние говорившие"></div>
+      <div class="room-widget__summary">
+        <strong id="widget-room-title"></strong>
+        <small id="widget-room-status"></small>
+      </div>
+      <button id="widget-microphone" class="room-widget__button" type="button" aria-label="Включить микрофон"><img src="/microphone-off.svg" alt=""></button>
+      <button id="widget-open-room" class="room-widget__button" type="button" aria-label="Вернуться в полноэкранный режим"><span class="room-widget__fullscreen-mark" aria-hidden="true"></span></button>
+    </section>
+    <div id="audio-container" hidden></div>
+    <dialog id="delete-profile-dialog" class="confirm-dialog">
+      <form method="dialog" class="confirm-dialog__panel">
+        <h2>Удалить аккаунт?</h2>
+        <p>Это навсегда удалит ваш профиль и вы не сможете это отменить!</p>
+        <div class="confirm-dialog__actions">
+          <button id="cancel-delete-profile" class="button button--secondary" value="cancel" type="submit">Отмена</button>
+          <button id="confirm-delete-profile" class="button button--danger" value="confirm" type="submit">Удалить</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" src="/src/account/profile.ts"></script>
+  </body>
+</html>

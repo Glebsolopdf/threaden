@@ -1,0 +1,31 @@
+name: opentalk-prod
+
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - ./deploy/production.env
+    environment:
+      HTTP_ADDR: "127.0.0.1:18080"
+      DATABASE_PATH: /data/app.db
+      LIVEKIT_URL: ws://127.0.0.1:7880
+    volumes:
+      - backend-data:/data
+    depends_on:
+      - livekit
+
+  livekit:
+    image: livekit/livekit-server:v1.13.4
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - ./deploy/production.env
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - ./deploy/livekit.yaml:/etc/livekit.yaml:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+volumes:
+  backend-data:
