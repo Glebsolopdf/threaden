@@ -1,0 +1,34 @@
+# Secrets and local environment
+**/.env
+**/.env.*
+!**/.env.example
+!deploy/production.env.example
+deploy/production.env
+
+# Go outputs and local data
+backend/api
+backend/voice-rooms
+backend/data/
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Web outputs and dependencies
+web-client/node_modules/
+web-client/dist/
+web-client/output/
+web-client/.playwright-cli/
+
+# Tool output
+output/
+coverage/
+*.log
+.DS_Store
+
+# Deployment secrets and generated runtime traces
+deploy/livekit.yaml
+!deploy/livekit.yaml.example
+.playwright-cli/
+**/.playwright-cli/
+*.trace
+*.network

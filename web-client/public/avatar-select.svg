@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Выбрать аватар</title>
+  <!-- Main icon centered in the canvas, plus badge overlaps bottom-right -->
+  <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Outer avatar circle -->
+    <circle cx="11.2" cy="11.2" r="8.2"/>
+
+    <!-- Person -->
+    <circle cx="11.2" cy="7.8" r="2.7"/>
+    <path d="M7.6 17.1c.45-2 1.8-3.2 3.6-3.2s3.15 1.2 3.6 3.2"/>
+
+    <!-- Add/select badge -->
+    <circle cx="18.2" cy="17.8" r="3.25" fill="currentColor" stroke="none"/>
+    <path d="M16.9 17.8h2.6M18.2 16.5v2.6" stroke="#ffffff" stroke-width="1.5"/>
+  </g>
+</svg>

@@ -1,0 +1,128 @@
+.group-profile {
+  min-height: 100%;
+  padding: 1.25rem;
+  color: #f5f5f5;
+}
+
+.group-profile__header,
+.group-profile__identity,
+.group-member {
+  display: flex;
+  align-items: center;
+}
+
+.group-profile__header {
+  min-height: 3rem;
+  gap: 0.75rem;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.group-profile__header h2 { margin: 0; font-size: 1rem; }
+
+.group-profile__back,
+.group-profile__actions button {
+  min-height: 2.65rem;
+  border: 1px solid #3b3b3b;
+  border-radius: 0.5rem;
+  color: #f5f5f5;
+  background: #1b1b1b;
+  cursor: pointer;
+}
+
+.group-profile__back { padding: 0 0.75rem; }
+.group-profile__back img {
+  width: 1.2rem;
+  height: 1.2rem;
+  filter: invert(1);
+}
+
+.group-profile__identity {
+  gap: 1rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.group-profile__identity .avatar { width: 4.5rem; height: 4.5rem; flex-basis: 4.5rem; font-size: 2rem; }
+.group-profile__identity h3 { margin: 0; font-size: 1.45rem; }
+.group-profile__identity p { margin: 0.25rem 0 0; color: #a3a3a3; }
+
+.group-profile__invite {
+  display: grid;
+  max-width: 42rem;
+  gap: 0.65rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #2d2d2d;
+}
+.group-profile__invite[hidden] { display: none; }
+.group-profile__invite h3 { margin: 0; font-size: 0.9rem; }
+.group-profile__invite div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+.group-profile__invite a {
+  min-width: 0;
+  overflow: hidden;
+  color: #f5f5f5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group-profile__invite button {
+  min-height: 2.4rem;
+  padding: 0 0.75rem;
+  border: 1px solid #3b3b3b;
+  border-radius: 0.5rem;
+  color: #f5f5f5;
+  background: #1b1b1b;
+  cursor: pointer;
+}
+.group-profile__invite button:hover { background: #242424; }
+
+.group-profile__members { max-width: 42rem; padding: 1.5rem 0; }
+.group-profile__members h3 { margin: 0 0 0.75rem; font-size: 0.9rem; }
+.group-profile__members ul { display: grid; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }
+
+.group-member { gap: 0.75rem; min-height: 3.75rem; padding: 0.5rem 0; border-bottom: 1px solid #232323; }
+.group-member > span:last-child { display: grid; gap: 0.1rem; }
+.group-member strong { font-size: 0.92rem; }
+.group-member small { color: #a3a3a3; }
+
+.group-profile__actions { display: grid; width: min(100%, 20rem); gap: 0.65rem; padding-top: 1rem; border-top: 1px solid #2d2d2d; }
+.group-profile__actions button { padding: 0 0.85rem; text-align: left; }
+.group-profile__actions button:hover { background: #242424; }
+.group-profile__actions .group-profile__delete { border-color: var(--danger-border); color: var(--danger-text); background: var(--danger-soft); }
+.group-profile__actions .group-profile__delete:hover { background: rgb(239 68 68 / 24%); }
+
+.delete-group-dialog { width: min(calc(100% - 2rem), 26rem); padding: 0; border: 1px solid #3b3b3b; border-radius: 0.75rem; color: #f5f5f5; background: #181818; }
+.delete-group-dialog::backdrop { background: rgb(0 0 0 / 72%); }
+.delete-group-dialog form { display: grid; gap: 0.85rem; padding: 1.25rem; }
+.delete-group-dialog h2,.delete-group-dialog p { margin: 0; }
+.delete-group-dialog p { color: #c2c2c2; }
+.delete-group-dialog menu { display: flex; justify-content: end; gap: 0.65rem; margin: 0.5rem 0 0; padding: 0; }
+.delete-group-dialog button { min-height: 2.6rem; padding: 0 0.85rem; border: 1px solid #3b3b3b; border-radius: 0.5rem; color: #f5f5f5; background: #242424; cursor: pointer; }
+.delete-group-dialog #confirm-delete-group { border-color: var(--danger-border); color: var(--danger-text); background: var(--danger-soft); }
+
+@media (max-width: 46rem) {
+  .group-profile {
+    height: 100%;
+    overflow: auto;
+    padding: 0.8rem;
+  }
+  .group-profile__back {
+    display: grid;
+    width: 2.5rem;
+    min-height: 2.5rem;
+    place-items: center;
+    padding: 0;
+  }
+  .group-profile__identity { padding-block: 1rem; }
+  .group-profile__identity .avatar {
+    width: 4rem;
+    height: 4rem;
+    flex-basis: 4rem;
+  }
+  .group-profile__identity h3 { font-size: 1.2rem; }
+  .group-profile__invite div { grid-template-columns: 1fr; }
+  .group-profile__invite a { white-space: normal; overflow-wrap: anywhere; }
+}

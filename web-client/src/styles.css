@@ -1,0 +1,49 @@
+@import "./styles/main.css";
+@import "./styles/screens/auth/index.css";
+
+html, body { min-height: 100%; margin: 0; background: #090a0d; color: #f4f4f5; }
+body { overflow: hidden; }
+button, input, select { font: inherit; }
+[hidden] { display: none !important; }
+app-root, app-shell, app-home, app-group, app-discover, app-settings, app-profile, app-voice, app-login, app-register { display: block; min-width: 0; min-height: 0; }
+app-root, app-shell { width: 100%; min-height: 100%; }
+.messenger { min-height: 100vh; height: 100dvh; background: #090a0d; overflow: hidden; }
+.rail img, .group-header img, .voice-room img, .room-widget img { width: 1.25rem; height: 1.25rem; object-fit: contain; }
+.rail-logo img { width: 1.65rem; height: 1.65rem; }
+.workspace > router-outlet + * { display: block; width: 100%; min-width: 0; min-height: 0; height: 100%; }
+.workspace > router-outlet { display: contents; }
+app-home, app-group, app-discover, app-settings, app-profile, app-voice { height: 100%; }
+.route-page { height: 100%; min-height: 0; }
+.clickable { cursor: pointer; }
+.validation-error { color: #ff9f9f; font-size: .84rem; margin: .35rem 0 0; }
+.inline-actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
+.dialog-backdrop { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .65); backdrop-filter: blur(8px); }
+.dialog-card { width: min(32rem, 100%); max-height: min(88dvh, 50rem); overflow: auto; border: 1px solid rgb(255 255 255 / .11); border-radius: 1.25rem; padding: 1.25rem; background: #111318; box-shadow: 0 2rem 5rem rgb(0 0 0 / .5); }
+.dialog-card h2 { margin-top: 0; }
+.dialog-card menu { display: flex; justify-content: flex-end; gap: .75rem; padding: 0; margin: 1.25rem 0 0; }
+.dialog-card form { display: grid; gap: .85rem; }
+.dialog-card label { display: grid; gap: .35rem; }
+.dialog-card input, .dialog-card select { width: 100%; box-sizing: border-box; }
+.page-loading { display: grid; place-items: center; min-height: 100%; color: #a8a8ad; }
+.empty-copy { padding: 1rem; color: #a8a8ad; }
+
+.rail a, .group-row, .profile-popover { text-decoration: none; color: inherit; }
+.group-row.is-active { background: rgb(255 255 255 / .08); }
+.rail-icon.is-active { background: rgb(255 255 255 / .1); }
+.group-filter { width: 100%; box-sizing: border-box; margin-top: .75rem; }
+.group-header__title { border: 0; background: transparent; color: inherit; text-align: left; padding: 0; }
+.profile-route { overflow: auto; padding-bottom: 2rem; }
+.profile-route .profile-edit-card { margin: 2rem auto; }
+.settings-view { overflow: auto; }
+.settings-view .settings-panel { max-width: 56rem; margin: 0 auto; padding: 1.5rem; }
+.discover-search { display: block; width: calc(100% - 2rem); margin: 1rem; box-sizing: border-box; }
+.voice-room--join { overflow: auto; }
+.voice-room--join .join-card { margin: 2rem auto; }
+.notification-region { position: fixed; z-index: 120; inset: 1rem 1rem auto auto; width: min(26rem, calc(100vw - 2rem)); }
+.room-widget { position: fixed; z-index: 100; touch-action: none; }
+.group-info-dialog__panel app-avatar, .group-members app-avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
+.chat-message__avatar { width: 2rem; height: 2rem; border-radius: 50%; }
+.voice-participant-card__avatar { width: 5rem; height: 5rem; border-radius: 50%; }
+.profile-avatar--large { width: 7rem; height: 7rem; border-radius: 50%; }
+.profile-popover app-avatar, .group-row app-avatar, .room-widget app-avatar { width: 2.5rem; height: 2.5rem; border-radius: 50%; }
+.group-info-dialog__actions img, .group-voice__delete img { width: 1.2rem; height: 1.2rem; }

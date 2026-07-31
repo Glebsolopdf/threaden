@@ -1,0 +1,18 @@
+port: 7880
+
+rtc:
+  use_external_ip: false
+  enable_loopback_candidate: true
+  udp_port: 7882
+  tcp_port: 7881
+
+turn:
+  enabled: true
+  udp_port: 3478
+  allow_restricted_peer_cidrs:
+    - 127.0.0.0/8
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - ::1/128
+    - fc00::/7

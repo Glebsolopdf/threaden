@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Микрофон выключен</title>
+  <g stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9 9V6a3 3 0 0 1 5.55-1.58"/>
+    <path d="M15 9.5V11a3 3 0 0 1-.45 1.58"/>
+    <path d="M6.2 9.5V11a5.8 5.8 0 0 0 9.78 4.2"/>
+    <path d="M17.8 9.5V11a5.76 5.76 0 0 1-.65 2.66"/>
+    <path d="M12 17v4"/>
+    <path d="M8.5 21h7"/>
+    <path d="M4 4l16 16"/>
+  </g>
+</svg>

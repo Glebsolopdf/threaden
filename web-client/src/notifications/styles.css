@@ -1,0 +1,143 @@
+.notification-region {
+  position: fixed;
+  z-index: 1000;
+  inset: 1rem 1rem auto auto;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  width: min(22rem, calc(100vw - 2rem));
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.status-notification {
+  position: relative;
+  overflow: hidden;
+  padding: 0.9rem 1rem 1rem;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: var(--radius);
+  background: rgb(244 244 245 / 78%);
+  color: #18191f;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 40%);
+  backdrop-filter: blur(18px) saturate(1.18);
+  pointer-events: auto;
+  animation: notification-enter 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.status-notification[data-kind="success"] {
+  border-color: rgb(34 197 94 / 44%);
+  background: rgb(14 18 16 / 76%);
+  color: #effdf4;
+}
+
+.status-notification[data-kind="error"] {
+  border-color: rgb(248 113 113 / 62%);
+  background: rgb(32 16 17 / 82%);
+  color: #fee2e2;
+}
+
+.status-notification:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+
+.status-notification:not([data-kind="error"]) {
+  cursor: pointer;
+}
+
+.status-notification[data-state="closing"] {
+  pointer-events: none;
+  animation: notification-exit 0.16s cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.notification-region.notification-leave {
+  animation: notification-region-exit 160ms ease-in both;
+}
+
+.notification-region.notification-leave .status-notification {
+  animation: notification-exit 160ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.status-notification p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.status-notification span {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 0.22rem;
+  transform-origin: left center;
+  animation: notification-timer var(--notification-duration) linear forwards;
+  background: rgb(113 113 122 / 70%);
+}
+
+.status-notification[data-kind="success"] span {
+  background: #22c55e;
+}
+
+.status-notification[data-kind="error"] span {
+  background: #ef4444;
+}
+
+@keyframes notification-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0.65rem, -0.25rem, 0) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes notification-exit {
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate3d(0.65rem, -0.2rem, 0) scale(0.98);
+  }
+}
+
+@keyframes notification-region-exit {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes notification-timer {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (width <= 38rem) {
+  .notification-region {
+    inset: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) auto auto;
+    width: min(19rem, calc(100vw - 1.5rem));
+  }
+
+  .status-notification {
+    max-height: min(11rem, calc(100vh - 2rem));
+    padding: 0.78rem 0.85rem 0.95rem;
+  }
+
+  .status-notification p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    font-size: 0.86rem;
+  }
+}
