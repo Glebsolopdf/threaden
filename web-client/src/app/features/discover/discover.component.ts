@@ -13,14 +13,14 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
   imports: [ReactiveFormsModule, RouterLink, AvatarComponent],
   template: `
     <section class="route-page" id="discover-view">
-      <header class="group-header"><a class="group-header__icon" routerLink="/" aria-label="Назад"><img src="/back.svg" alt=""></a><div class="group-header__title"><strong>Поиск групп</strong><small>Публичные сообщества</small></div></header>
+      <header class="group-header"><a class="group-header__icon" routerLink="/" aria-label="Назад"><img src="/back.svg" alt=""></a><div class="group-header__title"><strong>Поиск групп</strong><small>Публичные сообщества</small><small>Отображаются группы от 5 участников</small></div></header>
       <input id="discover-search" class="discover-search" [formControl]="search" placeholder="Поиск публичных групп" autocomplete="off">
       <div class="group-list">
         @if (loading()) { <div class="page-loading">Ищем группы…</div> }
         @else {
           @for (group of results(); track group.id) {
             <a class="group-row" [routerLink]="['/groups', group.id]">
-              <app-avatar [src]="group.avatar" [label]="group.name" />
+              <app-avatar [src]="group.avatar" [label]="group.name" [identity]="group.id" [kind]="'group'" />
               <span><strong>{{ group.name }}</strong><small>{{ group.member_count }} участников · {{ group.online_count }} онлайн</small></span>
             </a>
           } @empty { <p class="empty-copy">Ничего не найдено</p> }

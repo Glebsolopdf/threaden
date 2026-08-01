@@ -3,17 +3,21 @@
   display: block;
   overflow: hidden;
   border-radius: 999px;
-  background: #22252d;
+  background: linear-gradient(135deg, #20242d, #171a22);
 }
 
 .skeleton::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 8%), transparent);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 11%), transparent);
   animation: skeleton-shimmer 1.45s ease-in-out infinite;
   animation-delay: var(--skeleton-delay, 0ms);
   content: "";
   transform: translateX(-100%);
+}
+
+.message-list:has(.skeleton-message) {
+  justify-content: flex-end;
 }
 
 .skeleton-chat-row {
@@ -54,7 +58,19 @@
   gap: 0.5rem;
   align-items: end;
   margin-top: 0.45rem;
+  opacity: 0;
+  transform: translate3d(0, 0.55rem, 0);
+  animation: skeleton-message-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(var(--message-loader-index, 0) * 70ms);
 }
+
+.skeleton-message:nth-child(1) { --message-loader-index: 0; }
+.skeleton-message:nth-child(2) { --message-loader-index: 1; }
+.skeleton-message:nth-child(3) { --message-loader-index: 2; }
+.skeleton-message:nth-child(4) { --message-loader-index: 3; }
+.skeleton-message:nth-child(5) { --message-loader-index: 4; }
+.skeleton-message:nth-child(6) { --message-loader-index: 5; }
+.skeleton-message:nth-child(7) { --message-loader-index: 6; }
 
 .skeleton-message--own {
   width: min(30rem, 72%);
@@ -63,17 +79,112 @@
 }
 
 .skeleton-message__bubble {
+  position: relative;
   width: min(100%, 22rem);
   padding: 0.7rem;
   border-radius: 12px;
-  background: #151923;
+  background:
+    radial-gradient(circle at 16% 18%, rgb(255 255 255 / 8%), transparent 34%),
+    linear-gradient(135deg, #171b24, #11141b);
+  box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 16%);
+}
+
+.skeleton-message__bubble::before {
+  position: absolute;
+  bottom: 0;
+  left: -0.34rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+  background: #11141b;
+  content: "";
 }
 
 .skeleton-message--own .skeleton-message__bubble {
   justify-self: end;
-  background: #1d3042;
+  background:
+    radial-gradient(circle at 82% 18%, rgb(255 255 255 / 12%), transparent 34%),
+    linear-gradient(135deg, #24415f, #1b2c43);
+  box-shadow: 0 0.8rem 2.2rem rgb(22 74 120 / 22%);
+}
+
+.skeleton-message--own .skeleton-message__bubble::before {
+  right: -0.34rem;
+  left: auto;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+  background: #1b2c43;
+}
+
+.skeleton-message:nth-child(2n) .skeleton-line--1 { width: 64%; }
+.skeleton-message:nth-child(3n) .skeleton-line--2 { width: 58%; }
+
+.voice-connect {
+  display: grid;
+  min-height: 100%;
+  place-content: center;
+  justify-items: center;
+  gap: 0.42rem;
+  padding: 2rem;
+  color: var(--text);
+  background: #090a0d;
+}
+
+.voice-connect__copy {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.34rem;
+  margin: 0;
+  text-align: center;
+  animation: voice-connect-copy 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.voice-connect__copy strong {
+  font-size: clamp(1.25rem, 3vw, 1.55rem);
+  font-weight: 820;
+}
+
+.voice-connect__copy span {
+  display: inline-flex;
+  gap: 0.14rem;
+  translate: 0 -0.03rem;
+}
+
+.voice-connect__copy i {
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.voice-connect__copy i {
+  opacity: 0.28;
+  animation: voice-connect-dot 1.05s ease-in-out infinite;
+}
+
+.voice-connect__copy i:nth-child(2) { animation-delay: 140ms; }
+.voice-connect__copy i:nth-child(3) { animation-delay: 280ms; }
+
+.voice-connect > small {
+  color: var(--muted);
+  font-size: 0.86rem;
+  animation: voice-connect-copy 420ms cubic-bezier(0.16, 1, 0.3, 1) 70ms both;
+}
+
+@keyframes skeleton-message-rise {
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 @keyframes skeleton-shimmer {
   100% { transform: translateX(100%); }
+}
+
+@keyframes voice-connect-dot {
+  0%, 100% { opacity: 0.24; transform: translateY(0); }
+  45% { opacity: 0.96; transform: translateY(-0.1rem); }
+}
+
+@keyframes voice-connect-copy {
+  from { opacity: 0; transform: translate3d(0, 0.5rem, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }

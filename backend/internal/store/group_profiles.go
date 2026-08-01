@@ -38,11 +38,10 @@ func (s *Store) DeleteGroup(ctx context.Context, groupID string) error {
 	if err != nil {
 		return err
 	}
-	count, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if count == 0 {
+	if count, err := result.RowsAffected(); err != nil || count == 0 {
+		if err != nil {
+			return err
+		}
 		return ErrNotFound
 	}
 	return nil
@@ -53,11 +52,10 @@ func (s *Store) LeaveGroup(ctx context.Context, groupID, userID string) error {
 	if err != nil {
 		return err
 	}
-	count, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if count == 0 {
+	if count, err := result.RowsAffected(); err != nil || count == 0 {
+		if err != nil {
+			return err
+		}
 		return ErrNotFound
 	}
 	return nil
@@ -88,6 +86,25 @@ func (s *Store) RemoveGroupMember(ctx context.Context, groupID, userID string) e
 		return fmt.Errorf("remove member from group voice rooms: %w", err)
 	}
 	return tx.Commit()
+}
+
+func (s *Store) GroupSpamWarnings(ctx context.Context, groupID string, since time.Time) ([]model.GroupSpamWarning, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT reason,message_count,user_count,created_at FROM group_spam_warnings WHERE group_id=? AND created_at>=? ORDER BY created_at DESC`, groupID, since.Unix())
+	if err != nil {
+		return nil, fmt.Errorf("list group spam warnings: %w", err)
+	}
+	defer rows.Close()
+	out := []model.GroupSpamWarning{}
+	for rows.Next() {
+		var item model.GroupSpamWarning
+		var created int64
+		if err := rows.Scan(&item.Reason, &item.MessageCount, &item.UserCount, &created); err != nil {
+			return nil, err
+		}
+		item.CreatedAt = time.Unix(created, 0).UTC()
+		out = append(out, item)
+	}
+	return out, rows.Err()
 }
 
 type InactiveGroupCandidate struct {

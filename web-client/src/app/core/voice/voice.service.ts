@@ -14,6 +14,8 @@ import { ApiService } from '../api/api.service';
 import type { Member } from '../api/models';
 import { PreferencesService } from '../preferences/preferences.service';
 import { VoiceActivityDetector } from './activity-detector';
+import { ScreenShareController } from './screen-share/screen-share.controller';
+import type { ScreenShareMode } from './screen-share/screen-share.models';
 
 export type VoiceStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 export type RoomKind = 'group' | 'temporary';
@@ -56,13 +58,20 @@ const VOICE_DETAIL_LABELS: Readonly<Record<Exclude<VoiceStatus, 'connected'>, st
 export class VoiceService {
   private readonly api = inject(ApiService);
   private readonly preferences = inject(PreferencesService);
-  private readonly room = new Room();
+  private readonly room = new Room({
+    adaptiveStream: true,
+    dynacast: true,
+    publishDefaults: { videoCodec: 'vp8', simulcast: true },
+  });
   private readonly activity = new VoiceActivityDetector();
   private readonly audioElements = new Map<string, HTMLMediaElement[]>();
+  private readonly screenShareAudioSids = new Set<string>();
+  private readonly screenShareAudioByIdentity = new Map<string, HTMLMediaElement[]>();
   private readonly roster = signal(new Map<string, { name: string; avatar: string }>());
   private readonly audioContainer = this.createAudioContainer();
   private pingTimer?: number;
   private connecting = false;
+  readonly screenShare = new ScreenShareController(this.room, (identity, fallback) => this.roster().get(identity)?.name || fallback);
 
   readonly activeRoom = signal<ActiveVoiceRoom | null>(null);
   readonly status = signal<VoiceStatus>('disconnected');
@@ -73,6 +82,7 @@ export class VoiceService {
   readonly inputDevices = signal<MediaDeviceInfo[]>([]);
   readonly outputDevices = signal<MediaDeviceInfo[]>([]);
   readonly deviceMenuOpen = signal(false);
+  readonly screenShareAudioMuted = signal(false);
 
   readonly isActive = computed(() => Boolean(this.activeRoom()));
   readonly statusLabel = computed(() => VOICE_STATUS_LABELS[this.status()]);
@@ -151,6 +161,10 @@ export class VoiceService {
     this.emitParticipants();
   }
 
+  async startScreenShare(mode: ScreenShareMode): Promise<void> { await this.screenShare.start(mode); }
+  async stopScreenShare(): Promise<void> { await this.screenShare.stop(); }
+  async changeScreenShareMode(mode: ScreenShareMode): Promise<void> { await this.screenShare.changeMode(mode); }
+
   updateProfile(profile: { id: string; display_name: string; avatar?: string }): void {
     this.roster.update((items) => {
       const next = new Map(items);
@@ -190,6 +204,21 @@ export class VoiceService {
     this.preferences.updateAudio({ outputVolume: value });
   }
 
+  toggleScreenShareAudio(): void {
+    const muted = !this.screenShareAudioMuted();
+    for (const sid of this.screenShareAudioSids) for (const element of this.audioElements.get(sid) ?? []) element.muted = muted;
+    this.screenShareAudioMuted.set(muted);
+  }
+
+  setScreenShareAudioMuted(identity: string, muted: boolean): void {
+    for (const element of this.screenShareAudioByIdentity.get(identity) ?? []) element.muted = muted;
+  }
+
+  setScreenShareAudioVolume(identity: string, percent: number): void {
+    const volume = Math.min(100, Math.max(0, percent)) / 100;
+    for (const element of this.screenShareAudioByIdentity.get(identity) ?? []) element.volume = volume;
+  }
+
   async testMicrophone(): Promise<void> {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     window.setTimeout(() => stream.getTracks().forEach((track) => track.stop()), 1500);
@@ -227,6 +256,7 @@ export class VoiceService {
   }
 
   private async disconnect(): Promise<void> {
+    await this.screenShare.destroy();
     for (const publication of this.room.localParticipant.trackPublications.values()) publication.track?.stop();
     this.clearRemoteAudio();
     try { await this.room.disconnect(); } finally {
@@ -294,7 +324,7 @@ export class VoiceService {
 
   private readonly handleReconnecting = (): void => this.status.set('reconnecting');
   private readonly handleReconnected = (): void => { this.status.set('connected'); this.emitParticipants(); };
-  private readonly handleDisconnected = (): void => { this.clearRemoteAudio(); this.status.set('disconnected'); this.emitParticipants(); };
+  private readonly handleDisconnected = (): void => { this.clearRemoteAudio(); this.screenShare.clearRemote(); this.status.set('disconnected'); this.emitParticipants(); };
   private readonly handleRosterChanged = (): void => {
     const active = this.activeRoom();
     if (active) void this.loadRoster(active).finally(() => this.emitParticipants());
@@ -304,23 +334,39 @@ export class VoiceService {
   private readonly handleTrackSubscribed = (
     track: RemoteTrack,
     publication: RemoteTrackPublication,
-    _participant: RemoteParticipant,
+    participant: RemoteParticipant,
   ): void => {
+    if (this.screenShare.handleTrackSubscribed(track, publication, participant)) return;
     if (track.kind !== Track.Kind.Audio) return;
     const element = track.attach();
     element.autoplay = true;
     element.volume = this.preferences.audio().outputVolume / 100;
     this.audioContainer.append(element);
     this.audioElements.set(publication.trackSid, [element]);
+    if (publication.source === Track.Source.ScreenShareAudio) {
+      this.screenShareAudioSids.add(publication.trackSid);
+      const elements = this.screenShareAudioByIdentity.get(participant.identity) ?? [];
+      elements.push(element);
+      this.screenShareAudioByIdentity.set(participant.identity, elements);
+      element.muted = this.screenShareAudioMuted();
+    }
   };
 
   private readonly handleTrackUnsubscribed = (
     track: RemoteTrack,
     publication: RemoteTrackPublication,
-    _participant: RemoteParticipant,
+    participant: RemoteParticipant,
   ): void => {
-    for (const element of track.detach()) element.remove();
+    if (this.screenShare.handleTrackUnsubscribed(track, publication)) return;
+    const detached = track.detach();
+    for (const element of detached) element.remove();
     this.audioElements.delete(publication.trackSid);
+    this.screenShareAudioSids.delete(publication.trackSid);
+    if (publication.source === Track.Source.ScreenShareAudio) {
+      const elements = (this.screenShareAudioByIdentity.get(participant.identity) ?? []).filter((element) => !detached.includes(element));
+      if (elements.length) this.screenShareAudioByIdentity.set(participant.identity, elements);
+      else this.screenShareAudioByIdentity.delete(participant.identity);
+    }
   };
 
   private readonly emitParticipants = (): void => {
@@ -376,6 +422,9 @@ export class VoiceService {
     }
     for (const elements of this.audioElements.values()) for (const element of elements) element.remove();
     this.audioElements.clear();
+    this.screenShareAudioSids.clear();
+    this.screenShareAudioByIdentity.clear();
+    this.screenShareAudioMuted.set(false);
   }
 
   private createAudioContainer(): HTMLElement {

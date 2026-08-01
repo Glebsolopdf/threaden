@@ -8,10 +8,11 @@ import { AuthStore } from '../../core/auth/auth.store';
 import { chatMessage, GroupsStore, isSystemMessage, systemMessageText, type MessageView } from '../../core/events/groups.store';
 import { NotificationStore } from '../../core/notifications/notification.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
+import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
 @Component({
   selector: 'app-group',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, AvatarComponent],
+  imports: [ReactiveFormsModule, RouterLink, AvatarComponent, GroupSpamWarningsComponent],
   template: `
     <section class="route-page" id="group-view">
       @if (groups.groupLoading()) {
@@ -120,7 +121,7 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
       <div class="dialog-backdrop" animate.leave="dialog-leave" (click)="closeBackdrop($event, profileOpen)">
         <section class="group-info-dialog group-info-dialog__panel dialog-card" role="dialog" aria-modal="true">
           <header class="group-info-dialog__header">
-            <app-avatar id="group-profile-avatar" [src]="details.group.avatar" [label]="details.group.name" />
+            <app-avatar id="group-profile-avatar" [src]="details.group.avatar" [label]="details.group.name" [identity]="details.group.id" [kind]="'group'" />
             <div class="group-info-dialog__title"><h2>{{ details.group.name }}</h2><p>{{ details.group.member_count }} участников · {{ details.group.online_count }} онлайн</p></div>
             <button class="group-info-dialog__close" type="button" aria-label="Закрыть" (click)="profileOpen.set(false)">×</button>
           </header>
@@ -143,6 +144,7 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
                 }
               </ul>
             </section>
+            <app-group-spam-warnings [warnings]="details.spam_warnings ?? []" />
           </div>
         </section>
       </div>

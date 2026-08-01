@@ -5,7 +5,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -13,6 +15,7 @@ import (
 	"voice-rooms/internal/abuse"
 	"voice-rooms/internal/app"
 	appgroups "voice-rooms/internal/groups"
+	"voice-rooms/internal/httpapi/ban"
 	"voice-rooms/internal/store"
 )
 
@@ -47,12 +50,14 @@ func NewWithOptions(
 	security := options.Security
 	router := chi.NewRouter()
 	limiter := abuse.NewLimiter(st, security)
+	enforcer := ban.NewEnforcer(limiter, service, st, security, logger)
 	router.Use(middleware.RequestID)
 	router.Use(requestLogger(logger))
 	router.Use(recoverer(logger))
 	router.Use(cors(options.Origins))
 	router.Use(csrf(options.Origins))
 	router.Use(bodyLimit(10 << 20))
+	router.Use(abuseGuard(enforcer, security, logger))
 	router.Use(rateLimit(limiter, security, logger))
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusNotFound, "not_found", "resource not found")
@@ -188,3 +193,26 @@ func writeAppError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 }
 func isBodyTooLarge(err error) bool { var maxErr *http.MaxBytesError; return errors.As(err, &maxErr) }
+
+func abuseGuard(enforcer *ban.Enforcer, cfg abuse.Config, logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := clientIP(r, cfg.TrustedProxies)
+			banned, until, err := enforcer.Banned(r.Context(), ip)
+			if err != nil {
+				logger.ErrorContext(r.Context(), "ban check failed", "error", err)
+			} else if banned {
+				w.Header().Set("Retry-After", strconv.Itoa(max(1, int(time.Until(until).Seconds()))))
+				writeError(w, r, http.StatusTooManyRequests, "ip_banned", "too many requests")
+				return
+			}
+			sw := &statusWriter{ResponseWriter: w}
+			next.ServeHTTP(sw, r)
+			if sw.status == http.StatusTooManyRequests {
+				if err := enforcer.NoteViolation(r.Context(), sessionToken(r), ip); err != nil {
+					logger.ErrorContext(r.Context(), "record violation failed", "error", err)
+				}
+			}
+		})
+	}
+}

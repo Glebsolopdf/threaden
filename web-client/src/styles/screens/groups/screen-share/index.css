@@ -1,0 +1,90 @@
+.screen-share-cards-enter {
+  animation: screen-share-cards-enter 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.screen-share-cards-leave {
+  pointer-events: none;
+  animation: screen-share-cards-leave 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.screen-share-control { position: relative; }
+.screen-share-mode-menu { position: absolute; z-index: 9; bottom: calc(100% + 0.55rem); left: 50%; display: grid; width: max-content; min-width: 14rem; gap: 0.2rem; padding: 0.4rem; border: 1px solid var(--line); border-radius: 10px; background: #191a20; box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 42%); transform: translateX(-50%); }
+.voice-room__controls .screen-share-mode-menu button { min-height: 2.25rem; border: 0; border-radius: 7px; padding: 0 0.55rem; color: var(--text); background: transparent; text-align: left; }
+.voice-room__controls .screen-share-mode-menu button:hover,.voice-room__controls .screen-share-mode-menu button[aria-checked="true"] { background: rgb(255 255 255 / 9%); }
+.screen-share-mode-menu__audio { display: flex; align-items: center; gap: 0.5rem; min-height: 2.25rem; padding: 0 0.55rem; color: var(--text); font-size: 0.82rem; }
+.screen-share-mode-menu__audio:has(input:disabled) { color: var(--muted); }
+.screen-share-cards { display: grid; width: min(100%, 56rem); gap: 0.55rem; min-width: 0; margin-inline: auto; interpolate-size: allow-keywords; transform-origin: top center; transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1), max-width 320ms cubic-bezier(0.22, 1, 0.36, 1), transform 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease; }
+.screen-share-cards h3 { margin: 0; color: var(--muted); font-size: 0.8rem; font-weight: 700; }
+.screen-share-cards__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 0.7rem; align-items: start; }
+.screen-share-card { position: relative; min-width: 0; overflow: visible; border: 1px solid var(--line); border-radius: 12px; background: #050506; transform-origin: center top; will-change: transform, opacity, filter; transition: inline-size 320ms cubic-bezier(0.22, 1, 0.36, 1), block-size 320ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, box-shadow 220ms ease, filter 220ms ease; }
+.screen-share-card-enter {
+  animation: screen-share-card-enter 320ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
+.screen-share-card-leave {
+  pointer-events: none;
+  animation: screen-share-card-leave 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.screen-share-cards--single { width: min(100%, 32rem); }
+.screen-share-cards--single .screen-share-cards__list { justify-items: center; }
+.screen-share-cards--single .screen-share-card { width: 100%; }
+.screen-share-cards--single .screen-share-card:not(.screen-share-card-enter):not(.screen-share-card-leave) {
+  animation: screen-share-card-settle 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.screen-share-card__preview { display: block; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; padding: 0; border: 0; border-radius: 11px 11px 0 0; background: #000; cursor: pointer; transition: aspect-ratio 320ms cubic-bezier(0.22, 1, 0.36, 1), border-radius 220ms ease; }
+.screen-share-card__preview app-screen-share-stage { position: relative; display: grid; width: 100%; height: 100%; place-items: center; }
+.screen-share-stage__viewport { position: relative; display: grid; width: 100%; height: 100%; overflow: hidden; place-items: center; background: #000; }
+.screen-share-stage__viewport--draggable { cursor: grab; }
+.screen-share-stage__viewport--draggable:active { cursor: grabbing; }
+.screen-share-card video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.screen-share-stage__video--zoomed { transform-origin: center; transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1); will-change: transform; }
+.screen-share-stage__video--paused { visibility: hidden; }
+.screen-share-stage__controls { position: absolute; right: 1rem; bottom: 1rem; z-index: 3; display: flex; align-items: center; gap: 0.35rem; padding: 0.35rem; border: 1px solid rgb(255 255 255 / 14%); border-radius: 999px; background: rgb(8 10 14 / 72%); backdrop-filter: blur(14px); box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 35%); }
+.screen-share-stage__controls button { min-width: 2.5rem; height: 2.5rem; border: 0; border-radius: 999px; color: var(--text); background: transparent; font: inherit; font-weight: 700; cursor: pointer; }
+.screen-share-stage__controls button:hover:not(:disabled) { background: rgb(255 255 255 / 10%); }
+.screen-share-stage__controls button:disabled { cursor: default; opacity: 0.45; }
+.screen-share-stage__notice { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 0.35rem; padding: 1rem; color: var(--text); background: #0b0c10; text-align: center; }
+.screen-share-stage__notice strong { font-size: 0.9rem; }
+.screen-share-stage__notice span { color: var(--muted); font-size: 0.76rem; }
+.screen-share-card footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.5rem 2.4rem 0.55rem 0.65rem; color: var(--muted); font-size: 0.72rem; transition: padding 320ms cubic-bezier(0.22, 1, 0.36, 1), gap 220ms ease; }
+.screen-share-card footer strong { overflow: hidden; color: var(--text); text-overflow: ellipsis; white-space: nowrap; }
+.screen-share-card__menu-button { position: absolute; right: 0.35rem; bottom: 0.25rem; width: 2rem; height: 2rem; border: 0; border-radius: 50%; color: var(--text); background: transparent; font-size: 1.35rem; line-height: 1; cursor: pointer; }
+.screen-share-card__menu-button:hover,.screen-share-card__menu-button[aria-expanded="true"] { background: rgb(255 255 255 / 10%); }
+.screen-share-card__menu { position: absolute; z-index: 8; right: 0.35rem; bottom: 2.45rem; display: grid; min-width: 14rem; gap: 0.35rem; padding: 0.45rem; border: 1px solid var(--line); border-radius: 10px; background: #191a20; box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 42%); }
+.screen-share-card__menu button { min-height: 2.25rem; border: 0; border-radius: 7px; padding: 0 0.55rem; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.screen-share-card__menu button:hover { background: rgb(255 255 255 / 9%); }
+.screen-share-card__menu label { display: grid; gap: 0.3rem; padding: 0.35rem 0.55rem; color: var(--muted); font-size: 0.75rem; }
+.screen-share-card app-screen-share-stage:fullscreen { display: grid; width: 100vw; height: 100vh; place-items: center; background: #000; }
+.screen-share-card app-screen-share-stage:fullscreen .screen-share-stage__viewport { width: 100vw; height: 100vh; }
+.screen-share-card app-screen-share-stage:fullscreen video { width: 100vw; height: 100vh; object-fit: contain; }
+.screen-share-error { margin: 0; padding: 0.45rem 0.7rem; border-radius: var(--radius); font-size: 0.75rem; }
+.screen-share-error { color: var(--danger-text); background: var(--danger-soft); }
+@keyframes screen-share-cards-enter {
+  from { opacity: 0; transform: translate3d(0, 0.9rem, 0) scale(0.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes screen-share-cards-leave {
+  from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  to { opacity: 0; transform: translate3d(0, -0.35rem, 0) scale(0.99); }
+}
+
+@keyframes screen-share-card-enter {
+  from { opacity: 0; transform: translate3d(0, 1rem, 0) scale(0.92); filter: saturate(0.8) blur(6px); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: saturate(1) blur(0); }
+}
+
+@keyframes screen-share-card-leave {
+  from { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: saturate(1) blur(0); }
+  to { opacity: 0; transform: translate3d(0, 0.45rem, 0) scale(0.94); filter: saturate(0.82) blur(5px); }
+}
+
+@keyframes screen-share-card-settle {
+  0% { transform: scale(0.975); }
+  65% { transform: scale(1.012); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 44rem) { .screen-share-cards--single { width: 100%; } .screen-share-mode-menu { right: 0; left: auto; transform: none; } .screen-share-stage__controls { right: 0.75rem; bottom: 0.75rem; } .screen-share-stage__controls button { min-width: 2.3rem; height: 2.3rem; } }

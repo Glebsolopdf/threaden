@@ -38,13 +38,17 @@ func (g *Gateway) JoinToken(roomCode string, user model.User, ttl time.Duration)
 	canSubscribe := true
 	canPublishData := false
 	grant := &auth.VideoGrant{
-		RoomJoin:          true,
-		Room:              roomCode,
-		CanPublish:        &canPublish,
-		CanSubscribe:      &canSubscribe,
-		CanPublishData:    &canPublishData,
-		CanPublishSources: []string{"microphone"},
+		RoomJoin:       true,
+		Room:           roomCode,
+		CanPublish:     &canPublish,
+		CanSubscribe:   &canSubscribe,
+		CanPublishData: &canPublishData,
 	}
+	grant.SetCanPublishSources([]livekitproto.TrackSource{
+		livekitproto.TrackSource_MICROPHONE,
+		livekitproto.TrackSource_SCREEN_SHARE,
+		livekitproto.TrackSource_SCREEN_SHARE_AUDIO,
+	})
 	token, err := auth.NewAccessToken(g.apiKey, g.apiSecret).
 		SetIdentity(user.ID).
 		SetName(user.DisplayName).

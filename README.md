@@ -2,6 +2,8 @@
 
 Threaden — вокруг меня крутятся токены
 
+Версия: 0.3.3
+
 ## Быстрый запуск
 
 Требуются Docker Compose, Go 1.26+ для локальных backend-проверок и Node.js 20.19+, 22.12+ или 24+
@@ -16,6 +18,9 @@ Threaden — вокруг меня крутятся токены
 IPv6-origin страницы с IPv4 WebRTC/LiveKit endpoint. Подробности находятся в
 [`backend/README.md`](backend/README.md), [`web-client/README.md`](web-client/README.md)
 и [`deploy/README.md`](deploy/README.md).
+
+Демонстрация экрана (три capture-профиля, диагностика и production-порты)
+описана в [`docs/screen-sharing.md`](docs/screen-sharing.md).
 
 Для production Linux/systemd используйте [`threadenctl.sh`](threadenctl.sh):
 

@@ -25,8 +25,9 @@ curl --fail --silent http://localhost:8080/readyz >/dev/null || {
 }
 
 cd "$root_dir/web-client"
-if [[ ! -d node_modules ]]; then
-  npm install
+if [[ ! -x node_modules/.bin/ng ]]; then
+  echo "Installing frontend dependencies from package-lock.json…"
+  npm ci
 fi
 
 echo "Open http://127.0.0.1:4200"

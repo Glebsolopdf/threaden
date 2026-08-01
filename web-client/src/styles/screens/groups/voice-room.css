@@ -106,6 +106,8 @@
   padding: clamp(0.85rem, 2.6vw, 1.4rem);
 }
 
+.voice-room__content--sharing { grid-template-rows: auto minmax(0, 1fr) auto; }
+
 .voice-room__people {
   display: grid;
   min-height: 0;
@@ -291,6 +293,7 @@
   width: 3rem;
   min-height: 3rem;
 }
+
 
 @media (max-width: 44rem) {
   .voice-room { height: var(--app-height, 100dvh); }

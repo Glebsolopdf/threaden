@@ -14,8 +14,10 @@ import (
 	"time"
 
 	"voice-rooms/internal/abuse"
+	"voice-rooms/internal/antispam"
 	"voice-rooms/internal/app"
 	appgroups "voice-rooms/internal/groups"
+	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/httpapi"
 	"voice-rooms/internal/store"
 )
@@ -27,14 +29,15 @@ func strictAPI(t *testing.T) *testAPI {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	service := app.New(st, voiceFake{}, time.Hour, 15*time.Minute, 4, logger)
+	voice := newVoiceFake()
+	service := app.New(st, voice, time.Hour, 15*time.Minute, 4, logger)
 	cfg := abuse.DefaultConfig()
 	cfg.RegisterLimit = abuse.Limit{Capacity: 1, Refill: time.Hour}
 	cfg.LoginLimit = abuse.Limit{Capacity: 1, Refill: time.Hour}
 	cfg.TrustedProxies = []string{"127.0.0.1"}
 	limiter := abuse.NewLimiter(st, cfg)
-	groupService := appgroups.New(st, voiceFake{}, appgroups.NewHub()).
-		WithMessageGuard(abuse.NewMessageGuard(limiter, st, cfg))
+	groupService := appgroups.New(st, voice, hub.New()).
+		WithMessageGuard(antispam.NewGuard(limiter, st, cfg))
 	server := httptest.NewServer(httpapi.NewWithSecurity(service, groupService, st, logger, []string{"https://client.test"}, cfg))
 	t.Cleanup(func() {
 		server.Close()
@@ -90,6 +93,21 @@ func retryAfterSeconds(t *testing.T, headers http.Header) int {
 		t.Fatalf("invalid Retry-After header: %q", headers.Get("Retry-After"))
 	}
 	return seconds
+}
+
+func sessionTokenFromHeaders(t *testing.T, headers http.Header) string {
+	t.Helper()
+	for _, cookie := range (&http.Response{Header: headers}).Cookies() {
+		if cookie.Name != "threaden_session" {
+			continue
+		}
+		if !cookie.HttpOnly || cookie.SameSite != http.SameSiteStrictMode || cookie.Value == "" {
+			t.Fatalf("insecure session cookie: %+v", cookie)
+		}
+		return cookie.Value
+	}
+	t.Fatal("session cookie missing")
+	return ""
 }
 
 func TestUnchangedProfileIsRejected(t *testing.T) {

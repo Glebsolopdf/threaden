@@ -1,0 +1,14 @@
+port: 7880
+
+rtc:
+  use_external_ip: true
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 51000
+
+turn:
+  enabled: true
+  domain: turn.example.com
+  tls_port: 5349
+  cert_file: /etc/letsencrypt/live/livekit.example.com/fullchain.pem
+  key_file: /etc/letsencrypt/live/livekit.example.com/privkey.pem

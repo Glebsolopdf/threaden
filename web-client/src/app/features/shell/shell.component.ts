@@ -36,7 +36,7 @@ type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'tempo
         <nav>
           <a class="rail-icon" routerLink="/discover" routerLinkActive="is-active" aria-label="Поиск групп"><img src="/discover.svg" alt=""></a>
           <button class="rail-icon" type="button" aria-label="Создать группу" (click)="createDialogOpen.set(true)"><img src="/create-group-icon.svg" alt=""></button>
-          <button class="rail-icon" type="button" aria-label="Временные комнаты" (click)="temporaryDialogOpen.set(true)"><img src="/temporary-room.svg" alt=""></button>
+          <button class="rail-icon" type="button" aria-label="Временные комнаты" (click)="temporaryDialogOpen.set(true)"><img src="/temporary-room-v2.svg" alt=""></button>
         </nav>
         <div class="rail-spacer"></div>
         <button class="rail-icon" type="button" aria-label="Настройки" (click)="openAccount('settings')"><img src="/settings-icon.svg" alt=""></button>
@@ -61,7 +61,7 @@ type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'tempo
           } @else if (filteredGroups().length) {
             @for (group of filteredGroups(); track group.id) {
               <a class="group-row" animate.leave="list-item-leave" [routerLink]="['/groups', group.id]" routerLinkActive="is-active" (click)="sidebarOpen.set(false)">
-                <app-avatar [src]="group.avatar" [label]="group.name" />
+                <app-avatar [src]="group.avatar" [label]="group.name" [identity]="group.id" [kind]="'group'" />
                 <span class="group-row__copy"><strong>{{ group.name }}</strong><small>{{ group.last_message?.body || 'Нет сообщений' }}</small></span>
               </a>
             }
@@ -130,7 +130,6 @@ export class ShellComponent {
   protected readonly createPending = signal(false);
   protected readonly temporaryPending = signal(false);
   protected readonly skeletons = Array.from({ length: 8 }, (_, index) => index);
-  private stableViewportHeight = 0;
 
   protected readonly groupFilter = new FormControl('', { nonNullable: true });
   private readonly filterValue = toSignal(this.groupFilter.valueChanges.pipe(startWith(''), debounceTime(100), distinctUntilChanged()), { initialValue: '' });
@@ -237,10 +236,7 @@ export class ShellComponent {
   }
 
   private readonly handleViewportChange = (): void => this.updateViewportHeight();
-  private readonly handleOrientationChange = (): void => {
-    this.stableViewportHeight = 0;
-    this.updateViewportHeight();
-  };
+  private readonly handleOrientationChange = (): void => this.updateViewportHeight();
 
   private initViewportHeight(): void {
     if (typeof window === 'undefined') return;
@@ -262,10 +258,6 @@ export class ShellComponent {
   private updateViewportHeight(): void {
     if (typeof window === 'undefined') return;
     const height = Math.round(window.visualViewport?.height || window.innerHeight);
-    const active = document.activeElement;
-    const textInputFocused = active instanceof HTMLElement && active.matches('input, textarea, [contenteditable="true"]');
-    const keyboardLikelyOpen = textInputFocused && height < this.stableViewportHeight - 120;
-    if (!keyboardLikelyOpen) this.stableViewportHeight = Math.max(this.stableViewportHeight, height);
-    document.documentElement.style.setProperty('--app-height', `${this.stableViewportHeight || height}px`);
+    document.documentElement.style.setProperty('--app-height', `${height}px`);
   }
 }

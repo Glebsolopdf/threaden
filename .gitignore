@@ -4,6 +4,11 @@
 !**/.env.example
 !deploy/production.env.example
 deploy/production.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
 
 # Go outputs and local data
 backend/api
@@ -12,23 +17,31 @@ backend/data/
 **/*.db
 **/*.db-shm
 **/*.db-wal
+coverage/
 
-# Web outputs and dependencies
+# Web outputs, caches, and dependencies
 web-client/node_modules/
 web-client/dist/
 web-client/output/
-web-client/.playwright-cli/
-
-# Tool output
-output/
-coverage/
-*.log
-.DS_Store
-
-# Deployment secrets and generated runtime traces
-deploy/livekit.yaml
-!deploy/livekit.yaml.example
-.playwright-cli/
+web-client/.angular/
 **/.playwright-cli/
+
+# Tool output and transient files
+output/
+*.log
 *.trace
-*.network
+*.bak
+*.bak-*
+*.orig
+*.rej
+*.tmp
+*.tar.gz
+*.zip
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

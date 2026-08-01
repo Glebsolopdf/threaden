@@ -1,7 +1,13 @@
 # Changelog
 
-## Unreleased
+## 0.3.3 - 2026-08-01
 
+- Replaced the fixed 24-hour IP ban with an escalating ladder
+  (10s → 1m → 5m → 24h) that resets after 24h without violations, and added
+  automatic account deletion after 5 maximum-level (24h) bans within 30 days.
+- Added an anti-flood ownership limit (default 3 groups per account), hid
+  groups with fewer than 5 members from discovery, and added automatic 24-hour
+  IP bans after repeated rate-limit violations.
 - Fixed local Firefox WebRTC connections by using one IPv4 loopback origin for
   Angular and LiveKit, advertising reachable host ICE candidates, and enabling
   LiveKit's embedded TURN/UDP fallback.
@@ -16,7 +22,7 @@
 
 - Added low-disk emergency cleanup that triggers below 5 GiB free space and prioritizes inactive accounts, inactive groups, and oldest messages.
 - Fixed real-time message updates by keeping server-sent event streams flushable and open for long-lived clients.
-- Made `threaden.substituteme.space` the primary production web domain and redirected `opentalk.substituteme.space` to it.
+- Made `threaden.example.com` the primary production web domain and redirected `old-threaden.example.com` to it.
 
 ## 0.2.3 - 2026-07-27
 

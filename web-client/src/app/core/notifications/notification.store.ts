@@ -27,6 +27,7 @@ export class NotificationStore {
     if (typeof value === 'string') return this.show(value, 'error');
     const error = toApiError(value);
     if (error.code === 'voice_room_limit') return this.neutral('Достигнут лимит голосовых комнат в этой группе');
+    if (error.code === 'spam_warning') return this.neutral('Не надо, пожалуйста');
     this.show(this.displayError(error, fallback), 'error');
   }
 

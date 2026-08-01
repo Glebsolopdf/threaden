@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"voice-rooms/internal/abuse"
+	"voice-rooms/internal/antispam"
 	"voice-rooms/internal/model"
 )
 
@@ -32,12 +32,6 @@ func (s *Service) Send(ctx context.Context, id string, u model.User, body, idemp
 		return model.GroupMessage{}, e
 	}
 	if s.guard != nil {
-		if e := s.guard.Check(ctx, id, u, body); e != nil {
-			if errors.Is(e, abuse.ErrMessageRateLimited) {
-				return model.GroupMessage{}, ErrLimited
-			}
-			return model.GroupMessage{}, ErrInvalid
-		}
 		var fresh bool
 		mid, fresh, e = s.guard.Reserve(ctx, id, u.ID, idempotencyKey, mid)
 		if e != nil {
@@ -45,6 +39,20 @@ func (s *Service) Send(ctx context.Context, id string, u model.User, body, idemp
 		}
 		if !fresh {
 			return s.store.Message(ctx, mid)
+		}
+		if result, e := s.guard.Check(ctx, id, u, body); e != nil {
+			if result.DeleteGroup {
+				if members, memberErr := s.store.GroupMemberIDs(ctx, id); memberErr == nil {
+					_ = s.deleteGroup(ctx, id, members)
+				}
+			}
+			if errors.Is(e, antispam.ErrMessageWarning) {
+				return model.GroupMessage{}, ErrWarned
+			}
+			if errors.Is(e, antispam.ErrMessageRateLimited) {
+				return model.GroupMessage{}, ErrLimited
+			}
+			return model.GroupMessage{}, ErrInvalid
 		}
 	}
 	m := model.GroupMessage{ID: mid, GroupID: id, Author: u, Body: body, CreatedAt: s.now().UTC()}

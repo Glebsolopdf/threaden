@@ -75,3 +75,10 @@ type GroupVoiceRoom struct {
 	CreatedAt        time.Time `json:"created_at"`
 	ParticipantCount int       `json:"participant_count"`
 }
+
+type GroupSpamWarning struct {
+	Reason       string    `json:"reason"`
+	MessageCount int       `json:"message_count"`
+	UserCount    int       `json:"user_count"`
+	CreatedAt    time.Time `json:"created_at"`
+}

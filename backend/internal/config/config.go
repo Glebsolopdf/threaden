@@ -9,33 +9,41 @@ import (
 )
 
 type Config struct {
-	HTTPAddr             string
-	DatabasePath         string
-	LiveKitURL           string
-	LiveKitPublicURL     string
-	LiveKitAPIKey        string
-	LiveKitAPISecret     string
-	RoomTTL              time.Duration
-	LiveKitTokenTTL      time.Duration
-	SessionTTL           time.Duration
-	SessionIdleTTL       time.Duration
-	SessionCookieSecure  bool
-	MaxRoomParticipants  int
-	CORSAllowedOrigins   []string
-	TrustedProxies       []string
-	RateLimitBucketTTL   time.Duration
-	MaxMessageRunes      int
-	MaxMessageLinks      int
-	MaxMessageMentions   int
-	InactiveGroupTTL     time.Duration
-	GroupDeleteGrace     time.Duration
-	GroupCleanupInterval time.Duration
-	GroupCleanupBatch    int
-	GroupCleanupDryRun   bool
-	LowDiskMinFreeBytes  uint64
-	LowDiskCheckInterval time.Duration
-	LowDiskCleanupBatch  int
-	LowDiskMessageMinAge time.Duration
+	HTTPAddr                string
+	DatabasePath            string
+	LiveKitURL              string
+	LiveKitPublicURL        string
+	LiveKitAPIKey           string
+	LiveKitAPISecret        string
+	RoomTTL                 time.Duration
+	LiveKitTokenTTL         time.Duration
+	SessionTTL              time.Duration
+	SessionIdleTTL          time.Duration
+	SessionCookieSecure     bool
+	MaxRoomParticipants     int
+	CORSAllowedOrigins      []string
+	TrustedProxies          []string
+	RateLimitBucketTTL      time.Duration
+	MaxMessageRunes         int
+	MaxMessageLinks         int
+	MaxMessageMentions      int
+	InactiveGroupTTL        time.Duration
+	GroupDeleteGrace        time.Duration
+	GroupCleanupInterval    time.Duration
+	GroupCleanupBatch       int
+	GroupCleanupDryRun      bool
+	LowDiskMinFreeBytes     uint64
+	LowDiskCheckInterval    time.Duration
+	LowDiskCleanupBatch     int
+	LowDiskMessageMinAge    time.Duration
+	MaxUserGroups           int
+	DiscoverMinMembers      int
+	IPBanThreshold          int
+	IPBanWindow             time.Duration
+	IPBanSteps              []time.Duration
+	IPBanEscalationForget   time.Duration
+	AccountBanWindow        time.Duration
+	AccountBanDeletionCount int
 }
 
 func Load() (Config, error) {
@@ -104,6 +112,30 @@ func Load() (Config, error) {
 	if cfg.LowDiskMinFreeBytes, err = bytesValue("LOW_DISK_MIN_FREE_BYTES", 5*1024*1024*1024); err != nil {
 		return Config{}, err
 	}
+	if cfg.MaxUserGroups, err = positiveInt("MAX_USER_GROUPS", 3); err != nil {
+		return Config{}, err
+	}
+	if cfg.DiscoverMinMembers, err = positiveInt("DISCOVER_MIN_MEMBERS", 5); err != nil {
+		return Config{}, err
+	}
+	if cfg.IPBanThreshold, err = positiveInt("IP_BAN_THRESHOLD", 10); err != nil {
+		return Config{}, err
+	}
+	if cfg.IPBanWindow, err = duration("IP_BAN_WINDOW", "15m"); err != nil {
+		return Config{}, err
+	}
+	if cfg.IPBanSteps, err = durationList("IP_BAN_STEPS", "10s,1m,5m,24h"); err != nil {
+		return Config{}, err
+	}
+	if cfg.IPBanEscalationForget, err = duration("IP_BAN_ESCALATION_FORGET", "24h"); err != nil {
+		return Config{}, err
+	}
+	if cfg.AccountBanWindow, err = duration("ACCOUNT_BAN_WINDOW", "720h"); err != nil {
+		return Config{}, err
+	}
+	if cfg.AccountBanDeletionCount, err = positiveInt("ACCOUNT_BAN_DELETION_COUNT", 5); err != nil {
+		return Config{}, err
+	}
 	cfg.GroupCleanupDryRun = boolValue("GROUP_CLEANUP_DRY_RUN", true)
 	cfg.SessionCookieSecure = boolValue("SESSION_COOKIE_SECURE", false)
 	for _, origin := range strings.Split(getenv("CORS_ALLOWED_ORIGINS", "*"), ",") {
@@ -133,6 +165,24 @@ func duration(name, fallback string) (time.Duration, error) {
 		return 0, fmt.Errorf("%s must be a positive duration", name)
 	}
 	return d, nil
+}
+
+func durationList(name, fallback string) ([]time.Duration, error) {
+	var steps []time.Duration
+	for _, part := range strings.Split(getenv(name, fallback), ",") {
+		if part = strings.TrimSpace(part); part == "" {
+			continue
+		}
+		d, err := time.ParseDuration(part)
+		if err != nil || d <= 0 {
+			return nil, fmt.Errorf("%s must be a comma-separated list of positive durations", name)
+		}
+		steps = append(steps, d)
+	}
+	if len(steps) == 0 {
+		return nil, fmt.Errorf("%s must contain at least one duration", name)
+	}
+	return steps, nil
 }
 
 func positiveInt(name string, fallback int) (int, error) {

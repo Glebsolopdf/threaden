@@ -180,6 +180,19 @@ func (s *Service) DeleteUser(ctx context.Context, user model.User) error {
 	return translateStoreError(s.store.DeleteUser(ctx, user.ID))
 }
 
+func (s *Service) CleanupBannedUser(ctx context.Context, user model.User) error {
+	roomNames, err := s.store.CleanupBannedUser(ctx, user.ID, s.now().UTC(), 100)
+	if err != nil {
+		return err
+	}
+	for _, roomName := range roomNames {
+		if err := s.voice.RemoveParticipant(ctx, roomName, user.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func emailName(email string) string {
 	for i, r := range email {
 		if r == '@' && i > 0 {

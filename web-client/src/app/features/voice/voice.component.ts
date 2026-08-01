@@ -1,16 +1,18 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { GroupsStore } from '../../core/events/groups.store';
 import { NotificationStore } from '../../core/notifications/notification.store';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { VoiceService, type VoiceParticipant } from '../../core/voice/voice.service';
+import { SCREEN_SHARE_MODE_LABELS, type ScreenShareMode } from '../../core/voice/screen-share/screen-share.models';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
+import { ScreenShareCardsComponent } from './screen-share-cards/screen-share-cards.component';
 
 @Component({
   selector: 'app-voice',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, AvatarComponent],
+  imports: [ReactiveFormsModule, RouterLink, AvatarComponent, ScreenShareCardsComponent],
   template: `
     @if (!voice.activeRoom() && !temporaryCode() && !voiceRoomId()) {
       <section class="route-page voice-room voice-room--join">
@@ -40,7 +42,8 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
           <button class="voice-room__leave" type="button" [disabled]="pending()" (click)="leave()"><img src="/exit.svg" alt=""><span>Выйти</span></button>
         </header>
 
-        <div class="voice-room__content">
+        <div class="voice-room__content" [class.voice-room__content--sharing]="screenShares().length > 0">
+          @if (screenShares().length) { <app-screen-share-cards [shares]="screenShares()" /> }
           <section class="voice-room__people" aria-label="Участники голосовой комнаты">
             <ul class="voice-participants">
               @for (participant of voice.participants(); track participant.identity) {
@@ -54,8 +57,11 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
           </section>
           <section class="voice-room__controls" aria-label="Управление голосовой комнатой">
             <button class="voice-room__icon-button" type="button" [disabled]="pending() || voice.status() !== 'connected'" [attr.aria-pressed]="voice.microphoneEnabled()" [attr.aria-label]="voice.microphoneEnabled() ? 'Выключить микрофон' : 'Включить микрофон'" (click)="toggleMic()"><img [src]="voice.microphoneEnabled() ? '/microphone-on.svg' : '/microphone-off.svg'" alt=""></button>
-            @if (voice.audioBlocked()) { <button type="button" (click)="enableAudio()">Включить звук</button> }
             <button class="voice-room__icon-button" type="button" [disabled]="pending() || voice.status() !== 'connected'" aria-label="Настройки устройств" [attr.aria-expanded]="deviceMenuOpen()" (click)="toggleDeviceMenu()"><img src="/settings-icon.svg" alt=""></button>
+            <div class="screen-share-control">
+              <button class="voice-room__icon-button" type="button" aria-label="Выбрать качество демонстрации" [attr.aria-expanded]="screenShareMenuOpen()" [disabled]="voice.screenShare.isTransitioning() || voice.status() !== 'connected'" (click)="screenShareMenuOpen.update((open) => !open)"><img src="/screen-share.svg" alt=""></button>
+              @if (screenShareMenuOpen()) { <div class="screen-share-mode-menu" role="menu">@for (mode of screenShareModes; track mode) { <button type="button" role="menuitemradio" [attr.aria-checked]="voice.screenShare.selectedMode() === mode" (click)="selectScreenShareMode(mode)">{{ screenShareLabels[mode] }}</button> } <label class="screen-share-mode-menu__audio"><input type="checkbox" [checked]="voice.screenShare.includeSystemAudio()" [disabled]="voice.screenShare.isActive()" (change)="voice.screenShare.includeSystemAudio.set($any($event.target).checked)">Демонстрировать звук</label> @if (voice.screenShare.isActive()) { <button type="button" role="menuitem" (click)="stopScreenShare()">Остановить показ</button> }</div> }
+            </div>
             @if (deviceMenuOpen()) {
               <div class="voice-device-menu">
                 <label>Микрофон<select [value]="preferences.audio().inputDeviceId" (change)="selectInput($any($event.target).value)"><option value="">Системный микрофон</option>@for (device of voice.inputDevices(); track device.deviceId) { <option [value]="device.deviceId">{{ device.label || 'Микрофон' }}</option> }</select></label>
@@ -66,10 +72,19 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
               </div>
             }
           </section>
+          @if (voice.screenShare.error(); as screenError) { <p class="screen-share-error" role="alert">{{ screenError.message }}</p> }
         </div>
       </section>
     } @else {
-      <div class="page-loading">Подключение к голосовой комнате…</div>
+      <section class="voice-connect" aria-live="polite" aria-busy="true">
+        <p class="voice-connect__copy">
+          <strong>Секунду</strong>
+          <span aria-hidden="true">
+            <i></i><i></i><i></i>
+          </span>
+        </p>
+        <small>{{ temporaryCode() ? 'Входим во временную комнату' : 'Подключаем голосовую комнату' }}</small>
+      </section>
     }
   `,
 })
@@ -84,6 +99,13 @@ export class VoiceComponent {
   private readonly router = inject(Router);
   protected readonly pending = signal(false);
   protected readonly deviceMenuOpen = signal(false);
+  protected readonly screenShareMenuOpen = signal(false);
+  protected readonly screenShareModes: ScreenShareMode[] = ['quality', 'balanced', 'smooth'];
+  protected readonly screenShareLabels = SCREEN_SHARE_MODE_LABELS;
+  protected readonly screenShares = computed(() => {
+    const local = this.voice.screenShare.localPreview();
+    return local ? [local, ...this.voice.screenShare.remoteShares()] : this.voice.screenShare.remoteShares();
+  });
   private loadedKey = '';
 
   protected readonly joinForm = new FormGroup({
@@ -157,7 +179,6 @@ export class VoiceComponent {
     try { await this.voice.toggleMicrophone(); }
     catch (error) { this.notifications.error(error, 'Не удалось изменить состояние микрофона'); }
   }
-  protected async enableAudio(): Promise<void> { try { await this.voice.startAudio(); } catch (error) { this.notifications.error(error, 'Не удалось включить звук'); } }
   protected async toggleDeviceMenu(): Promise<void> {
     this.deviceMenuOpen.update((value) => !value);
     if (this.deviceMenuOpen()) await this.voice.loadDevices().catch((error) => this.notifications.error(error, 'Не удалось получить список устройств'));
@@ -165,6 +186,21 @@ export class VoiceComponent {
   protected async selectInput(id: string): Promise<void> { try { await this.voice.selectInputDevice(id); } catch (error) { this.notifications.error(error, 'Не удалось выбрать микрофон'); } }
   protected async selectOutput(id: string): Promise<void> { try { await this.voice.selectOutputDevice(id); } catch (error) { this.notifications.error(error, 'Не удалось выбрать динамики'); } }
   protected async testMicrophone(): Promise<void> { try { await this.voice.testMicrophone(); this.notifications.success('Микрофон доступен'); } catch (error) { this.notifications.error(error, 'Не удалось проверить микрофон'); } }
+  protected async selectScreenShareMode(mode: ScreenShareMode): Promise<void> {
+    this.screenShareMenuOpen.set(false);
+    try {
+      await this.voice.changeScreenShareMode(mode);
+      if (this.voice.screenShare.includeSystemAudio() && !this.voice.screenShare.localPreview()?.hasAudio) {
+        this.notifications.neutral('Браузер начал демонстрацию без аудиотрека. В picker нужно выбрать вкладку/экран с доступным звуком и включить системный звук.');
+      }
+    }
+    catch (error) { this.notifications.error(error, this.voice.screenShare.error()?.message || 'Не удалось изменить режим демонстрации'); }
+  }
+  protected async stopScreenShare(): Promise<void> {
+    this.screenShareMenuOpen.set(false);
+    try { await this.voice.stopScreenShare(); }
+    catch (error) { this.notifications.error(error, 'Не удалось остановить демонстрацию экрана'); }
+  }
   protected async copyCode(code: string): Promise<void> { try { await navigator.clipboard.writeText(code); this.notifications.success('Код скопирован'); } catch { this.notifications.error('Не удалось скопировать код'); } }
 
   protected avatarColor(participant: VoiceParticipant): string {

@@ -1,5 +1,7 @@
 # Threaden Angular web client
 
+Версия: 0.3.3
+
 Веб-клиент переписан с Vanilla TypeScript/Vite на Angular. Серверные контракты не изменены: приложение продолжает использовать Go API, HttpOnly cookie, SSE `/v1/events` и LiveKit.
 
 ## Стек

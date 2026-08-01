@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"voice-rooms/internal/store/rate"
 	"voice-rooms/internal/store/schema"
 
 	_ "modernc.org/sqlite"
@@ -17,14 +18,16 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("not found")
-	ErrConflict  = errors.New("conflict")
-	ErrForbidden = errors.New("forbidden")
-	ErrRoomFull  = errors.New("room full")
+	ErrNotFound   = errors.New("not found")
+	ErrConflict   = errors.New("conflict")
+	ErrForbidden  = errors.New("forbidden")
+	ErrRoomFull   = errors.New("room full")
+	ErrGroupLimit = errors.New("group limit reached")
 )
 
 type Store struct {
 	db *sql.DB
+	*rate.Store
 }
 
 func Open(path string) (*Store, error) {
@@ -49,7 +52,7 @@ func Open(path string) (*Store, error) {
 	// ponytail: one connection makes SQLite write ordering explicit; raise this only
 	// after measured contention warrants per-connection PRAGMA management.
 	db.SetMaxOpenConns(1)
-	s := &Store{db: db}
+	s := &Store{db: db, Store: rate.New(db)}
 	if err := s.migrate(context.Background()); err != nil {
 		db.Close()
 		return nil, err
@@ -162,69 +165,15 @@ func (s *Store) MigrationVersion() (int, error) {
 	return version, err
 }
 
-func (s *Store) TakeRateLimit(
-	ctx context.Context,
-	key string,
-	now time.Time,
-	capacity int,
-	refillPerSecond float64,
-	ttl time.Duration,
-) (bool, time.Duration, error) {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return false, 0, fmt.Errorf("begin rate limit: %w", err)
-	}
-	defer tx.Rollback()
-	nowUnix := now.Unix()
-	_, _ = tx.ExecContext(ctx, `DELETE FROM rate_limit_buckets WHERE expires_at <= ?`, nowUnix)
-	var tokens float64
-	var updated int64
-	err = tx.QueryRowContext(ctx, `SELECT tokens, updated_at FROM rate_limit_buckets WHERE key = ?`, key).
-		Scan(&tokens, &updated)
-	if errors.Is(err, sql.ErrNoRows) {
-		tokens = float64(capacity)
-		updated = nowUnix
-	} else if err != nil {
-		return false, 0, fmt.Errorf("read rate bucket: %w", err)
-	}
-	if elapsed := nowUnix - updated; elapsed > 0 {
-		tokens = min(float64(capacity), tokens+float64(elapsed)*refillPerSecond)
-	}
-	if tokens < 1 {
-		wait := time.Duration((1-tokens)/refillPerSecond) * time.Second
-		if wait < time.Second {
-			wait = time.Second
-		}
-		if err := upsertRateBucket(ctx, tx, key, tokens, nowUnix, now.Add(ttl).Unix()); err != nil {
-			return false, 0, err
-		}
-		return false, wait, tx.Commit()
-	}
-	tokens--
-	if err := upsertRateBucket(ctx, tx, key, tokens, nowUnix, now.Add(ttl).Unix()); err != nil {
-		return false, 0, err
-	}
-	return true, 0, tx.Commit()
-}
-
-func upsertRateBucket(ctx context.Context, tx *sql.Tx, key string, tokens float64, updated, expires int64) error {
-	_, err := tx.ExecContext(ctx, `
-		INSERT INTO rate_limit_buckets(key, tokens, updated_at, expires_at)
-		VALUES(?, ?, ?, ?)
-		ON CONFLICT(key) DO UPDATE SET
-			tokens=excluded.tokens,
-			updated_at=excluded.updated_at,
-			expires_at=excluded.expires_at`,
-		key, tokens, updated, expires)
-	if err != nil {
-		return fmt.Errorf("write rate bucket: %w", err)
-	}
-	return nil
-}
-
 func (s *Store) TouchUser(ctx context.Context, userID string, now time.Time) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE users SET last_seen_at = ? WHERE id = ?`, now.Unix(), userID)
 	return err
+}
+
+func (s *Store) CountUserGroups(ctx context.Context, userID string) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM groups WHERE owner_id=?`, userID).Scan(&n)
+	return n, err
 }
 
 func (s *Store) DeleteInactiveUsers(ctx context.Context, cutoff time.Time) error {
@@ -239,6 +188,105 @@ func (s *Store) DeleteInactiveUsersBatch(ctx context.Context, cutoff time.Time, 
 	}
 	count, _ := result.RowsAffected()
 	return int(count), nil
+}
+
+func (s *Store) CleanupBannedUser(ctx context.Context, userID string, now time.Time, messageLimit int) ([]string, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin banned-user cleanup: %w", err)
+	}
+	defer tx.Rollback()
+	roomNames, err := collectIDs(tx.QueryContext(ctx, `SELECT room_code FROM room_members WHERE user_id = ?`, userID))
+	if err != nil {
+		return nil, fmt.Errorf("list temporary room memberships: %w", err)
+	}
+	groupVoiceNames, err := collectIDs(tx.QueryContext(ctx, `SELECT 'group:' || vr.group_id || ':' || vr.id FROM group_voice_members vm JOIN group_voice_rooms vr ON vr.id = vm.voice_room_id WHERE vm.user_id = ?`, userID))
+	if err != nil {
+		return nil, fmt.Errorf("list group voice memberships: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM room_members WHERE user_id = ?`, userID); err != nil {
+		return nil, fmt.Errorf("delete temporary room memberships: %w", err)
+	}
+	if len(roomNames) > 0 {
+		if _, err = tx.ExecContext(ctx, `UPDATE rooms SET empty_since_at = ? WHERE code IN (SELECT code FROM rooms WHERE code IN (`+placeholders(len(roomNames))+`) AND NOT EXISTS (SELECT 1 FROM room_members rm WHERE rm.room_code = rooms.code))`, prependArgs(now.Unix(), roomNames)...); err != nil {
+			return nil, fmt.Errorf("mark temporary rooms empty: %w", err)
+		}
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM group_voice_members WHERE user_id = ?`, userID); err != nil {
+		return nil, fmt.Errorf("delete group voice memberships: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM group_messages WHERE id IN (SELECT id FROM group_messages WHERE author_id = ? ORDER BY created_at DESC LIMIT ?)`, userID, messageLimit); err != nil {
+		return nil, fmt.Errorf("delete recent user messages: %w", err)
+	}
+	roomNames = append(roomNames, groupVoiceNames...)
+	return roomNames, tx.Commit()
+}
+
+func (s *Store) DeleteRecentMessagesByAuthor(ctx context.Context, groupID, userID string, since time.Time, limit int) (int, error) {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM group_messages WHERE id IN (SELECT id FROM group_messages WHERE group_id = ? AND author_id = ? AND created_at >= ? ORDER BY created_at DESC LIMIT ?)`, groupID, userID, since.Unix(), limit)
+	if err != nil {
+		return 0, fmt.Errorf("delete recent messages by author: %w", err)
+	}
+	count, _ := result.RowsAffected()
+	return int(count), nil
+}
+
+func (s *Store) DeleteRecentRepeatedMessages(ctx context.Context, groupID, userID, body string, since time.Time, limit int) (int, error) {
+	result, err := s.db.ExecContext(ctx, `DELETE FROM group_messages WHERE id IN (SELECT id FROM group_messages WHERE group_id = ? AND author_id = ? AND created_at >= ? AND lower(trim(body)) = ? ORDER BY created_at DESC LIMIT ?)`, groupID, userID, since.Unix(), body, limit)
+	if err != nil {
+		return 0, fmt.Errorf("delete repeated messages: %w", err)
+	}
+	count, _ := result.RowsAffected()
+	return int(count), nil
+}
+
+func (s *Store) CreateGroupSpamWarning(ctx context.Context, groupID, reason string, now time.Time, messageCount, userCount int, cooldown, window time.Duration) (int, bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, false, fmt.Errorf("begin group spam warning: %w", err)
+	}
+	defer tx.Rollback()
+	_, _ = tx.ExecContext(ctx, `DELETE FROM group_spam_warnings WHERE created_at < ?`, now.Add(-window).Unix())
+	var recent int
+	if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM group_spam_warnings WHERE group_id = ? AND created_at > ?`, groupID, now.Add(-cooldown).Unix()).Scan(&recent); err != nil {
+		return 0, false, fmt.Errorf("count recent group spam warnings: %w", err)
+	}
+	if recent > 0 {
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM group_spam_warnings WHERE group_id = ? AND created_at >= ?`, groupID, now.Add(-window).Unix()).Scan(&recent); err != nil {
+			return 0, false, fmt.Errorf("count group spam warnings: %w", err)
+		}
+		return recent, false, tx.Commit()
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO group_spam_warnings(group_id,reason,message_count,user_count,created_at) VALUES(?,?,?,?,?)`, groupID, reason, messageCount, userCount, now.Unix()); err != nil {
+		return 0, false, fmt.Errorf("insert group spam warning: %w", err)
+	}
+	if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM group_spam_warnings WHERE group_id = ? AND created_at >= ?`, groupID, now.Add(-window).Unix()).Scan(&recent); err != nil {
+		return 0, false, fmt.Errorf("count group spam warnings: %w", err)
+	}
+	return recent, true, tx.Commit()
+}
+
+func collectIDs(rows *sql.Rows, err error) ([]string, error) {
+	if err != nil {
+		return nil, err
+	}
+	return scanIDs(rows)
+}
+
+func placeholders(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	return strings.TrimRight(strings.Repeat("?,", n), ",")
+}
+
+func prependArgs(first any, rest []string) []any {
+	args := make([]any, 0, len(rest)+1)
+	args = append(args, first)
+	for _, item := range rest {
+		args = append(args, item)
+	}
+	return args
 }
 
 func isConstraint(err error) bool {

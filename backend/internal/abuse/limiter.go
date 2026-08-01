@@ -6,12 +6,14 @@ import (
 	"time"
 )
 
-type BucketStore interface {
+type LimiterStore interface {
 	TakeRateLimit(context.Context, string, time.Time, int, float64, time.Duration) (bool, time.Duration, error)
+	NoteViolation(context.Context, string, time.Time, time.Duration, int, []time.Duration, time.Duration) (int, time.Time, error)
+	IPBanActive(context.Context, string, time.Time) (bool, time.Time, error)
 }
 
 type Limiter struct {
-	store BucketStore
+	store LimiterStore
 	cfg   Config
 	now   func() time.Time
 }
@@ -22,7 +24,14 @@ type Decision struct {
 	Key        string
 }
 
-func NewLimiter(store BucketStore, cfg Config) *Limiter {
+// BanResult describes a newly created ban: its escalation level (1-based) and
+// when it expires. A zero Level means no ban was created.
+type BanResult struct {
+	Level int
+	Until time.Time
+}
+
+func NewLimiter(store LimiterStore, cfg Config) *Limiter {
 	return &Limiter{store: store, cfg: cfg, now: time.Now}
 }
 
@@ -36,6 +45,23 @@ func (l *Limiter) Allow(ctx context.Context, scope, subject string, limit Limit)
 	}
 	return Decision{Allowed: ok, RetryAfter: retry, Key: key}, nil
 }
+
+func (l *Limiter) NoteViolation(ctx context.Context, ip string) (BanResult, error) {
+	level, until, err := l.store.NoteViolation(
+		ctx, banKey(ip), l.now().UTC(), l.cfg.IPBanWindow, l.cfg.IPBanThreshold,
+		l.cfg.IPBanSteps, l.cfg.IPBanEscalationForget,
+	)
+	if err != nil {
+		return BanResult{}, err
+	}
+	return BanResult{Level: level, Until: until}, nil
+}
+
+func (l *Limiter) Banned(ctx context.Context, ip string) (bool, time.Time, error) {
+	return l.store.IPBanActive(ctx, banKey(ip), l.now().UTC())
+}
+
+func banKey(ip string) string { return "ip:" + ip }
 
 func EndpointLimit(cfg Config, route string) Limit {
 	switch route {

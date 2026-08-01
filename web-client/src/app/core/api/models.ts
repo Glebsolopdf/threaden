@@ -82,6 +82,14 @@ export interface GroupInfo {
 export interface GroupProfile {
   group: GroupInfo;
   members: GroupMember[];
+  spam_warnings?: GroupSpamWarning[];
+}
+
+export interface GroupSpamWarning {
+  reason: string;
+  message_count: number;
+  user_count: number;
+  created_at: string;
 }
 
 export interface GroupVoiceJoin {

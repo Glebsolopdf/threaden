@@ -2,7 +2,7 @@ package schema
 
 import "fmt"
 
-const LatestVersion = 10
+const LatestVersion = 13
 
 func Migration(version int) (string, error) {
 	switch version {
@@ -26,6 +26,12 @@ func Migration(version int) (string, error) {
 		return migration9, nil
 	case 10:
 		return migration10, nil
+	case 11:
+		return migration11, nil
+	case 12:
+		return migration12, nil
+	case 13:
+		return migration13, nil
 	default:
 		return "", fmt.Errorf("unknown migration version %d", version)
 	}
@@ -239,4 +245,53 @@ const migration9 = `
 const migration10 = `
 	ALTER TABLE sessions ADD COLUMN reviewed_at INTEGER;
 	UPDATE sessions SET reviewed_at = created_at WHERE reviewed_at IS NULL;
+`
+
+const migration11 = `
+	CREATE TABLE IF NOT EXISTS ip_bans (
+		key TEXT PRIMARY KEY,
+		violations INTEGER NOT NULL,
+		window_start INTEGER NOT NULL,
+		until INTEGER NOT NULL,
+		updated_at INTEGER NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS ip_bans_until_idx ON ip_bans(until);
+`
+
+const migration12 = `
+	-- Some early v11 deployments recorded the migration before the ip_bans table
+	-- was present. Keep this recovery migration safe for those databases.
+	CREATE TABLE IF NOT EXISTS ip_bans (
+		key TEXT PRIMARY KEY,
+		violations INTEGER NOT NULL,
+		window_start INTEGER NOT NULL,
+		until INTEGER NOT NULL,
+		updated_at INTEGER NOT NULL
+	);
+
+	ALTER TABLE ip_bans ADD COLUMN ban_count INTEGER NOT NULL DEFAULT 0;
+	CREATE INDEX IF NOT EXISTS ip_bans_until_idx ON ip_bans(until);
+
+	CREATE TABLE IF NOT EXISTS account_bans (
+		user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		created_at INTEGER NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS account_bans_user_created_idx ON account_bans(user_id, created_at);
+	CREATE INDEX IF NOT EXISTS account_bans_created_idx ON account_bans(created_at);
+`
+
+const migration13 = `
+	CREATE TABLE IF NOT EXISTS group_spam_warnings (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+		reason TEXT NOT NULL,
+		message_count INTEGER NOT NULL,
+		user_count INTEGER NOT NULL,
+		created_at INTEGER NOT NULL
+	);
+
+	CREATE INDEX IF NOT EXISTS group_spam_warnings_group_created_idx
+		ON group_spam_warnings(group_id, created_at);
 `

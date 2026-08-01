@@ -1,11 +1,14 @@
 package httpapi
 
 import (
-	"github.com/go-chi/chi/v5"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+
 	appgroups "voice-rooms/internal/groups"
+	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
 )
 
@@ -230,7 +233,7 @@ func (h groupHandler) events(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case e := <-events:
-			_, _ = w.Write([]byte("event: " + e.Type + "\ndata: " + string(appgroups.Encode(e)) + "\n\n"))
+			_, _ = w.Write([]byte("event: " + e.Type + "\ndata: " + string(hub.Encode(e)) + "\n\n"))
 			flusher.Flush()
 		case <-ticker.C:
 			_, _ = w.Write([]byte(": ping\n\n"))
@@ -263,8 +266,12 @@ func writeGroupError(w http.ResponseWriter, r *http.Request, e error) {
 		writeError(w, r, http.StatusForbidden, "forbidden", "group membership is required")
 	case appgroups.Is(e, appgroups.ErrInvalid):
 		writeError(w, r, http.StatusBadRequest, "validation_error", "group input is invalid")
+	case appgroups.Is(e, appgroups.ErrWarned):
+		writeError(w, r, http.StatusConflict, "spam_warning", "Не надо, пожалуйста")
 	case appgroups.Is(e, appgroups.ErrLimited):
 		writeError(w, r, http.StatusTooManyRequests, "rate_limited", "too many requests")
+	case appgroups.Is(e, appgroups.ErrGroupLimit):
+		writeError(w, r, http.StatusConflict, "group_limit", "user can own at most 3 groups")
 	case appgroups.Is(e, appgroups.ErrVoiceLimit):
 		writeError(w, r, http.StatusConflict, "voice_room_limit", "group can have at most 5 voice rooms")
 	default:

@@ -11,12 +11,21 @@ import (
 
 type NewGroup struct{ ID, Visibility, OwnerID, Name, Avatar, InviteToken string }
 
-func (s *Store) CreateGroup(ctx context.Context, in NewGroup, now time.Time) error {
+func (s *Store) CreateGroup(ctx context.Context, in NewGroup, now time.Time, maxOwned int) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin group: %w", err)
 	}
 	defer tx.Rollback()
+	if maxOwned > 0 {
+		var owned int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM groups WHERE owner_id=?`, in.OwnerID).Scan(&owned); err != nil {
+			return fmt.Errorf("count owned groups: %w", err)
+		}
+		if owned >= maxOwned {
+			return ErrGroupLimit
+		}
+	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO groups(id,visibility,owner_id,name,avatar,invite_token,created_at,last_activity_at) VALUES(?,?,?,?,?,?,?,?)`, in.ID, in.Visibility, in.OwnerID, in.Name, in.Avatar, in.InviteToken, now.Unix(), now.Unix())
 	if err != nil {
 		if isConstraint(err) {
@@ -100,8 +109,8 @@ func (s *Store) GroupByInvite(ctx context.Context, token string) (model.Group, e
 func (s *Store) UserGroups(ctx context.Context, userID string) ([]model.Group, error) {
 	return s.listGroups(ctx, `JOIN group_members own ON own.group_id=g.id WHERE own.user_id=? ORDER BY g.last_activity_at DESC`, userID)
 }
-func (s *Store) DiscoverGroups(ctx context.Context, q string, limit, offset int) ([]model.Group, error) {
-	return s.listGroups(ctx, `WHERE g.visibility='public' AND lower(g.name) LIKE ? ORDER BY g.last_activity_at DESC LIMIT ? OFFSET ?`, "%"+strings.ToLower(q)+"%", limit, offset)
+func (s *Store) DiscoverGroups(ctx context.Context, q string, minMembers, limit, offset int) ([]model.Group, error) {
+	return s.listGroups(ctx, `WHERE g.visibility='public' AND lower(g.name) LIKE ? AND (SELECT COUNT(*) FROM group_members gm WHERE gm.group_id=g.id) >= ? ORDER BY g.last_activity_at DESC LIMIT ? OFFSET ?`, "%"+strings.ToLower(q)+"%", minMembers, limit, offset)
 }
 func (s *Store) listGroups(ctx context.Context, tail string, args ...any) ([]model.Group, error) {
 	rows, e := s.db.QueryContext(ctx, `SELECT `+groupFields+` FROM groups g JOIN users u ON u.id=g.owner_id `+tail, args...)

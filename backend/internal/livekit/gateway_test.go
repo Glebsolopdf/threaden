@@ -33,8 +33,21 @@ func TestJoinTokenClaims(t *testing.T) {
 		t.Fatalf("wrong room grants: %+v", video)
 	}
 	sources := video.GetCanPublishSources()
-	if len(sources) != 1 || sources[0] != livekitproto.TrackSource_MICROPHONE {
-		t.Fatalf("token must publish microphone only: %v", sources)
+	wantSources := map[livekitproto.TrackSource]bool{
+		livekitproto.TrackSource_MICROPHONE:         true,
+		livekitproto.TrackSource_SCREEN_SHARE:       true,
+		livekitproto.TrackSource_SCREEN_SHARE_AUDIO: true,
+	}
+	if len(sources) != len(wantSources) {
+		t.Fatalf("unexpected publish sources: %v", sources)
+	}
+	for _, source := range sources {
+		if !wantSources[source] {
+			t.Fatalf("unexpected publish source: %v", source)
+		}
+	}
+	if video.RoomAdmin || video.RoomCreate || video.RoomList || video.RoomRecord || video.IngressAdmin || video.Agent || video.Hidden || video.Recorder {
+		t.Fatalf("token contains an administrative grant: %+v", video)
 	}
 	remaining := time.Until(registered.ExpiresAt.Time)
 	if remaining < 4*time.Minute || remaining > 5*time.Minute {

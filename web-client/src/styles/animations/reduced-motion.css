@@ -11,7 +11,9 @@
   .chat-message[data-animate],
   .mobile-sidebar-button,
   .rail,
-  .list-panel {
+  .list-panel,
+  .screen-share-cards,
+  .screen-share-card {
     transform: none !important;
   }
 }

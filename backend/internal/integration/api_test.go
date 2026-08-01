@@ -18,25 +18,43 @@ import (
 	"voice-rooms/internal/abuse"
 	"voice-rooms/internal/app"
 	appgroups "voice-rooms/internal/groups"
+	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/httpapi"
 	"voice-rooms/internal/model"
 	"voice-rooms/internal/store"
 )
 
-type voiceFake struct{}
+type voiceFake struct{ state *voiceFakeState }
+type voiceFakeState struct {
+	mu      sync.Mutex
+	removed []string
+}
 
+func newVoiceFake() voiceFake { return voiceFake{state: &voiceFakeState{}} }
 func (voiceFake) PublicURL() string { return "ws://voice.test" }
 func (voiceFake) JoinToken(string, model.User, time.Duration) (string, error) {
 	return "signed-livekit-jwt", nil
 }
-func (voiceFake) DeleteRoom(context.Context, string) error                { return nil }
-func (voiceFake) RemoveParticipant(context.Context, string, string) error { return nil }
+func (voiceFake) DeleteRoom(context.Context, string) error { return nil }
+func (f voiceFake) RemoveParticipant(_ context.Context, roomName, identity string) error {
+	f.state.mu.Lock()
+	defer f.state.mu.Unlock()
+	f.state.removed = append(f.state.removed, roomName+":"+identity)
+	return nil
+}
+func (f voiceFake) removedParticipants() []string {
+	f.state.mu.Lock()
+	defer f.state.mu.Unlock()
+	out := make([]string, len(f.state.removed))
+	copy(out, f.state.removed)
+	return out
+}
 
 type testAPI struct {
 	server *httptest.Server
 	store  *store.Store
+	voice  voiceFake
 }
-
 func newAPI(t *testing.T, maxMembers int) *testAPI {
 	t.Helper()
 	st, err := store.Open(filepath.Join(t.TempDir(), "integration.db"))
@@ -44,8 +62,9 @@ func newAPI(t *testing.T, maxMembers int) *testAPI {
 		t.Fatal(err)
 	}
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	service := app.New(st, voiceFake{}, time.Hour, 15*time.Minute, maxMembers, logger)
-	groupService := appgroups.New(st, voiceFake{}, appgroups.NewHub())
+	voice := newVoiceFake()
+	service := app.New(st, voice, time.Hour, 15*time.Minute, maxMembers, logger)
+	groupService := appgroups.New(st, voice, hub.New())
 	security := abuse.DefaultConfig()
 	security.GroupCreateLimit = abuse.Limit{Capacity: 100, Refill: time.Hour}
 	security.ProfileUpdateLimit = abuse.Limit{Capacity: 100, Refill: time.Hour}
@@ -54,20 +73,13 @@ func newAPI(t *testing.T, maxMembers int) *testAPI {
 		server.Close()
 		st.Close()
 	})
-	return &testAPI{server: server, store: st}
+	return &testAPI{server: server, store: st, voice: voice}
 }
-
 func (a *testAPI) request(t *testing.T, method, path, token string, body []byte) (int, []byte, http.Header) {
 	t.Helper()
 	return a.requestWithType(t, method, path, token, body, "application/json")
 }
-
-func (a *testAPI) requestWithType(
-	t *testing.T,
-	method, path, token string,
-	body []byte,
-	contentType string,
-) (int, []byte, http.Header) {
+func (a *testAPI) requestWithType(t *testing.T, method, path, token string, body []byte, contentType string) (int, []byte, http.Header) {
 	t.Helper()
 	req, err := http.NewRequest(method, a.server.URL+path, bytes.NewReader(body))
 	if err != nil {
@@ -90,7 +102,6 @@ func (a *testAPI) requestWithType(
 	}
 	return resp.StatusCode, data, resp.Header
 }
-
 func (a *testAPI) user(t *testing.T, name string) string {
 	t.Helper()
 	status, body, headers := a.request(t, http.MethodPost, "/v1/auth/register", "", []byte(
@@ -104,7 +115,6 @@ func (a *testAPI) user(t *testing.T, name string) string {
 	}
 	return sessionTokenFromHeaders(t, headers)
 }
-
 func TestAPILifecycleValidationAndCORS(t *testing.T) {
 	api := newAPI(t, 2)
 	status, body, _ := api.request(t, http.MethodPost, "/v1/auth/register", "", []byte(
@@ -211,9 +221,7 @@ func TestDeleteProfile(t *testing.T) {
 
 func login(t *testing.T, api *testAPI, email string) string {
 	t.Helper()
-	status, body, headers := api.request(t, http.MethodPost, "/v1/auth/login", "", []byte(
-		fmt.Sprintf(`{"email":%q,"password":"password123"}`, email),
-	))
+	status, body, headers := api.request(t, http.MethodPost, "/v1/auth/login", "", []byte(fmt.Sprintf(`{"email":%q,"password":"password123"}`, email)))
 	if status != http.StatusOK {
 		t.Fatalf("login: %d %s", status, body)
 	}
@@ -227,19 +235,11 @@ func updateProfile(t *testing.T, api *testAPI, token, name string, avatar []byte
 	t.Helper()
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	if err := writer.WriteField("display_name", name); err != nil {
-		t.Fatal(err)
-	}
+	if err := writer.WriteField("display_name", name); err != nil { t.Fatal(err) }
 	part, err := writer.CreateFormFile("avatar", "avatar.gif")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := part.Write(avatar); err != nil {
-		t.Fatal(err)
-	}
-	if err := writer.Close(); err != nil {
-		t.Fatal(err)
-	}
+	if err != nil { t.Fatal(err) }
+	if _, err := part.Write(avatar); err != nil { t.Fatal(err) }
+	if err := writer.Close(); err != nil { t.Fatal(err) }
 	return api.requestWithType(t, http.MethodPatch, "/v1/me", token, body.Bytes(), writer.FormDataContentType())
 }
 

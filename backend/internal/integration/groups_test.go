@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -14,17 +15,17 @@ import (
 func TestGroupsPrivacyInviteAndMessages(t *testing.T) {
 	api := newAPI(t, 4)
 	owner, member, stranger := api.user(t, "owner"), api.user(t, "member"), api.user(t, "stranger")
-	status, body, _ := api.request(t, http.MethodPost, "/v1/groups", owner, []byte(`{"name":"Public","visibility":"public"}`))
-	if status != http.StatusCreated {
-		t.Fatalf("create public: %d %s", status, body)
-	}
 	var public struct {
 		ID string `json:"id"`
 	}
-	if err := json.Unmarshal(body, &public); err != nil {
-		t.Fatal(err)
+	public.ID = createGroup(t, api, owner, "Public")
+	joiners := append([]string{member}, api.user(t, "discover-1"), api.user(t, "discover-2"), api.user(t, "discover-3"))
+	for _, token := range joiners {
+		if status, _, _ := api.request(t, http.MethodPost, "/v1/groups/"+public.ID+"/members", token, nil); status != http.StatusOK {
+			t.Fatalf("join public: %d", status)
+		}
 	}
-	status, body, _ = api.request(t, http.MethodGet, "/v1/discover/groups?q=pub", "", nil)
+	status, body, _ := api.request(t, http.MethodGet, "/v1/discover/groups?q=pub", "", nil)
 	if status != http.StatusOK || !bytes.Contains(body, []byte(public.ID)) {
 		t.Fatalf("discover: %d %s", status, body)
 	}
@@ -35,10 +36,6 @@ func TestGroupsPrivacyInviteAndMessages(t *testing.T) {
 	status, _, _ = api.request(t, http.MethodPost, "/v1/groups/"+public.ID+"/messages", stranger, []byte(`{"body":"blocked"}`))
 	if status != http.StatusForbidden {
 		t.Fatalf("outsider send: %d", status)
-	}
-	status, _, _ = api.request(t, http.MethodPost, "/v1/groups/"+public.ID+"/members", member, nil)
-	if status != http.StatusOK {
-		t.Fatalf("join public: %d", status)
 	}
 	status, body, _ = api.request(t, http.MethodPost, "/v1/groups/"+public.ID+"/messages", member, []byte(`{"body":"hello group"}`))
 	if status != http.StatusCreated || !bytes.Contains(body, []byte("hello group")) {
@@ -73,25 +70,19 @@ func TestGroupsPrivacyInviteAndMessages(t *testing.T) {
 func TestGroupProfileAndDeletion(t *testing.T) {
 	api := newAPI(t, 4)
 	owner, member, removable, stranger := api.user(t, "profile-owner"), api.user(t, "profile-member"), api.user(t, "profile-removable"), api.user(t, "profile-stranger")
-	status, body, _ := api.request(t, http.MethodPost, "/v1/groups", owner, []byte(`{"name":"Profile","visibility":"public"}`))
-	if status != http.StatusCreated {
-		t.Fatalf("create group: %d %s", status, body)
-	}
 	var group struct {
 		ID string `json:"id"`
 	}
-	if err := json.Unmarshal(body, &group); err != nil {
-		t.Fatal(err)
-	}
+	group.ID = createGroup(t, api, owner, "Profile")
 	ownerID := currentUserID(t, api, owner)
 	removableID := currentUserID(t, api, removable)
-	if status, _, _ = api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/members", member, nil); status != http.StatusOK {
+	if status, _, _ := api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/members", member, nil); status != http.StatusOK {
 		t.Fatalf("join member: %d", status)
 	}
-	if status, _, _ = api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/members", removable, nil); status != http.StatusOK {
+	if status, _, _ := api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/members", removable, nil); status != http.StatusOK {
 		t.Fatalf("join removable: %d", status)
 	}
-	status, body, _ = api.request(t, http.MethodGet, "/v1/groups/"+group.ID+"/profile", member, nil)
+	status, body, _ := api.request(t, http.MethodGet, "/v1/groups/"+group.ID+"/profile", member, nil)
 	if status != http.StatusOK || !bytes.Contains(body, []byte(`"role":"owner"`)) || !bytes.Contains(body, []byte(`"role":"member"`)) {
 		t.Fatalf("profile: %d %s", status, body)
 	}
@@ -165,10 +156,9 @@ func currentUserID(t *testing.T, api *testAPI, token string) string {
 	return user.ID
 }
 
-func TestMembershipEventsIncludePublicMemberDetails(t *testing.T) {
-	api := newAPI(t, 4)
-	owner, member := api.user(t, "events-owner"), api.user(t, "events-member")
-	status, body, _ := api.request(t, http.MethodPost, "/v1/groups", owner, []byte(`{"name":"Events","visibility":"public"}`))
+func createGroup(t *testing.T, api *testAPI, token, name string) string {
+	t.Helper()
+	status, body, _ := api.request(t, http.MethodPost, "/v1/groups", token, []byte(fmt.Sprintf(`{"name":%q,"visibility":"public"}`, name)))
 	if status != http.StatusCreated {
 		t.Fatalf("create group: %d %s", status, body)
 	}
@@ -178,6 +168,16 @@ func TestMembershipEventsIncludePublicMemberDetails(t *testing.T) {
 	if err := json.Unmarshal(body, &group); err != nil {
 		t.Fatal(err)
 	}
+	return group.ID
+}
+
+func TestMembershipEventsIncludePublicMemberDetails(t *testing.T) {
+	api := newAPI(t, 4)
+	owner, member := api.user(t, "events-owner"), api.user(t, "events-member")
+	var group struct {
+		ID string `json:"id"`
+	}
+	group.ID = createGroup(t, api, owner, "Events")
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api.server.URL+"/v1/events", nil)
@@ -234,29 +234,23 @@ func nextSSEEvent(t *testing.T, scanner *bufio.Scanner) (string, []byte) {
 func TestGroupVoiceRoomLimit(t *testing.T) {
 	api := newAPI(t, 4)
 	owner, member := api.user(t, "voice-limit-owner"), api.user(t, "voice-limit-member")
-	status, body, _ := api.request(t, http.MethodPost, "/v1/groups", owner, []byte(`{"name":"Voice Limit","visibility":"public"}`))
-	if status != http.StatusCreated {
-		t.Fatalf("create group: %d %s", status, body)
-	}
 	var group struct {
 		ID string `json:"id"`
 	}
-	if err := json.Unmarshal(body, &group); err != nil {
-		t.Fatal(err)
-	}
-	if status, _, _ = api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/members", member, nil); status != http.StatusOK {
+	group.ID = createGroup(t, api, owner, "Voice Limit")
+	if status, _, _ := api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/members", member, nil); status != http.StatusOK {
 		t.Fatalf("join member: %d", status)
 	}
-	if status, _, _ = api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/voice-rooms", member, []byte(`{"name":"Nope"}`)); status != http.StatusForbidden {
+	if status, _, _ := api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/voice-rooms", member, []byte(`{"name":"Nope"}`)); status != http.StatusForbidden {
 		t.Fatalf("member create voice room: %d", status)
 	}
 	for i := 1; i <= 5; i++ {
-		status, body, _ = api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/voice-rooms", owner, []byte(`{"name":"Room"}`))
+		status, body, _ := api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/voice-rooms", owner, []byte(`{"name":"Room"}`))
 		if status != http.StatusCreated {
 			t.Fatalf("create voice room %d: %d %s", i, status, body)
 		}
 	}
-	status, body, _ = api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/voice-rooms", owner, []byte(`{"name":"Overflow"}`))
+	status, body, _ := api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/voice-rooms", owner, []byte(`{"name":"Overflow"}`))
 	if status != http.StatusConflict || !bytes.Contains(body, []byte(`"voice_room_limit"`)) {
 		t.Fatalf("voice room limit: %d %s", status, body)
 	}
@@ -265,20 +259,14 @@ func TestGroupVoiceRoomLimit(t *testing.T) {
 func TestGroupVoiceRoomDeleteRequiresOwner(t *testing.T) {
 	api := newAPI(t, 4)
 	owner, member := api.user(t, "voice-delete-owner"), api.user(t, "voice-delete-member")
-	status, body, _ := api.request(t, http.MethodPost, "/v1/groups", owner, []byte(`{"name":"Voice Delete","visibility":"public"}`))
-	if status != http.StatusCreated {
-		t.Fatalf("create group: %d %s", status, body)
-	}
 	var group struct {
 		ID string `json:"id"`
 	}
-	if err := json.Unmarshal(body, &group); err != nil {
-		t.Fatal(err)
-	}
-	if status, _, _ = api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/members", member, nil); status != http.StatusOK {
+	group.ID = createGroup(t, api, owner, "Voice Delete")
+	if status, _, _ := api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/members", member, nil); status != http.StatusOK {
 		t.Fatalf("join member: %d", status)
 	}
-	status, body, _ = api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/voice-rooms", owner, []byte(`{"name":"General"}`))
+	status, body, _ := api.request(t, http.MethodPost, "/v1/groups/"+group.ID+"/voice-rooms", owner, []byte(`{"name":"General"}`))
 	if status != http.StatusCreated {
 		t.Fatalf("create voice room: %d %s", status, body)
 	}

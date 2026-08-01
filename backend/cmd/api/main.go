@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"voice-rooms/internal/abuse"
+	"voice-rooms/internal/antispam"
 	"voice-rooms/internal/app"
 	"voice-rooms/internal/config"
 	"voice-rooms/internal/disk"
 	appgroups "voice-rooms/internal/groups"
+	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/httpapi"
 	livekitgateway "voice-rooms/internal/livekit"
 	"voice-rooms/internal/store"
@@ -47,9 +49,16 @@ func main() {
 	security.MaxMessageRunes = cfg.MaxMessageRunes
 	security.MaxLinks = cfg.MaxMessageLinks
 	security.MaxMentions = cfg.MaxMessageMentions
+	security.IPBanThreshold = cfg.IPBanThreshold
+	security.IPBanWindow = cfg.IPBanWindow
+	security.IPBanSteps = cfg.IPBanSteps
+	security.IPBanEscalationForget = cfg.IPBanEscalationForget
+	security.AccountBanWindow = cfg.AccountBanWindow
+	security.AccountBanDeletionCount = cfg.AccountBanDeletionCount
 	limiter := abuse.NewLimiter(st, security)
-	groupService := appgroups.New(st, voice, appgroups.NewHub()).
-		WithMessageGuard(abuse.NewMessageGuard(limiter, st, security)).
+	groupService := appgroups.New(st, voice, hub.New()).
+		WithLimits(appgroups.Limits{MaxUserGroups: cfg.MaxUserGroups, DiscoverMinMembers: cfg.DiscoverMinMembers}).
+		WithMessageGuard(antispam.NewGuard(limiter, st, security)).
 		WithCleanup(appgroups.CleanupConfig{
 			InactiveAfter: cfg.InactiveGroupTTL,
 			DeleteGrace:   cfg.GroupDeleteGrace,

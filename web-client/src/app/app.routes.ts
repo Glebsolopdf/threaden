@@ -15,6 +15,11 @@ export const routes: Routes = [
     title: 'Регистрация · threaden',
   },
   {
+    path: 'blocked',
+    loadComponent: () => import('./features/blocked/blocked.component').then((m) => m.BlockedComponent),
+    title: 'Доступ ограничен · threaden',
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./features/shell/shell.component').then((m) => m.ShellComponent),

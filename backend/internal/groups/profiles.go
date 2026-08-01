@@ -2,13 +2,16 @@ package groups
 
 import (
 	"context"
+	"time"
 
+	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
 )
 
 type Profile struct {
-	Group   model.Group         `json:"group"`
-	Members []model.GroupMember `json:"members"`
+	Group        model.Group              `json:"group"`
+	Members      []model.GroupMember      `json:"members"`
+	SpamWarnings []model.GroupSpamWarning `json:"spam_warnings,omitempty"`
 }
 
 func (s *Service) Profile(ctx context.Context, groupID string, user model.User) (Profile, error) {
@@ -20,7 +23,11 @@ func (s *Service) Profile(ctx context.Context, groupID string, user model.User) 
 	if err != nil {
 		return Profile{}, err
 	}
-	return Profile{Group: group, Members: members}, nil
+	warnings, err := s.store.GroupSpamWarnings(ctx, groupID, s.now().Add(-30*24*time.Hour))
+	if err != nil {
+		return Profile{}, err
+	}
+	return Profile{Group: group, Members: members, SpamWarnings: warnings}, nil
 }
 
 func (s *Service) Delete(ctx context.Context, groupID string, user model.User) error {
@@ -35,11 +42,7 @@ func (s *Service) Delete(ctx context.Context, groupID string, user model.User) e
 	if err != nil {
 		return err
 	}
-	if err := s.store.DeleteGroup(ctx, groupID); err != nil {
-		return mapErr(err)
-	}
-	s.hub.Publish(members, Event{Type: "group_deleted", GroupID: groupID})
-	return nil
+	return s.deleteGroup(ctx, groupID, members)
 }
 
 func (s *Service) Leave(ctx context.Context, groupID string, user model.User) error {
@@ -57,7 +60,7 @@ func (s *Service) Leave(ctx context.Context, groupID string, user model.User) er
 	if err := s.store.LeaveGroup(ctx, groupID, user.ID); err != nil {
 		return mapErr(err)
 	}
-	s.hub.Publish(members, Event{Type: "member_left", GroupID: groupID, Data: NewMemberEvent(user)})
+	s.hub.Publish(members, hub.Event{Type: "member_left", GroupID: groupID, Data: hub.NewMemberEvent(user)})
 	s.publishGroup(ctx, groupID, "group_updated", group)
 	return nil
 }
@@ -78,10 +81,10 @@ func (s *Service) RemoveMember(ctx context.Context, groupID, memberID string, us
 	if err != nil {
 		return Profile{}, err
 	}
-	member := EventMember{ID: memberID}
+	member := hub.EventMember{ID: memberID}
 	for _, item := range groupMembers {
 		if item.ID == memberID {
-			member = EventMember{ID: item.ID, DisplayName: item.DisplayName, Avatar: item.Avatar}
+			member = hub.EventMember{ID: item.ID, DisplayName: item.DisplayName, Avatar: item.Avatar}
 			break
 		}
 	}
@@ -92,7 +95,15 @@ func (s *Service) RemoveMember(ctx context.Context, groupID, memberID string, us
 	if err != nil {
 		return Profile{}, err
 	}
-	s.hub.Publish(members, Event{Type: "member_removed", GroupID: groupID, Data: MemberEvent{Member: member}})
-	s.hub.Publish(members, Event{Type: "group_updated", GroupID: groupID, Data: updated.Group})
+	s.hub.Publish(members, hub.Event{Type: "member_removed", GroupID: groupID, Data: hub.MemberEvent{Member: member}})
+	s.hub.Publish(members, hub.Event{Type: "group_updated", GroupID: groupID, Data: updated.Group})
 	return updated, nil
+}
+
+func (s *Service) deleteGroup(ctx context.Context, groupID string, members []string) error {
+	if err := s.store.DeleteGroup(ctx, groupID); err != nil {
+		return mapErr(err)
+	}
+	s.hub.Publish(members, hub.Event{Type: "group_deleted", GroupID: groupID})
+	return nil
 }

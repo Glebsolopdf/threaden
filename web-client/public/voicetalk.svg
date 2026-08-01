@@ -1,26 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
-  <title id="title">OpenTalk logo</title>
-  <desc id="desc">Minimal speech bubble with an audio waveform</desc>
-
-  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Speech bubble -->
-    <path
-      d="M256 72
-         C154.38 72 72 143.63 72 232
-         C72 283.31 99.79 328.92 143.03 358.18
-         L124 430
-         L200.49 390.12
-         C218.29 394.03 236.87 396 256 396
-         C357.62 396 440 324.37 440 236
-         C440 147.63 357.62 72 256 72Z"
-      stroke-width="28"
-    />
-
-    <!-- Audio waveform -->
-    <path d="M160 248V220" stroke-width="24"/>
-    <path d="M208 276V192" stroke-width="24"/>
-    <path d="M256 304V164" stroke-width="24"/>
-    <path d="M304 276V192" stroke-width="24"/>
-    <path d="M352 248V220" stroke-width="24"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Голосовые комнаты</title>
+  <desc id="desc">Облачко речи с аудио волной</desc>
+  <g stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 4.25c-4.35 0-7.75 2.85-7.75 6.55 0 2.08 1.1 3.9 2.82 5.1l-.72 3.05 3.12-1.72c.8.16 1.65.25 2.53.25 4.35 0 7.75-2.85 7.75-6.68S16.35 4.25 12 4.25Z" fill="none" stroke-width="1.8"/>
+    <path d="M8.3 11.65v-1.3M10.15 13v-4M12 14.1V7.9M13.85 13v-4M15.7 11.65v-1.3" fill="none" stroke-width="1.65"/>
   </g>
 </svg>

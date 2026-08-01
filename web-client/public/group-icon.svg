@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Группа</title>
+  <g stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M9.2 11.1a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4Z"/>
+    <path d="M3.2 19.7c.45-3.05 2.8-5.25 6-5.25 3.18 0 5.54 2.2 6 5.25"/>
+    <path d="M16.15 11.15a3 3 0 0 0 0-5.8"/>
+    <path d="M16.9 14.35c2.1.52 3.58 2.08 3.9 4.25"/>
+  </g>
+</svg>

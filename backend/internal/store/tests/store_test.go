@@ -169,7 +169,7 @@ func TestInactiveGroupScheduleAndDelete(t *testing.T) {
 	if err := st.CreateGroup(ctx, store.NewGroup{
 		ID: "grp_cleanup", Visibility: "public", OwnerID: owner.ID,
 		Name: "Cleanup", Avatar: "", InviteToken: "inv_cleanup",
-	}, now.Add(-8*24*time.Hour)); err != nil {
+	}, now.Add(-8*24*time.Hour), 0); err != nil {
 		t.Fatal(err)
 	}
 	if err := st.AddMessage(ctx, model.GroupMessage{ID: "msg_old", GroupID: "grp_cleanup", Author: owner, Body: "old", CreatedAt: now.Add(-9 * 24 * time.Hour)}); err != nil {
