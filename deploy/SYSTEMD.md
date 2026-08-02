@@ -39,6 +39,7 @@ TRUSTED_PROXIES=127.0.0.1,::1
 sudo ./threadenctl.sh doctor
 sudo ./threadenctl.sh start
 sudo ./threadenctl.sh restart
+sudo ./threadenctl.sh restart --full
 sudo ./threadenctl.sh stop
 sudo ./threadenctl.sh recovery --yes
 sudo ./threadenctl.sh status
@@ -50,6 +51,7 @@ sudo ./threadenctl.sh logs
 ```bash
 sudo ./threadenctl.sh start --backend
 sudo ./threadenctl.sh restart --web
+sudo ./threadenctl.sh restart --full --backend --web
 sudo ./threadenctl.sh recovery --livekit --yes
 sudo ./threadenctl.sh stop --backend --web
 ```

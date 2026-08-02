@@ -35,8 +35,12 @@ main() {
     start) preflight_selected; prepare_installation; start_selected ;;
     stop) preflight_minimal; stop_selected ;;
     restart)
-      preflight_selected; ensure_threaden_user; ensure_directories; stop_selected
-      clear_selected_caches; install_environment; build_selected; install_units; start_selected
+      if ((FULL_RESTART)); then
+        preflight_selected; ensure_threaden_user; ensure_directories; stop_selected
+        clear_selected_caches; install_environment; build_selected; install_units; start_selected
+      else
+        preflight_minimal; stop_selected; start_selected
+      fi
       ;;
     recovery)
       confirm_recovery; install_os_dependencies; preflight_selected; stop_selected

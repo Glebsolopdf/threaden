@@ -21,6 +21,9 @@ type createGroupRequest struct {
 type messageRequest struct {
 	Body string `json:"body"`
 }
+type typingRequest struct {
+	Active bool `json:"active"`
+}
 type voiceRoomRequest struct {
 	Name string `json:"name"`
 }
@@ -137,6 +140,17 @@ func (h groupHandler) messages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, m)
+}
+func (h groupHandler) typing(w http.ResponseWriter, r *http.Request) {
+	var v typingRequest
+	if !decodeGroupJSON(w, r, &v) {
+		return
+	}
+	if e := h.service.SetTyping(r.Context(), chi.URLParam(r, "id"), currentUser(r), v.Active); e != nil {
+		writeGroupError(w, r, e)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 func (h groupHandler) join(w http.ResponseWriter, r *http.Request) {
 	g, e := h.service.Join(r.Context(), chi.URLParam(r, "id"), currentUser(r), false)

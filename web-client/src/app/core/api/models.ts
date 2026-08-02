@@ -54,6 +54,10 @@ export interface GroupMemberEvent {
   member: Pick<User, 'id' | 'display_name' | 'avatar'>;
 }
 
+export interface GroupTypingEvent extends GroupMemberEvent {
+  active: boolean;
+}
+
 export type GroupMemberEventType = 'member_joined' | 'member_left' | 'member_removed';
 
 export interface GroupVoiceRoom {

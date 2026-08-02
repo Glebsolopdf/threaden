@@ -1,4 +1,4 @@
-name: threaden-prod
+name: opentalk-prod
 
 services:
   backend:

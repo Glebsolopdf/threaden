@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, effect, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -7,6 +7,7 @@ import type { GroupMember, GroupProfile, GroupVoiceRoom } from '../../core/api/m
 import { AuthStore } from '../../core/auth/auth.store';
 import { chatMessage, GroupsStore, isSystemMessage, systemMessageText, type MessageView } from '../../core/events/groups.store';
 import { NotificationStore } from '../../core/notifications/notification.store';
+import { TypingStore } from '../../core/events/typing.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
 @Component({
@@ -22,7 +23,7 @@ import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
           <a class="group-header__icon mobile-back" routerLink="/" aria-label="Назад к группам"><img src="/back.svg" alt=""></a>
           <button class="group-header__title clickable" type="button" (click)="openProfile()">
             <strong>{{ group.name }}</strong>
-            <small>{{ group.member_count }} участников · {{ group.online_count }} онлайн</small>
+            <small aria-live="polite">@if (typingLabel()) { <span class="group-header__typing">{{ typingLabel() }}</span> } @else { {{ group.member_count }} участников · {{ group.online_count }} онлайн }</small>
           </button>
           @if (voiceParticipants(group.voice_rooms ?? []) > 0) {
             <div class="group-voice-strip"><img src="/microphone-on.svg" alt=""><span>{{ voiceParticipants(group.voice_rooms ?? []) }}</span></div>
@@ -76,7 +77,7 @@ import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
 
         @if (groups.currentIsMember()) {
           <form class="composer" [formGroup]="messageForm" (ngSubmit)="sendMessage()" autocomplete="off">
-            <input formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true">
+            <input formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true" (input)="typingState.notify(groupId(), messageForm.controls.body.value.trim().length > 0)">
             <button type="submit" [disabled]="messageForm.invalid || sending()">{{ sending() ? 'Отправка…' : 'Отправить' }}</button>
           </form>
         } @else {
@@ -164,6 +165,7 @@ export class GroupComponent {
   protected readonly auth = inject(AuthStore);
   private readonly api = inject(ApiService);
   private readonly notifications = inject(NotificationStore);
+  protected readonly typingState = inject(TypingStore);
   private readonly router = inject(Router);
   private readonly messageList = viewChild<ElementRef<HTMLElement>>('messageList');
   private loadedKey = '';
@@ -177,10 +179,10 @@ export class GroupComponent {
   protected readonly voiceJoining = signal(false);
   protected readonly profileOpen = signal(false);
   protected readonly deleteConfirmOpen = signal(false);
+  protected readonly typingLabel = computed(() => this.typingState.labelFor(this.groupId(), this.auth.user()?.id));
   protected readonly profile = signal<GroupProfile | null>(null);
   protected readonly messageForm = new FormGroup({ body: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(2000)] }) });
   protected readonly voiceForm = new FormGroup({ name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(80)] }) });
-
   constructor() {
     effect(() => {
       const key = this.groupId() ? `group:${this.groupId()}` : this.inviteToken() ? `invite:${this.inviteToken()}` : '';
@@ -218,14 +220,13 @@ export class GroupComponent {
     return isSystemMessage(item) ? '' : item.status === 'sending' ? ' · отправка' : item.status === 'error' ? ' · ошибка' : item.message.edited_at ? ' · изменено' : '';
   }
   protected voiceParticipants(rooms: GroupVoiceRoom[]): number { return rooms.reduce((sum, room) => sum + room.participant_count, 0); }
-
   protected async sendMessage(): Promise<void> {
     if (this.messageForm.invalid || this.sending()) return;
     const body = this.messageForm.controls.body.value;
-    this.messageForm.reset({ body: '' });
+    this.messageForm.reset({ body: '' }); this.typingState.notify(this.groupId(), false);
     this.sending.set(true);
     try { await this.groups.sendMessage(body); }
-    catch (error) { this.messageForm.setValue({ body }); this.notifications.error(error, 'Не удалось отправить сообщение'); }
+    catch (error) { this.messageForm.setValue({ body }); this.typingState.notify(this.groupId(), body.trim().length > 0); this.notifications.error(error, 'Не удалось отправить сообщение'); }
     finally { this.sending.set(false); }
   }
 

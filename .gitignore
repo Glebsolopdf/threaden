@@ -4,6 +4,7 @@
 !**/.env.example
 !deploy/production.env.example
 deploy/production.env
+deploy/livekit.yaml
 *.pem
 *.key
 *.p12
@@ -17,17 +18,18 @@ backend/data/
 **/*.db
 **/*.db-shm
 **/*.db-wal
-coverage/
 
-# Web outputs, caches, and dependencies
+# Web outputs and dependencies
 web-client/node_modules/
 web-client/dist/
 web-client/output/
-web-client/.angular/
+web-client/.playwright-cli/
 **/.playwright-cli/
+web-client/.angular/
 
-# Tool output and transient files
+# Tool output
 output/
+coverage/
 *.log
 *.trace
 *.bak
@@ -37,8 +39,6 @@ output/
 *.tmp
 *.tar.gz
 *.zip
-
-# Editors and operating systems
 .DS_Store
 Thumbs.db
 .idea/

@@ -34,6 +34,7 @@ SELECT_WEB=0
 SELECT_LIVEKIT=0
 EXPLICIT_SELECTION=0
 ASSUME_YES=0
+FULL_RESTART=0
 
 log() { printf '[threadenctl] %s\n' "$*"; }
 warn() { printf '[threadenctl] WARNING: %s\n' "$*" >&2; }
@@ -69,7 +70,7 @@ Usage: sudo ./threadenctl.sh <command> [components] [options]
 Commands:
   start       Check, build/install and start.
   recovery    Recreate Threaden units/processes/caches, repair rights, start.
-  restart     Stop, clear Threaden caches, rebuild and start.
+  restart     Stop and start selected services without rebuilding.
   stop        Stop selected services.  shutdown is an alias.
   status      Show service status.
   logs        Follow journal logs.
@@ -77,11 +78,12 @@ Commands:
   install     Build/install without starting.
 
 Components: --backend, --web, --livekit, --all (default: all)
-Options:    --root PATH, --yes, --version, --help
+Options:    --full, --root PATH, --yes, --version, --help
 
 Examples:
   sudo ./threadenctl.sh start
   sudo ./threadenctl.sh restart --backend
+  sudo ./threadenctl.sh restart --full
   sudo ./threadenctl.sh recovery --web --yes
   sudo ./threadenctl.sh stop --backend --web
 HELP
@@ -101,6 +103,7 @@ parse_args() {
       --web) SELECT_WEB=1; EXPLICIT_SELECTION=1 ;;
       --livekit) SELECT_LIVEKIT=1; EXPLICIT_SELECTION=1 ;;
       --all) SELECT_BACKEND=1; SELECT_WEB=1; SELECT_LIVEKIT=1; EXPLICIT_SELECTION=1 ;;
+      --full) FULL_RESTART=1 ;;
       --root) shift; (($#)) || die "--root requires a path"; PROJECT_ROOT="$1" ;;
       --yes|-y) ASSUME_YES=1 ;;
       --version) printf '%s\n' "$SCRIPT_VERSION"; exit 0 ;;
@@ -109,6 +112,7 @@ parse_args() {
     esac
     shift
   done
+  [[ $FULL_RESTART -eq 0 || $ACTION == restart ]] || die "--full is only valid with restart"
   if ((EXPLICIT_SELECTION == 0)); then
     SELECT_BACKEND=1; SELECT_WEB=1; SELECT_LIVEKIT=1
   fi

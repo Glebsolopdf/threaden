@@ -22,7 +22,7 @@
 
 - Added low-disk emergency cleanup that triggers below 5 GiB free space and prioritizes inactive accounts, inactive groups, and oldest messages.
 - Fixed real-time message updates by keeping server-sent event streams flushable and open for long-lived clients.
-- Made `threaden.example.com` the primary production web domain and redirected `old-threaden.example.com` to it.
+- Made `threaden.substituteme.space` the primary production web domain and redirected `opentalk.substituteme.space` to it.
 
 ## 0.2.3 - 2026-07-27
 

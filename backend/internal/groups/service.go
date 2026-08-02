@@ -162,6 +162,21 @@ func (s *Service) member(ctx context.Context, id, user string) bool {
 	ok, e := s.store.IsGroupMember(ctx, id, user)
 	return e == nil && ok
 }
+
+func (s *Service) SetTyping(ctx context.Context, id string, u model.User, active bool) error {
+	if !s.member(ctx, id, u.ID) {
+		return ErrForbidden
+	}
+	ids, err := s.store.GroupMemberIDs(ctx, id)
+	if err != nil {
+		return err
+	}
+	s.hub.Publish(ids, hub.Event{
+		Type: "typing_updated", GroupID: id,
+		Data: hub.TypingEvent{Member: hub.NewMemberEvent(u).Member, Active: active},
+	})
+	return nil
+}
 func (s *Service) withOnline(g model.Group) model.Group {
 	ids, e := s.store.GroupMemberIDs(context.Background(), g.ID)
 	if e != nil {

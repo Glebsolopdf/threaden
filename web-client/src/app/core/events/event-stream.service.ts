@@ -1,7 +1,8 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Subject } from 'rxjs';
-import type { EventEnvelope, GroupMemberEvent, GroupMemberEventType, GroupMessage } from '../api/models';
+import type { EventEnvelope, GroupMemberEvent, GroupMemberEventType, GroupMessage, GroupTypingEvent } from '../api/models';
 import { apiBaseUrl } from '../api/runtime-config';
+import { TypingStore } from './typing.store';
 import { NotificationStore } from '../notifications/notification.store';
 
 export type ConnectionStatus =
@@ -12,6 +13,7 @@ export type ConnectionStatus =
 @Injectable({ providedIn: 'root' })
 export class EventStreamService {
   private readonly notifications = inject(NotificationStore);
+  private readonly typing = inject(TypingStore);
   private source?: EventSource;
   private connectedOnce = false;
 
@@ -38,6 +40,7 @@ export class EventStreamService {
     };
 
     source.addEventListener('message_created', (event) => this.handleEvent(event, true));
+    source.addEventListener('typing_updated', (event) => this.handleTyping(event));
     source.addEventListener('profile_updated', (event) => this.handleProfileUpdated(event));
     for (const type of ['member_joined', 'member_left', 'member_removed'] as const) {
       source.addEventListener(type, (event) => this.handleMemberEvent(event, type));
@@ -69,6 +72,17 @@ export class EventStreamService {
     }
   }
 
+  private handleTyping(event: MessageEvent<string>): void {
+    try {
+      const payload = JSON.parse(event.data) as EventEnvelope<GroupTypingEvent>;
+      if (payload.group_id && payload.data && this.isTypingEvent(payload.data)) {
+        this.typing.update(payload.group_id, payload.data);
+      }
+    } catch (error) {
+      this.notifications.error(error, 'Получено некорректное событие сервера');
+    }
+  }
+
   disconnect(): void {
     this.source?.close();
     this.source = undefined;
@@ -93,5 +107,10 @@ export class EventStreamService {
   private isMemberEvent(value: unknown): value is GroupMemberEvent {
     const member = (value as Partial<GroupMemberEvent> | null)?.member;
     return Boolean(member && typeof member.id === 'string' && typeof member.display_name === 'string');
+  }
+
+  private isTypingEvent(value: unknown): value is GroupTypingEvent {
+    const item = value as Partial<GroupTypingEvent> | null;
+    return Boolean(item && typeof item.active === 'boolean' && item.member && this.isMemberEvent(item));
   }
 }

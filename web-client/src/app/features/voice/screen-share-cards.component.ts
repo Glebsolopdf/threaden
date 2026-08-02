@@ -17,13 +17,15 @@ import { ScreenShareStageComponent } from '../screen-share-stage/screen-share-st
               <button class="screen-share-card__preview" type="button" [style.aspect-ratio]="previewRatio(share)" [attr.aria-label]="'Открыть демонстрацию ' + share.participantName + ' на весь экран'" (click)="openFullscreen(share.publicationSid)">
                 <app-screen-share-stage [share]="share" />
               </button>
-              <footer><strong>{{ share.participantName }}{{ share.isLocal ? ' (Вы)' : '' }}</strong><span>{{ share.dimensions ? share.dimensions.width + '×' + share.dimensions.height : 'Загрузка…' }}</span></footer>
+              <footer><strong>{{ share.participantName }}{{ share.isLocal ? ' (Вы)' : '' }}</strong><span>{{ share.dimensions ? share.dimensions.width + '×' + share.dimensions.height : 'Загрузка…' }}{{ share.hasAudio ? ' · звук' : ' · без звука' }}</span></footer>
               @if (!share.isLocal) {
                 <button class="screen-share-card__menu-button" type="button" aria-label="Действия с демонстрацией" [attr.aria-expanded]="openMenuSid() === share.publicationSid" (click)="toggleMenu(share.publicationSid)">⋯</button>
                 @if (openMenuSid() === share.publicationSid) {
                   <div class="screen-share-card__menu" role="menu">
-                    <button type="button" role="menuitem" (click)="toggleMute(share)">{{ isMuted(share) ? 'Включить звук' : 'Заглушить звук' }}</button>
-                    <label>Громкость <input type="range" min="0" max="100" [value]="volumeFor(share)" (input)="setVolume(share, +$any($event.target).value)"></label>
+                    @if (share.hasAudio) {
+                      <button type="button" role="menuitem" (click)="toggleMute(share)">{{ isMuted(share) ? 'Включить звук' : 'Заглушить звук' }}</button>
+                      <label>Громкость <input type="range" min="0" max="100" [value]="volumeFor(share)" (input)="setVolume(share, +$any($event.target).value)"></label>
+                    }
                     <button type="button" role="menuitem" (click)="disableForMe(share)">Отключить демонстрацию для меня</button>
                   </div>
                 }

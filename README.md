@@ -31,7 +31,9 @@ sudo ./threadenctl.sh status
 ```
 
 Команды `recovery`, `restart`, `stop|shutdown`, выбор `--backend`, `--web` и
-`--livekit` описаны в [`deploy/SYSTEMD.md`](deploy/SYSTEMD.md).
+`--livekit` описаны в [`deploy/SYSTEMD.md`](deploy/SYSTEMD.md). Обычный
+`restart` только перезапускает сервисы; для полной пересборки используйте
+`restart --full`.
 
 ## Безопасность 
 
@@ -49,4 +51,4 @@ sudo ./threadenctl.sh status
 
 ## Лицензия
 
-MIT. См. [`LICENSE`](LICENSE).
+GPL-3.0. См. [`LICENSE`](LICENSE).

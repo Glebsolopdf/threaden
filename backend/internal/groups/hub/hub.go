@@ -18,6 +18,11 @@ type MemberEvent struct {
 	Member EventMember `json:"member"`
 }
 
+type TypingEvent struct {
+	Member EventMember `json:"member"`
+	Active bool        `json:"active"`
+}
+
 type EventMember struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"display_name"`

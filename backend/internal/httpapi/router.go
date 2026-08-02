@@ -115,6 +115,7 @@ func NewWithOptions(
 		protected.Post("/v1/groups/{id}/members", groups.join)
 		protected.Post("/v1/invites/{token}/join", groups.joinInvite)
 		protected.Post("/v1/groups/{id}/messages", groups.send)
+		protected.Post("/v1/groups/{id}/typing", groups.typing)
 		protected.Post("/v1/groups/{id}/voice-rooms", groups.createVoice)
 		protected.Post("/v1/group-voice-rooms/{id}/join", groups.joinVoice)
 		protected.Delete("/v1/group-voice-rooms/{id}/members/me", groups.leaveVoice)
