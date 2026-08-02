@@ -78,6 +78,8 @@ export class GroupsStore {
       ]);
       this.current.set(group);
       this.messages.set(messages.map((message): ChatMessageView => ({ message, status: 'sent' })));
+      const lastMessage = messages.at(-1);
+      if (lastMessage && this.currentIsMember()) this.markRead(id, lastMessage.id);
       return group;
     } finally {
       this.groupLoading.set(false);
@@ -142,8 +144,17 @@ export class GroupsStore {
   mergeMessage(message: GroupMessage): void {
     if (this.current()?.id === message.group_id) {
       this.messages.update((items) => mergeIncomingMessage(items, message, this.auth.user()?.id));
+      if (message.author.id !== this.auth.user()?.id) this.markRead(message.group_id, message.id);
     }
     this.scheduleRefresh();
+  }
+
+  markMessageRead(messageID: string): void {
+    this.messages.update((items) => items.map((item) => isSystemMessage(item) || item.message.id !== messageID ? item : { ...item, message: { ...item.message, read: true } }));
+  }
+
+  private markRead(groupID: string, messageID: string): void {
+    void firstValueFrom(this.api.markGroupRead(groupID, messageID)).catch(() => undefined);
   }
 
   updateProfile(profile: { id: string; display_name: string; avatar?: string }): void {

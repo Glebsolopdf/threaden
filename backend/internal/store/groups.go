@@ -178,21 +178,20 @@ func (s *Store) hydrateGroup(ctx context.Context, g model.Group) (model.Group, e
 	return g, nil
 }
 
-func (s *Store) Messages(ctx context.Context, groupID string, cutoff time.Time, limit int) ([]model.GroupMessage, error) {
-	rows, e := s.db.QueryContext(ctx, `SELECT m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at FROM group_messages m JOIN users u ON u.id=m.author_id WHERE m.group_id=? AND m.created_at>=? ORDER BY m.created_at DESC LIMIT ?`, groupID, cutoff.Unix(), limit)
+func (s *Store) Messages(ctx context.Context, groupID string, cutoff time.Time, limit int, userID ...string) ([]model.GroupMessage, error) {
+	reader := ""; if len(userID) > 0 { reader = userID[0] }
+	rows, e := s.db.QueryContext(ctx, `SELECT m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at,CASE WHEN m.author_id=? AND EXISTS(SELECT 1 FROM group_message_reads r WHERE r.message_id=m.id AND r.user_id<>m.author_id) THEN 1 ELSE 0 END FROM group_messages m JOIN users u ON u.id=m.author_id WHERE m.group_id=? AND m.created_at>=? ORDER BY m.created_at DESC LIMIT ?`, reader, groupID, cutoff.Unix(), limit)
 	if e != nil {
 		return nil, e
 	}
-	defer rows.Close()
-	out := []model.GroupMessage{}
+	defer rows.Close(); out := []model.GroupMessage{}
 	for rows.Next() {
 		var m model.GroupMessage
-		var a, c int64
-		if e = rows.Scan(&m.ID, &m.GroupID, &m.Body, &c, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &a); e != nil {
+		var a, c, read int64
+		if e = rows.Scan(&m.ID, &m.GroupID, &m.Body, &c, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &a, &read); e != nil {
 			return nil, e
 		}
-		m.CreatedAt = time.Unix(c, 0).UTC()
-		m.Author.CreatedAt = time.Unix(a, 0).UTC()
+		m.CreatedAt = time.Unix(c, 0).UTC(); m.Author.CreatedAt = time.Unix(a, 0).UTC(); m.Read = read != 0
 		out = append(out, m)
 	}
 	if err := rows.Err(); err != nil {

@@ -228,6 +228,37 @@ func TestMessageIdempotencyKeyPreventsDuplicateSend(t *testing.T) {
 	}
 }
 
+func TestMessageReadReceiptUpdatesSender(t *testing.T) {
+	api := newAPI(t, 4)
+	owner, reader := api.user(t, "receipt-owner"), api.user(t, "receipt-reader")
+	groupID := createGroup(t, api, owner, "Receipts")
+	if status, _, _ := api.request(t, http.MethodPost, "/v1/groups/"+groupID+"/members", reader, nil); status != http.StatusOK {
+		t.Fatalf("join group: %d", status)
+	}
+	status, body, _ := api.request(t, http.MethodPost, "/v1/groups/"+groupID+"/messages", owner, []byte(`{"body":"read me"}`))
+	if status != http.StatusCreated {
+		t.Fatalf("send message: %d %s", status, body)
+	}
+	var message struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(body, &message); err != nil {
+		t.Fatal(err)
+	}
+	status, body, _ = api.request(t, http.MethodGet, "/v1/groups/"+groupID+"/messages", owner, nil)
+	if status != http.StatusOK || bytes.Contains(body, []byte(`"read":true`)) {
+		t.Fatalf("message should be unread: %d %s", status, body)
+	}
+	status, body, _ = api.request(t, http.MethodPost, "/v1/groups/"+groupID+"/read", reader, []byte(fmt.Sprintf(`{"message_id":%q}`, message.ID)))
+	if status != http.StatusNoContent {
+		t.Fatalf("mark read: %d %s", status, body)
+	}
+	status, body, _ = api.request(t, http.MethodGet, "/v1/groups/"+groupID+"/messages", owner, nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte(`"read":true`)) {
+		t.Fatalf("message should be read: %d %s", status, body)
+	}
+}
+
 func postMessageWithKey(t *testing.T, api *testAPI, token, groupID, key string) []byte {
 	t.Helper()
 	req, err := http.NewRequest(http.MethodPost, api.server.URL+"/v1/groups/"+groupID+"/messages", bytes.NewReader([]byte(`{"body":"hello once"}`)))

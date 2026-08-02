@@ -23,6 +23,10 @@ type TypingEvent struct {
 	Active bool        `json:"active"`
 }
 
+type MessageReadEvent struct {
+	MessageID string `json:"message_id"`
+}
+
 type EventMember struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"display_name"`

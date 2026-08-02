@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Subject } from 'rxjs';
-import type { EventEnvelope, GroupMemberEvent, GroupMemberEventType, GroupMessage, GroupTypingEvent } from '../api/models';
+import type { EventEnvelope, GroupMemberEvent, GroupMemberEventType, GroupMessage, GroupMessageReadEvent, GroupTypingEvent } from '../api/models';
 import { apiBaseUrl } from '../api/runtime-config';
 import { TypingStore } from './typing.store';
 import { NotificationStore } from '../notifications/notification.store';
@@ -19,6 +19,7 @@ export class EventStreamService {
 
   readonly status = signal<ConnectionStatus>({ state: 'good', label: 'Хорошее соединение' });
   readonly messageCreated = new Subject<GroupMessage>();
+  readonly messageRead = new Subject<GroupMessageReadEvent>();
   readonly profileUpdated = new Subject<GroupMemberEvent['member']>();
   readonly memberEvent = new Subject<{ type: GroupMemberEventType; groupID: string; member: GroupMemberEvent['member'] }>();
   readonly refreshRequested = new Subject<void>();
@@ -40,6 +41,7 @@ export class EventStreamService {
     };
 
     source.addEventListener('message_created', (event) => this.handleEvent(event, true));
+    source.addEventListener('message_read', (event) => this.handleMessageRead(event));
     source.addEventListener('typing_updated', (event) => this.handleTyping(event));
     source.addEventListener('profile_updated', (event) => this.handleProfileUpdated(event));
     for (const type of ['member_joined', 'member_left', 'member_removed'] as const) {
@@ -81,6 +83,13 @@ export class EventStreamService {
     } catch (error) {
       this.notifications.error(error, 'Получено некорректное событие сервера');
     }
+  }
+
+  private handleMessageRead(event: MessageEvent<string>): void {
+    try {
+      const payload = JSON.parse(event.data) as EventEnvelope<GroupMessageReadEvent>;
+      if (payload.data && typeof payload.data.message_id === 'string') this.messageRead.next(payload.data);
+    } catch (error) { this.notifications.error(error, 'Получено некорректное событие сервера'); }
   }
 
   disconnect(): void {

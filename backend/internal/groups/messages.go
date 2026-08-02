@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"voice-rooms/internal/antispam"
+	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
 )
 
@@ -16,7 +17,28 @@ func (s *Service) Messages(ctx context.Context, id string, u *model.User, limit 
 		return nil, e
 	}
 	_ = g
-	return s.store.Messages(ctx, id, s.now().Add(-7*24*time.Hour), limit)
+	reader := ""
+	if u != nil {
+		reader = u.ID
+	}
+	return s.store.Messages(ctx, id, s.now().Add(-7*24*time.Hour), limit, reader)
+}
+
+func (s *Service) MarkRead(ctx context.Context, id, userID, messageID string) error {
+	if !s.member(ctx, id, userID) {
+		return ErrForbidden
+	}
+	if messageID == "" {
+		return ErrInvalid
+	}
+	receipts, err := s.store.MarkGroupMessagesRead(ctx, id, userID, messageID, s.now().UTC())
+	if err != nil {
+		return mapErr(err)
+	}
+	for _, receipt := range receipts {
+		s.hub.Publish([]string{receipt.AuthorID}, hub.Event{Type: "message_read", GroupID: id, Data: hub.MessageReadEvent{MessageID: receipt.MessageID}})
+	}
+	return nil
 }
 
 func (s *Service) Send(ctx context.Context, id string, u model.User, body, idempotencyKey string) (model.GroupMessage, error) {

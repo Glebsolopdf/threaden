@@ -94,6 +94,9 @@ export class ApiService {
   sendMessage(id: string, body: string): Observable<GroupMessage> {
     return this.http.post<GroupMessage>(`/v1/groups/${encodeURIComponent(id)}/messages`, { body });
   }
+  markGroupRead(id: string, messageID: string): Observable<void> {
+    return this.http.post<void>(`/v1/groups/${encodeURIComponent(id)}/read`, { message_id: messageID });
+  }
   setTyping(id: string, active: boolean): Observable<void> {
     return this.http.post<void>(`/v1/groups/${encodeURIComponent(id)}/typing`, { active });
   }

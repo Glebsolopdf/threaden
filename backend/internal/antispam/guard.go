@@ -23,7 +23,7 @@ var (
 
 type Store interface {
 	ReserveIdempotencyKey(context.Context, string, string, string, string, time.Time, time.Duration) (string, bool, error)
-	Messages(context.Context, string, time.Time, int) ([]model.GroupMessage, error)
+	Messages(context.Context, string, time.Time, int, ...string) ([]model.GroupMessage, error)
 	CreateGroupSpamWarning(context.Context, string, string, time.Time, int, int, time.Duration, time.Duration) (int, bool, error)
 	DeleteRecentMessagesByAuthor(context.Context, string, string, time.Time, int) (int, error)
 	DeleteRecentRepeatedMessages(context.Context, string, string, string, time.Time, int) (int, error)

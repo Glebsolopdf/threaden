@@ -65,7 +65,7 @@ import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
                   <div class="chat-message__bubble">
                     @if (!isOwn(chat) && !isCompact(index)) { <strong class="chat-message__author">{{ chat.message.author.display_name }}</strong> }
                     <p>{{ chat.message.body }}</p>
-                    <footer><time [attr.datetime]="chat.message.created_at">{{ formatTime(chat.message.created_at) }}</time>{{ statusSuffix(chat) }}</footer>
+                    <footer><time [attr.datetime]="chat.message.created_at">{{ formatTime(chat.message.created_at) }}</time>@if (isOwn(chat) && chat.status === 'sent') { <span class="message-status" [attr.aria-label]="chat.message.read ? 'Прочитано' : 'Отправлено'">{{ chat.message.read ? '✓✓' : '✓' }}</span> }{{ statusSuffix(chat) }}</footer>
                   </div>
                 </article>
               } @else {

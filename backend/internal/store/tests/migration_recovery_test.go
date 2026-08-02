@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	store "voice-rooms/internal/store"
+	"voice-rooms/internal/store/schema"
 
 	_ "modernc.org/sqlite"
 )
@@ -31,7 +32,7 @@ func TestMigration12RecoversMissingIPBansTable(t *testing.T) {
 	}
 	defer st.Close()
 	version, err := st.MigrationVersion()
-	if err != nil || version != 13 {
+	if err != nil || version != schema.LatestVersion {
 		t.Fatalf("unexpected recovered version %d: %v", version, err)
 	}
 }

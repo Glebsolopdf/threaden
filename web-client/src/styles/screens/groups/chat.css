@@ -79,6 +79,7 @@
   white-space: nowrap;
 }
 .chat-message--own footer { color: #91b5d7; }
+.message-status { margin-left: 0.28rem; color: #b8e5ff; font-weight: 700; letter-spacing: -0.08em; }
 .chat-message[data-status="sending"] .chat-message__bubble { opacity: 0.72; }
 .chat-message[data-status="error"] .chat-message__bubble { border-color: var(--danger-border); color: var(--danger-text); background: var(--danger-soft); }
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"voice-rooms/internal/store/rate"
+	"voice-rooms/internal/store/readreceipts"
 	"voice-rooms/internal/store/schema"
 
 	_ "modernc.org/sqlite"
@@ -158,6 +159,8 @@ func (s *Store) migrate(ctx context.Context) error {
 
 func (s *Store) Close() error                   { return s.db.Close() }
 func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
+
+func (s *Store) MarkGroupMessagesRead(ctx context.Context, groupID, userID, messageID string, now time.Time) ([]readreceipts.Receipt, error) { receipts, err := readreceipts.Mark(ctx, s.db, groupID, userID, messageID, now.Unix()); if errors.Is(err, readreceipts.ErrNotFound) { return nil, ErrNotFound }; return receipts, err }
 
 func (s *Store) MigrationVersion() (int, error) {
 	var version int

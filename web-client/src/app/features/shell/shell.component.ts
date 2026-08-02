@@ -150,6 +150,7 @@ export class ShellComponent {
     void this.groups.refresh().catch((error) => this.notifications.error(error, 'Не удалось загрузить список групп'));
     this.events.connect();
     this.events.messageCreated.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((message) => this.groups.mergeMessage(message));
+    this.events.messageRead.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => this.groups.markMessageRead(event.message_id));
     this.events.memberEvent.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => this.groups.addSystemMessage(event.type, event.groupID, event.member));
     this.events.profileUpdated.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((profile) => { this.groups.updateProfile(profile); this.voice.updateProfile(profile); });
     this.events.refreshRequested.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.groups.scheduleRefresh());

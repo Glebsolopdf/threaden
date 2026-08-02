@@ -152,6 +152,7 @@ func (h groupHandler) typing(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+func (h groupHandler) read(w http.ResponseWriter, r *http.Request) { var v struct{ MessageID string `json:"message_id"` }; if !decodeGroupJSON(w, r, &v) { return }; if e := h.service.MarkRead(r.Context(), chi.URLParam(r, "id"), currentUser(r).ID, v.MessageID); e != nil { writeGroupError(w, r, e); return }; w.WriteHeader(http.StatusNoContent) }
 func (h groupHandler) join(w http.ResponseWriter, r *http.Request) {
 	g, e := h.service.Join(r.Context(), chi.URLParam(r, "id"), currentUser(r), false)
 	if e != nil {

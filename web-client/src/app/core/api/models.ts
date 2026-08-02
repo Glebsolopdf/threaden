@@ -48,6 +48,7 @@ export interface GroupMessage {
   body: string;
   created_at: string;
   edited_at?: string;
+  read?: boolean;
 }
 
 export interface GroupMemberEvent {
@@ -56,6 +57,10 @@ export interface GroupMemberEvent {
 
 export interface GroupTypingEvent extends GroupMemberEvent {
   active: boolean;
+}
+
+export interface GroupMessageReadEvent {
+  message_id: string;
 }
 
 export type GroupMemberEventType = 'member_joined' | 'member_left' | 'member_removed';

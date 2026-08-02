@@ -66,6 +66,7 @@ type GroupMessage struct {
 	Author    User      `json:"author"`
 	Body      string    `json:"body"`
 	CreatedAt time.Time `json:"created_at"`
+	Read      bool      `json:"read,omitempty"`
 }
 
 type GroupVoiceRoom struct {
