@@ -99,13 +99,19 @@ type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'tempo
 
     @if (temporaryDialogOpen()) {
       <div class="dialog-backdrop" animate.leave="dialog-leave" (click)="closeBackdrop($event, temporaryDialogOpen)">
-        <section class="dialog-card" role="dialog" aria-modal="true" aria-labelledby="temporary-title">
+        <section class="dialog-card temporary-dialog-card" role="dialog" aria-modal="true" aria-labelledby="temporary-title">
           <form [formGroup]="temporaryForm" (ngSubmit)="joinTemporary()">
-            <header class="dialog-card__header"><div><h2 id="temporary-title">Временная комната</h2><p>Один разговор без создания группы.</p></div><button class="dialog-close" type="button" aria-label="Закрыть" (click)="temporaryDialogOpen.set(false)">×</button></header>
-            <button class="themed-button temporary-create" type="button" [disabled]="temporaryPending()" (click)="createTemporary()">Создать новую комнату</button>
-            <div class="dialog-divider"><span>или войти по коду</span></div>
-            <label>Код комнаты<input type="text" formControlName="code" maxlength="26" placeholder="26-значный код" autocomplete="off" spellcheck="false"></label>
-            <menu><button type="button" (click)="temporaryDialogOpen.set(false)">Отмена</button><button type="submit" [disabled]="temporaryForm.invalid || temporaryPending()">Войти</button></menu>
+            <header class="dialog-card__header"><div><h2 id="temporary-title">Временная комната</h2><p>Начните временный разговор без создания постоянной группы.</p></div><button class="dialog-close" type="button" aria-label="Закрыть" (click)="temporaryDialogOpen.set(false)">×</button></header>
+            <div class="temporary-flow">
+              <section class="temporary-section">
+                <button class="themed-button temporary-create" type="button" [disabled]="temporaryPending()" (click)="createTemporary()">Создать комнату</button>
+              </section>
+              <section class="temporary-section temporary-section--join" aria-labelledby="temporary-join-title">
+                <h3 id="temporary-join-title">Уже есть код комнаты?</h3>
+                <input id="temporary-code" type="text" formControlName="code" maxlength="26" placeholder="Вставьте его сюда" autocomplete="off" spellcheck="false" aria-label="Код комнаты">
+                <button class="temporary-join" type="submit" [disabled]="temporaryForm.invalid || temporaryPending()">Войти</button>
+              </section>
+            </div>
           </form>
         </section>
       </div>

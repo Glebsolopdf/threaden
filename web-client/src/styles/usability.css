@@ -216,7 +216,13 @@ select:disabled {
   flex: 0 0 2.25rem;
   place-items: center;
   padding: 0 !important;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
+}
+.temporary-dialog-card .dialog-close {
+  width: 2.4rem;
+  min-height: 2.4rem !important;
+  border-color: transparent;
+  background: transparent;
 }
 .dialog-divider {
   display: flex;
@@ -232,8 +238,6 @@ select:disabled {
   background: var(--line);
   content: "";
 }
-.temporary-create { width: 100%; }
-
 .group-header {
   backdrop-filter: blur(16px);
 }
