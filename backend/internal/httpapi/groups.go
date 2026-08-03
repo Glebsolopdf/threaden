@@ -18,12 +18,6 @@ type createGroupRequest struct {
 	Avatar     string `json:"avatar"`
 	Visibility string `json:"visibility"`
 }
-type messageRequest struct {
-	Body string `json:"body"`
-}
-type typingRequest struct {
-	Active bool `json:"active"`
-}
 type voiceRoomRequest struct {
 	Name string `json:"name"`
 }
@@ -123,36 +117,6 @@ func (h groupHandler) get(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, g)
 }
-func (h groupHandler) messages(w http.ResponseWriter, r *http.Request) {
-	u := optionalUser(r)
-	limit := 30
-	if value := r.URL.Query().Get("limit"); value != "" {
-		parsed, err := strconv.Atoi(value)
-		if err != nil || parsed < 1 || parsed > 100 {
-			writeError(w, r, http.StatusBadRequest, "validation_error", "limit must be between 1 and 100")
-			return
-		}
-		limit = parsed
-	}
-	m, e := h.service.Messages(r.Context(), chi.URLParam(r, "id"), u, limit)
-	if e != nil {
-		writeGroupError(w, r, e)
-		return
-	}
-	writeJSON(w, http.StatusOK, m)
-}
-func (h groupHandler) typing(w http.ResponseWriter, r *http.Request) {
-	var v typingRequest
-	if !decodeGroupJSON(w, r, &v) {
-		return
-	}
-	if e := h.service.SetTyping(r.Context(), chi.URLParam(r, "id"), currentUser(r), v.Active); e != nil {
-		writeGroupError(w, r, e)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
-}
-func (h groupHandler) read(w http.ResponseWriter, r *http.Request) { var v struct{ MessageID string `json:"message_id"` }; if !decodeGroupJSON(w, r, &v) { return }; if e := h.service.MarkRead(r.Context(), chi.URLParam(r, "id"), currentUser(r).ID, v.MessageID); e != nil { writeGroupError(w, r, e); return }; w.WriteHeader(http.StatusNoContent) }
 func (h groupHandler) join(w http.ResponseWriter, r *http.Request) {
 	g, e := h.service.Join(r.Context(), chi.URLParam(r, "id"), currentUser(r), false)
 	if e != nil {
@@ -181,18 +145,6 @@ func (h groupHandler) joinInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, g)
-}
-func (h groupHandler) send(w http.ResponseWriter, r *http.Request) {
-	var v messageRequest
-	if !decodeGroupJSON(w, r, &v) {
-		return
-	}
-	m, e := h.service.Send(r.Context(), chi.URLParam(r, "id"), currentUser(r), v.Body, r.Header.Get("Idempotency-Key"))
-	if e != nil {
-		writeGroupError(w, r, e)
-		return
-	}
-	writeJSON(w, http.StatusCreated, m)
 }
 func (h groupHandler) createVoice(w http.ResponseWriter, r *http.Request) {
 	var v voiceRoomRequest

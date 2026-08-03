@@ -178,20 +178,22 @@ func (s *Store) hydrateGroup(ctx context.Context, g model.Group) (model.Group, e
 	return g, nil
 }
 
-func (s *Store) Messages(ctx context.Context, groupID string, cutoff time.Time, limit int, userID ...string) ([]model.GroupMessage, error) {
-	reader := ""; if len(userID) > 0 { reader = userID[0] }
+func (s *Store) Messages(ctx context.Context, groupID string, cutoff time.Time, limit int, reader string) ([]model.GroupMessage, error) {
 	rows, e := s.db.QueryContext(ctx, `SELECT m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at,CASE WHEN m.author_id=? AND EXISTS(SELECT 1 FROM group_message_reads r WHERE r.message_id=m.id AND r.user_id<>m.author_id) THEN 1 ELSE 0 END FROM group_messages m JOIN users u ON u.id=m.author_id WHERE m.group_id=? AND m.created_at>=? ORDER BY m.created_at DESC LIMIT ?`, reader, groupID, cutoff.Unix(), limit)
 	if e != nil {
 		return nil, e
 	}
-	defer rows.Close(); out := []model.GroupMessage{}
+	defer rows.Close()
+	out := []model.GroupMessage{}
 	for rows.Next() {
 		var m model.GroupMessage
 		var a, c, read int64
 		if e = rows.Scan(&m.ID, &m.GroupID, &m.Body, &c, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &a, &read); e != nil {
 			return nil, e
 		}
-		m.CreatedAt = time.Unix(c, 0).UTC(); m.Author.CreatedAt = time.Unix(a, 0).UTC(); m.Read = read != 0
+		m.CreatedAt = time.Unix(c, 0).UTC()
+		m.Author.CreatedAt = time.Unix(a, 0).UTC()
+		m.Read = read != 0
 		out = append(out, m)
 	}
 	if err := rows.Err(); err != nil {
@@ -237,63 +239,5 @@ func (s *Store) AddMessage(ctx context.Context, m model.GroupMessage) error {
 }
 func (s *Store) DeleteExpiredMessages(ctx context.Context, cutoff time.Time) error {
 	_, e := s.db.ExecContext(ctx, `DELETE FROM group_messages WHERE created_at<?`, cutoff.Unix())
-	return e
-}
-func (s *Store) CreateVoiceRoom(ctx context.Context, id, groupID, name string, now time.Time, maxRooms int) error {
-	tx, e := s.db.BeginTx(ctx, nil)
-	if e != nil {
-		return e
-	}
-	defer tx.Rollback()
-	var count int
-	if e = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM group_voice_rooms WHERE group_id=?`, groupID).Scan(&count); e != nil {
-		return e
-	}
-	if count >= maxRooms {
-		return ErrRoomFull
-	}
-	_, e = tx.ExecContext(ctx, `INSERT INTO group_voice_rooms(id,group_id,name,created_at) VALUES(?,?,?,?)`, id, groupID, name, now.Unix())
-	if e != nil {
-		return e
-	}
-	return tx.Commit()
-}
-func (s *Store) VoiceRoom(ctx context.Context, id string) (model.GroupVoiceRoom, error) {
-	var r model.GroupVoiceRoom
-	var t int64
-	e := s.db.QueryRowContext(ctx, `SELECT id,group_id,name,created_at FROM group_voice_rooms WHERE id=?`, id).Scan(&r.ID, &r.GroupID, &r.Name, &t)
-	if e == sql.ErrNoRows {
-		return r, ErrNotFound
-	}
-	r.CreatedAt = time.Unix(t, 0).UTC()
-	return r, e
-}
-func (s *Store) DeleteVoiceRoom(ctx context.Context, id string) error {
-	result, e := s.db.ExecContext(ctx, `DELETE FROM group_voice_rooms WHERE id=?`, id)
-	if e != nil {
-		return e
-	}
-	n, _ := result.RowsAffected()
-	if n == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-func (s *Store) EnterVoice(ctx context.Context, roomID, userID string, now time.Time) (string, error) {
-	tx, e := s.db.BeginTx(ctx, nil)
-	if e != nil {
-		return "", e
-	}
-	defer tx.Rollback()
-	var old string
-	_ = tx.QueryRowContext(ctx, `SELECT voice_room_id FROM group_voice_members WHERE user_id=?`, userID).Scan(&old)
-	_, e = tx.ExecContext(ctx, `INSERT INTO group_voice_members(user_id,voice_room_id,joined_at) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET voice_room_id=excluded.voice_room_id,joined_at=excluded.joined_at`, userID, roomID, now.Unix())
-	if e != nil {
-		return "", e
-	}
-	return old, tx.Commit()
-}
-func (s *Store) LeaveVoice(ctx context.Context, roomID, userID string) error {
-	_, e := s.db.ExecContext(ctx, `DELETE FROM group_voice_members WHERE voice_room_id=? AND user_id=?`, roomID, userID)
 	return e
 }
