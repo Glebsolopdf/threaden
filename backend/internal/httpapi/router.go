@@ -16,6 +16,7 @@ import (
 	"voice-rooms/internal/app"
 	appgroups "voice-rooms/internal/groups"
 	"voice-rooms/internal/httpapi/ban"
+	"voice-rooms/internal/httpapi/groupchat"
 	"voice-rooms/internal/store"
 )
 
@@ -80,6 +81,14 @@ func NewWithOptions(
 	users := userHandler{service: service, groups: groupService, cookieSecure: options.SessionCookieSecure}
 	rooms := roomHandler{service: service}
 	groups := groupHandler{service: groupService}
+	chat := groupchat.New(groupService, groupchat.Hooks{
+		WriteJSON:       writeJSON,
+		WriteError:      writeError,
+		DecodeJSON:      decodeJSON,
+		CurrentUser:     currentUser,
+		OptionalUser:    optionalUser,
+		WriteGroupError: writeGroupError,
+	})
 	router.Post("/v1/auth/register", users.register)
 	router.Post("/v1/auth/login", users.login)
 	router.Delete("/v1/auth/logout", users.logout)
@@ -88,7 +97,7 @@ func NewWithOptions(
 	router.Group(func(public chi.Router) {
 		public.Use(optionalAuthenticate(service))
 		public.Get("/v1/groups/{id}", groups.get)
-		public.Get("/v1/groups/{id}/messages", groups.messages)
+		public.Get("/v1/groups/{id}/messages", chat.Messages)
 	})
 	router.Group(func(protected chi.Router) {
 		protected.Use(authenticate(service))
@@ -114,9 +123,9 @@ func NewWithOptions(
 		protected.Delete("/v1/groups/{id}", groups.delete)
 		protected.Post("/v1/groups/{id}/members", groups.join)
 		protected.Post("/v1/invites/{token}/join", groups.joinInvite)
-		protected.Post("/v1/groups/{id}/messages", groups.send)
-		protected.Post("/v1/groups/{id}/read", groups.read)
-		protected.Post("/v1/groups/{id}/typing", groups.typing)
+		protected.Post("/v1/groups/{id}/messages", chat.Send)
+		protected.Post("/v1/groups/{id}/read", chat.Read)
+		protected.Post("/v1/groups/{id}/typing", chat.Typing)
 		protected.Post("/v1/groups/{id}/voice-rooms", groups.createVoice)
 		protected.Post("/v1/group-voice-rooms/{id}/join", groups.joinVoice)
 		protected.Delete("/v1/group-voice-rooms/{id}/members/me", groups.leaveVoice)

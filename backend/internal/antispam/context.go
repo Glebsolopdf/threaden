@@ -19,7 +19,7 @@ func (g *Guard) evaluateGroup(ctx context.Context, groupID, body, reason string,
 	if window <= 0 {
 		window = time.Minute
 	}
-	messages, err := g.store.Messages(ctx, groupID, now.Add(-window), 40)
+	messages, err := g.store.Messages(ctx, groupID, now.Add(-window), 40, "")
 	if err != nil {
 		return Result{}, err
 	}

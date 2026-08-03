@@ -1,19 +1,20 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
 import type { GroupMember, GroupProfile, GroupVoiceRoom } from '../../core/api/models';
 import { AuthStore } from '../../core/auth/auth.store';
-import { chatMessage, GroupsStore, isSystemMessage, systemMessageText, type MessageView } from '../../core/events/groups.store';
+import { GroupsStore } from '../../core/events/groups.store';
 import { NotificationStore } from '../../core/notifications/notification.store';
 import { TypingStore } from '../../core/events/typing.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
+import { GroupMessageListComponent } from './group-message-list.component';
 @Component({
   selector: 'app-group',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, AvatarComponent, GroupSpamWarningsComponent],
+  imports: [ReactiveFormsModule, RouterLink, AvatarComponent, GroupSpamWarningsComponent, GroupMessageListComponent],
   template: `
     <section class="route-page" id="group-view">
       @if (groups.groupLoading()) {
@@ -39,41 +40,7 @@ import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
           </div>
         </header>
 
-        <div #messageList class="message-list">
-          @if (groups.messagesLoading()) {
-            @for (item of skeletons; track item) {
-              <div class="skeleton-message" [class.skeleton-message--own]="item % 3 === 1">
-                @if (item % 3 !== 1) { <span class="skeleton skeleton-message__avatar"></span> }
-                <span class="skeleton-message__bubble"><span class="skeleton skeleton-line skeleton-line--1"></span><span class="skeleton skeleton-line skeleton-line--2"></span></span>
-              </div>
-            }
-          } @else {
-            @for (item of groups.messages(); track messageId(item); let index = $index) {
-              @if (chatMessage(item); as chat) {
-                <article
-                  class="chat-message"
-                  animate.leave="message-leave"
-                  [class.chat-message--own]="isOwn(chat)"
-                  [class.chat-message--other]="!isOwn(chat)"
-                  [attr.data-status]="chat.status"
-                  [attr.data-compact]="isCompact(index)"
-                  [attr.data-animate]="chat.animate || null"
-                >
-                  @if (!isOwn(chat)) {
-                    <app-avatar class="chat-message__avatar" [src]="isCompact(index) ? '' : (chat.message.author.avatar || '')" [label]="chat.message.author.display_name" />
-                  }
-                  <div class="chat-message__bubble">
-                    @if (!isOwn(chat) && !isCompact(index)) { <strong class="chat-message__author">{{ chat.message.author.display_name }}</strong> }
-                    <p>{{ chat.message.body }}</p>
-                    <footer><time [attr.datetime]="chat.message.created_at">{{ formatTime(chat.message.created_at) }}</time>@if (isOwn(chat) && chat.status === 'sent') { <span class="message-status" [attr.aria-label]="chat.message.read ? 'Прочитано' : 'Отправлено'">{{ chat.message.read ? '✓✓' : '✓' }}</span> }{{ statusSuffix(chat) }}</footer>
-                  </div>
-                </article>
-              } @else {
-                <article class="system-message" animate.leave="message-leave" [attr.data-animate]="item.animate"><span>{{ systemMessageText(item) }}</span></article>
-              }
-            } @empty { <p class="empty-copy">Сообщений пока нет</p> }
-          }
-        </div>
+        <app-group-message-list [messages]="groups.messages()" [loading]="groups.messagesLoading()" [currentUserId]="auth.user()?.id" />
 
         @if (groups.currentIsMember()) {
           <form class="composer" [formGroup]="messageForm" (ngSubmit)="sendMessage()" autocomplete="off">
@@ -167,9 +134,7 @@ export class GroupComponent {
   private readonly notifications = inject(NotificationStore);
   protected readonly typingState = inject(TypingStore);
   private readonly router = inject(Router);
-  private readonly messageList = viewChild<ElementRef<HTMLElement>>('messageList');
   private loadedKey = '';
-  protected readonly skeletons = Array.from({ length: 7 }, (_, index) => index);
   protected readonly sending = signal(false);
   protected readonly joining = signal(false);
   protected readonly menuOpen = signal(false);
@@ -190,13 +155,6 @@ export class GroupComponent {
       this.loadedKey = key;
       void this.load();
     });
-    effect(() => {
-      this.groups.messages();
-      window.requestAnimationFrame(() => {
-        const element = this.messageList()?.nativeElement;
-        if (element) element.scrollTop = element.scrollHeight;
-      });
-    });
   }
 
   private async load(): Promise<void> {
@@ -204,20 +162,6 @@ export class GroupComponent {
       if (this.groupId()) await this.groups.openGroup(this.groupId());
       else if (this.inviteToken()) await this.groups.openInvite(this.inviteToken());
     } catch (error) { this.notifications.error(error, 'Не удалось загрузить данные группы'); }
-  }
-  protected readonly chatMessage = chatMessage;
-  protected readonly systemMessageText = systemMessageText;
-  protected messageId(item: MessageView): string { return isSystemMessage(item) ? item.id : item.viewID ?? item.message.id; }
-  protected isOwn(item: MessageView): boolean { return !isSystemMessage(item) && item.message.author.id === this.auth.user()?.id; }
-  protected isCompact(index: number): boolean {
-    const items = this.groups.messages();
-    const previous = items[index - 1];
-    const current = items[index];
-    return Boolean(previous && current && !isSystemMessage(previous) && !isSystemMessage(current) && previous.message.author.id === current.message.author.id);
-  }
-  protected formatTime(value: string): string { return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-  protected statusSuffix(item: MessageView): string {
-    return isSystemMessage(item) ? '' : item.status === 'sending' ? ' · отправка' : item.status === 'error' ? ' · ошибка' : item.message.edited_at ? ' · изменено' : '';
   }
   protected voiceParticipants(rooms: GroupVoiceRoom[]): number { return rooms.reduce((sum, room) => sum + room.participant_count, 0); }
   protected async sendMessage(): Promise<void> {

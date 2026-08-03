@@ -5,16 +5,15 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"voice-rooms/internal/store/rate"
 	"voice-rooms/internal/store/readreceipts"
-	"voice-rooms/internal/store/schema"
+	"voice-rooms/internal/store/voicerooms"
 
-	_ "modernc.org/sqlite"
+	sqlite "voice-rooms/internal/store/sqlite"
+
 	sqlite3 "modernc.org/sqlite"
 )
 
@@ -29,138 +28,32 @@ var (
 type Store struct {
 	db *sql.DB
 	*rate.Store
+	*voicerooms.VoiceRooms
 }
 
 func Open(path string) (*Store, error) {
-	if path != ":memory:" {
-		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-			return nil, fmt.Errorf("create database directory: %w", err)
-		}
-	}
-	dsn := path
-	if path == ":memory:" {
-		dsn = "file:voice_rooms?mode=memory&cache=shared"
-	}
-	separator := "?"
-	if strings.Contains(dsn, "?") {
-		separator = "&"
-	}
-	dsn += separator + "_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_txlock=immediate"
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sqlite.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open sqlite: %w", err)
+		return nil, err
 	}
-	// ponytail: one connection makes SQLite write ordering explicit; raise this only
-	// after measured contention warrants per-connection PRAGMA management.
-	db.SetMaxOpenConns(1)
-	s := &Store{db: db, Store: rate.New(db)}
-	if err := s.migrate(context.Background()); err != nil {
+	s := &Store{db: db, Store: rate.New(db), VoiceRooms: voicerooms.New(db, ErrNotFound, ErrRoomFull)}
+	if err := sqlite.Migrate(context.Background(), db); err != nil {
 		db.Close()
 		return nil, err
 	}
 	return s, nil
 }
 
-func (s *Store) migrate(ctx context.Context) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin migration: %w", err)
-	}
-	defer tx.Rollback()
-	var exists int
-	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_migrations'`).Scan(&exists)
-	if err != nil {
-		return fmt.Errorf("inspect migrations: %w", err)
-	}
-	current := 0
-	if exists == 0 {
-		content, err := schema.Migration(1)
-		if err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, content); err != nil {
-			return fmt.Errorf("apply migration 1: %w", err)
-		}
-		content, err = schema.Migration(4)
-		if err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, content); err != nil {
-			return fmt.Errorf("apply migration 4: %w", err)
-		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(4, ?)`, time.Now().Unix()); err != nil {
-			return fmt.Errorf("record migration 4: %w", err)
-		}
-		current = 4
-	} else if err = tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(version), 0) FROM schema_migrations`).Scan(&current); err != nil {
-		return fmt.Errorf("read migration version: %w", err)
-	}
-	if current == 1 {
-		content, err := schema.Migration(2)
-		if err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, content); err != nil {
-			return fmt.Errorf("apply migration 2: %w", err)
-		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(2, ?)`, time.Now().Unix()); err != nil {
-			return fmt.Errorf("record migration 2: %w", err)
-		}
-		current = 2
-	}
-	if current == 2 {
-		content, err := schema.Migration(3)
-		if err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, content); err != nil {
-			return fmt.Errorf("apply migration 3: %w", err)
-		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(3, ?)`, time.Now().Unix()); err != nil {
-			return fmt.Errorf("record migration 3: %w", err)
-		}
-		current = 3
-	}
-	if current == 3 {
-		content, err := schema.Migration(4)
-		if err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, content); err != nil {
-			return fmt.Errorf("apply migration 4: %w", err)
-		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(4, ?)`, time.Now().Unix()); err != nil {
-			return fmt.Errorf("record migration 4: %w", err)
-		}
-		current = 4
-	}
-	for current < schema.LatestVersion {
-		next := current + 1
-		content, err := schema.Migration(next)
-		if err != nil {
-			return err
-		}
-		if _, err = tx.ExecContext(ctx, content); err != nil {
-			return fmt.Errorf("apply migration %d: %w", next, err)
-		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO schema_migrations(version, applied_at) VALUES(?, ?)`, next, time.Now().Unix()); err != nil {
-			return fmt.Errorf("record migration %d: %w", next, err)
-		}
-		current = next
-	}
-	if current > schema.LatestVersion {
-		return fmt.Errorf("database schema version %d is newer than this binary", current)
-	}
-	if err = tx.Commit(); err != nil {
-		return fmt.Errorf("commit migrations: %w", err)
-	}
-	return nil
-}
-
 func (s *Store) Close() error                   { return s.db.Close() }
 func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
 
-func (s *Store) MarkGroupMessagesRead(ctx context.Context, groupID, userID, messageID string, now time.Time) ([]readreceipts.Receipt, error) { receipts, err := readreceipts.Mark(ctx, s.db, groupID, userID, messageID, now.Unix()); if errors.Is(err, readreceipts.ErrNotFound) { return nil, ErrNotFound }; return receipts, err }
+func (s *Store) MarkGroupMessagesRead(ctx context.Context, groupID, userID, messageID string, now time.Time) ([]readreceipts.Receipt, error) {
+	receipts, err := readreceipts.Mark(ctx, s.db, groupID, userID, messageID, now.Unix())
+	if errors.Is(err, readreceipts.ErrNotFound) {
+		return nil, ErrNotFound
+	}
+	return receipts, err
+}
 
 func (s *Store) MigrationVersion() (int, error) {
 	var version int
@@ -269,6 +162,11 @@ func (s *Store) CreateGroupSpamWarning(ctx context.Context, groupID, reason stri
 	return recent, true, tx.Commit()
 }
 
+func isConstraint(err error) bool {
+	var sqliteErr *sqlite3.Error
+	return errors.As(err, &sqliteErr) && sqliteErr.Code()&0xff == 19
+}
+
 func collectIDs(rows *sql.Rows, err error) ([]string, error) {
 	if err != nil {
 		return nil, err
@@ -290,9 +188,4 @@ func prependArgs(first any, rest []string) []any {
 		args = append(args, item)
 	}
 	return args
-}
-
-func isConstraint(err error) bool {
-	var sqliteErr *sqlite3.Error
-	return errors.As(err, &sqliteErr) && sqliteErr.Code()&0xff == 19
 }

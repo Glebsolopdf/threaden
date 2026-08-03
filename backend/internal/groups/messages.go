@@ -12,11 +12,10 @@ import (
 )
 
 func (s *Service) Messages(ctx context.Context, id string, u *model.User, limit int) ([]model.GroupMessage, error) {
-	g, e := s.Get(ctx, id, u)
+	_, e := s.Get(ctx, id, u)
 	if e != nil {
 		return nil, e
 	}
-	_ = g
 	reader := ""
 	if u != nil {
 		reader = u.ID

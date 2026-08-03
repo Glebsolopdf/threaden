@@ -23,7 +23,7 @@ var (
 
 type Store interface {
 	ReserveIdempotencyKey(context.Context, string, string, string, string, time.Time, time.Duration) (string, bool, error)
-	Messages(context.Context, string, time.Time, int, ...string) ([]model.GroupMessage, error)
+	Messages(context.Context, string, time.Time, int, string) ([]model.GroupMessage, error)
 	CreateGroupSpamWarning(context.Context, string, string, time.Time, int, int, time.Duration, time.Duration) (int, bool, error)
 	DeleteRecentMessagesByAuthor(context.Context, string, string, time.Time, int) (int, error)
 	DeleteRecentRepeatedMessages(context.Context, string, string, string, time.Time, int) (int, error)
@@ -65,7 +65,7 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 			return result, g.warnOnce(user.ID, now)
 		}
 	}
-	if recent, err := g.store.Messages(ctx, groupID, now.Add(-g.cfg.MessageLimit.Refill), 20); err != nil {
+	if recent, err := g.store.Messages(ctx, groupID, now.Add(-g.cfg.MessageLimit.Refill), 20, ""); err != nil {
 		return Result{}, err
 	} else if similar, users := countSimilarMessages(body, recent); similar >= 3 && users >= 2 {
 		if _, err := g.store.DeleteRecentMessagesByAuthor(ctx, groupID, user.ID, now.Add(-g.cfg.MessageLimit.Refill), 20); err != nil {
