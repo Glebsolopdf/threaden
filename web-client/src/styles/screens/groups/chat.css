@@ -1,5 +1,16 @@
+.message-list,
+app-group-message-list {
+  min-height: 0;
+}
+
+app-group-message-list {
+  display: block;
+  overflow: hidden;
+}
+
 .message-list {
   grid-row: 2;
+  height: 100%;
   display: flex;
   min-height: 0;
   flex-direction: column;
@@ -152,6 +163,7 @@
   .composer {
     position: static;
     flex: 0 0 auto;
+    min-height: 3.85rem;
     padding: 0.6rem 0.65rem max(0.6rem, env(safe-area-inset-bottom));
   }
   .composer button { padding-inline: 0.8rem; }

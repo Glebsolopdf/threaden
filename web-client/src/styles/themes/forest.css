@@ -1,0 +1,100 @@
+html[data-theme="forest"] {
+  color-scheme: dark;
+  --bg: oklch(0.2 0.045 145);
+  --panel: oklch(0.255 0.045 145);
+  --panel-soft: oklch(0.17 0.04 145);
+  --panel-hover: oklch(0.3 0.05 145);
+  --text: oklch(0.94 0.035 110);
+  --muted: oklch(0.74 0.04 125);
+  --faint: oklch(0.56 0.04 135);
+  --line: oklch(0.38 0.05 145);
+  --line-soft: oklch(0.3 0.04 145);
+  --action-bg: oklch(0.72 0.14 125);
+  --action-bg-hover: oklch(0.8 0.14 125);
+  --action-text: oklch(0.18 0.04 145);
+  --action-border: oklch(0.72 0.12 125 / 0.7);
+  --sent-bg: oklch(0.4 0.12 155);
+  --sent-text: oklch(0.96 0.035 110);
+  --positive: oklch(0.76 0.15 125);
+  --positive-soft: oklch(0.76 0.15 125 / 0.14);
+  --danger-soft: oklch(0.32 0.08 30);
+  --danger-border: oklch(0.62 0.14 30 / 0.65);
+  --danger-text: oklch(0.82 0.08 35);
+  --shadow: 0 24px 70px oklch(0.08 0.035 145 / 0.55);
+}
+
+html[data-theme="forest"] body,
+html[data-theme="forest"] .messenger,
+html[data-theme="forest"] .workspace,
+html[data-theme="forest"] .voice-room,
+html[data-theme="forest"] .voice-connect { background: var(--bg); }
+
+html[data-theme="forest"] .panel,
+html[data-theme="forest"] .dialog-card,
+html[data-theme="forest"] .app-dialog--voice,
+html[data-theme="forest"] .confirm-dialog__panel,
+html[data-theme="forest"] .account-dialog,
+html[data-theme="forest"] .group-info-dialog,
+html[data-theme="forest"] .group-voice-dialog { background: var(--panel); }
+
+html[data-theme="forest"] .rail,
+html[data-theme="forest"] .account-dialog__nav { background: oklch(0.225 0.045 145); }
+html[data-theme="forest"] .list-panel,
+html[data-theme="forest"] .group-header,
+html[data-theme="forest"] .composer,
+html[data-theme="forest"] .voice-room__header,
+html[data-theme="forest"] .voice-room__controls { background: var(--panel); }
+html[data-theme="forest"] .group-row.is-active,
+html[data-theme="forest"] .rail-icon.is-active { background: var(--panel-hover); }
+html[data-theme="forest"] .chat-message__bubble { background: oklch(0.29 0.05 145); }
+html[data-theme="forest"] .chat-message--own .chat-message__bubble { background: var(--sent-bg); }
+html[data-theme="forest"] .group-menu__dropdown,
+html[data-theme="forest"] .voice-device-menu,
+html[data-theme="forest"] .screen-share-mode-menu,
+html[data-theme="forest"] .screen-share-card__menu { color: var(--text); background: var(--panel); box-shadow: var(--shadow); }
+html[data-theme="forest"] .group-menu__dropdown button,
+html[data-theme="forest"] .voice-device-menu button { color: var(--text); }
+html[data-theme="forest"] .group-menu__dropdown button:hover,
+html[data-theme="forest"] .voice-device-menu button:hover,
+html[data-theme="forest"] .screen-share-card__menu button:hover { background: var(--panel-hover); }
+
+html[data-theme="forest"] .profile-popover { border-color: var(--line); background: var(--panel); }
+html[data-theme="forest"] .profile-popover:hover { background: var(--panel-hover); }
+html[data-theme="forest"] .group-header__icon,
+html[data-theme="forest"] .voice-room__header button,
+html[data-theme="forest"] .voice-room__controls button { color: var(--text); background: var(--panel-hover); }
+html[data-theme="forest"] .voice-participant-card {
+  border-color: var(--line);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--participant-bg) 82%, #172d1d 18%), var(--panel));
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.08), 0 0.8rem 2rem oklch(0.08 0.035 145 / 0.28);
+}
+html[data-theme="forest"] .voice-participant-card strong { color: var(--text); text-shadow: 0 1px 2px oklch(0.08 0.035 145 / 0.7); }
+html[data-theme="forest"] .voice-device-menu select,
+html[data-theme="forest"] .voice-device-menu input[type="range"] { color: var(--text); background: var(--panel-soft); }
+html[data-theme="forest"] .screen-share-card { background: var(--panel-soft); }
+html[data-theme="forest"] .screen-share-stage__controls { border-color: var(--line); background: oklch(0.2 0.045 145 / 0.92); }
+html[data-theme="forest"] .screen-share-stage__notice { background: var(--panel); }
+
+html[data-theme="forest"] .welcome__title {
+  background: linear-gradient(105deg, oklch(0.82 0.16 125) 30%, oklch(0.95 0.07 105) 50%, oklch(0.82 0.16 125) 70%);
+  background-size: 300% 100%;
+  background-position: 100% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: welcome-shimmer 9s ease-in-out infinite;
+}
+
+html[data-theme="forest"] .auth-page,
+html[data-theme="forest"] body:has(.auth-page) { background: var(--bg); }
+html[data-theme="forest"] .auth-page {
+  --auth-canvas: var(--bg);
+  --auth-surface: var(--panel);
+  --auth-surface-hover: var(--panel-hover);
+  --auth-text: var(--text);
+  --auth-muted: var(--muted);
+  --auth-border: var(--line);
+  --auth-focus: var(--positive);
+  --auth-danger: var(--danger-text);
+  --auth-danger-surface: var(--danger-soft);
+}

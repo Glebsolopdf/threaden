@@ -134,6 +134,7 @@ body:has(.messenger) { overflow: hidden; background: #090a0d; }
 
 .group-header {
   position: relative;
+  z-index: 5;
   grid-row: 1;
   display: flex;
   min-height: 3.75rem;

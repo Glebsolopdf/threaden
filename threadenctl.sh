@@ -9,6 +9,8 @@ load_config
 refresh_paths
 # shellcheck source=deploy/threadenctl/build.sh
 source "$ROOT_DIR/deploy/threadenctl/build.sh"
+# shellcheck source=deploy/threadenctl/public.sh
+source "$ROOT_DIR/deploy/threadenctl/public.sh"
 # shellcheck source=deploy/threadenctl/units.sh
 source "$ROOT_DIR/deploy/threadenctl/units.sh"
 # shellcheck source=deploy/threadenctl/recovery.sh
