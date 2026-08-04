@@ -16,12 +16,14 @@ readonly NGINX_CACHE="/var/cache/threaden-nginx"
 readonly UNIT_DIR="/etc/systemd/system"
 readonly BACKEND_UNIT="threaden-backend.service"
 readonly WEB_UNIT="threaden-web.service"
+readonly PUBLIC_WEB_UNIT="threaden-public-web.service"
 readonly LIVEKIT_UNIT="threaden-livekit.service"
 readonly LOCK_FILE="/run/lock/threadenctl.lock"
 
 PROJECT_ROOT="${THREADEN_ROOT:-$DEFAULT_ROOT}"
 BACKEND_BIND="127.0.0.1:18080"
 WEB_BIND="127.0.0.1:18081"
+PUBLIC_WEB_BIND="127.0.0.1:18082"
 LIVEKIT_IMAGE="livekit/livekit-server:v1.13.4"
 GO_IMAGE="golang:1.26-alpine"
 NODE_IMAGE="node:24-alpine"
@@ -31,6 +33,7 @@ HEALTH_TIMEOUT_SECONDS="45"
 ACTION=""
 SELECT_BACKEND=0
 SELECT_WEB=0
+SELECT_PUBLIC=0
 SELECT_LIVEKIT=0
 EXPLICIT_SELECTION=0
 ASSUME_YES=0
@@ -77,13 +80,16 @@ Commands:
   doctor      Run checks without changes.
   install     Build/install without starting.
 
-Components: --backend, --web, --livekit, --all (default: all)
+Components: --backend, --web, --public, --livekit, --all (default: backend + public + livekit)
 Options:    --full, --root PATH, --yes, --version, --help
+
+--public selects the separate public web service on port 18082.
 
 Examples:
   sudo ./threadenctl.sh start
   sudo ./threadenctl.sh restart --backend
   sudo ./threadenctl.sh restart --full
+  sudo ./threadenctl.sh restart --full --public
   sudo ./threadenctl.sh recovery --web --yes
   sudo ./threadenctl.sh stop --backend --web
 HELP
@@ -101,8 +107,9 @@ parse_args() {
     case "$1" in
       --backend) SELECT_BACKEND=1; EXPLICIT_SELECTION=1 ;;
       --web) SELECT_WEB=1; EXPLICIT_SELECTION=1 ;;
+      --public) SELECT_PUBLIC=1; EXPLICIT_SELECTION=1 ;;
       --livekit) SELECT_LIVEKIT=1; EXPLICIT_SELECTION=1 ;;
-      --all) SELECT_BACKEND=1; SELECT_WEB=1; SELECT_LIVEKIT=1; EXPLICIT_SELECTION=1 ;;
+      --all) SELECT_BACKEND=1; SELECT_PUBLIC=1; SELECT_LIVEKIT=1; EXPLICIT_SELECTION=1 ;;
       --full) FULL_RESTART=1 ;;
       --root) shift; (($#)) || die "--root requires a path"; PROJECT_ROOT="$1" ;;
       --yes|-y) ASSUME_YES=1 ;;
@@ -114,7 +121,7 @@ parse_args() {
   done
   [[ $FULL_RESTART -eq 0 || $ACTION == restart ]] || die "--full is only valid with restart"
   if ((EXPLICIT_SELECTION == 0)); then
-    SELECT_BACKEND=1; SELECT_WEB=1; SELECT_LIVEKIT=1
+    SELECT_BACKEND=1; SELECT_PUBLIC=1; SELECT_LIVEKIT=1
   fi
   refresh_paths
 }
@@ -122,6 +129,7 @@ parse_args() {
 selected_units() {
   if ((SELECT_BACKEND)); then printf '%s\n' "$BACKEND_UNIT"; fi
   if ((SELECT_WEB)); then printf '%s\n' "$WEB_UNIT"; fi
+  if ((SELECT_PUBLIC)); then printf '%s\n' "$PUBLIC_WEB_UNIT"; fi
   if ((SELECT_LIVEKIT)); then printf '%s\n' "$LIVEKIT_UNIT"; fi
   return 0
 }
@@ -130,10 +138,13 @@ selected_names() {
   local names=()
   ((SELECT_BACKEND)) && names+=(backend)
   ((SELECT_WEB)) && names+=(web)
+  ((SELECT_PUBLIC)) && names+=(public)
   ((SELECT_LIVEKIT)) && names+=(livekit)
   local joined="${names[*]}"
   printf '%s' "${joined//$'\n'/, }"
 }
+
+web_selected() { ((SELECT_WEB || SELECT_PUBLIC)); }
 
 require_root() { [[ ${EUID:-$(id -u)} -eq 0 ]] || die "run with sudo"; }
 version_ge() { [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" == "$2" ]]; }
@@ -205,7 +216,7 @@ preflight_selected() {
     validate_env_file
     go_version_ok || docker_usable || die "need Go >= $MIN_GO_VERSION or Docker"
   fi
-  if ((SELECT_WEB)); then
+  if web_selected; then
     [[ -f "$WEB_DIR/package.json" && -f "$WEB_DIR/package-lock.json" ]] || die "web source is incomplete"
     command_exists nginx || die "nginx is required"
     { node_version_ok && command_exists npm; } || docker_usable || die "need Node >= $MIN_NODE_VERSION or Docker"

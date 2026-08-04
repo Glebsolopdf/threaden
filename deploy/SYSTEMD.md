@@ -1,15 +1,18 @@
 # Управление Threaden через systemd
 
-В корне проекта находится `threadenctl.sh`. Он создаёт три независимых unit:
+В корне проекта находится `threadenctl.sh`. Он создаёт четыре независимых unit:
 
 - `threaden-backend.service` — собранный Go API;
 - `threaden-web.service` — production-сборка Angular, которую обслуживает отдельный
   nginx-процесс;
+- `threaden-public-web.service` — отдельный экземпляр web для публичного reverse
+  proxy на `127.0.0.1:18082`;
 - `threaden-livekit.service` — локальный LiveKit в Docker с host networking.
 
-Скрипт предназначен для Linux-сервера с systemd. По умолчанию web слушает
-`127.0.0.1:18081`, backend — `127.0.0.1:18080`. Публичный TLS reverse proxy
-должен проксировать сайт на `127.0.0.1:18081`. Значения можно изменить после
+Скрипт предназначен для Linux-сервера с systemd. Локальный web слушает
+`127.0.0.1:18081`, публичный web — `127.0.0.1:18082`, backend —
+`127.0.0.1:18080`. Публичный TLS reverse proxy должен проксировать сайт на
+`127.0.0.1:18082`. Значения можно изменить после
 первого запуска в `/etc/threaden/threadenctl.conf`.
 
 ## Перед первым запуском
@@ -40,6 +43,7 @@ sudo ./threadenctl.sh doctor
 sudo ./threadenctl.sh start
 sudo ./threadenctl.sh restart
 sudo ./threadenctl.sh restart --full
+sudo ./threadenctl.sh restart --full --public
 sudo ./threadenctl.sh stop
 sudo ./threadenctl.sh recovery --yes
 sudo ./threadenctl.sh status
@@ -54,10 +58,11 @@ sudo ./threadenctl.sh restart --web
 sudo ./threadenctl.sh restart --full --backend --web
 sudo ./threadenctl.sh recovery --livekit --yes
 sudo ./threadenctl.sh stop --backend --web
+sudo ./threadenctl.sh stop --public
 ```
 
-Флаги можно комбинировать. Без флагов выбираются backend, web и LiveKit.
-Если используется внешний LiveKit, запускайте `--backend --web`, не выбирая
+Флаги можно комбинировать. Без флагов выбираются backend, публичный web и LiveKit.
+Локальный web выбирается только явно через `--web`. Если используется внешний LiveKit, запускайте `--backend --public`, не выбирая
 `--livekit`.
 
 ## Что делает recovery

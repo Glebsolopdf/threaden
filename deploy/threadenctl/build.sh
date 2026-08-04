@@ -7,7 +7,7 @@ ensure_threaden_user() {
 
 ensure_directories() {
   install -d -m 0755 -o root -g root "$CONFIG_DIR" "$INSTALL_DIR"
-  install -d -m 0750 -o threaden -g threaden "$STATE_DIR" "$BUILD_CACHE" "$NGINX_CACHE" /run/threaden-web
+  install -d -m 0750 -o threaden -g threaden "$STATE_DIR" "$BUILD_CACHE" "$NGINX_CACHE" /run/threaden-web /run/threaden-public-web
   install -d -m 0750 -o threaden -g threaden "$BUILD_CACHE/home" "$BUILD_CACHE/go-cache" "$BUILD_CACHE/go-mod"
   local dir
   for dir in client_temp proxy_temp fastcgi_temp uwsgi_temp scgi_temp; do
@@ -21,6 +21,7 @@ write_default_config() {
 PROJECT_ROOT=$(printf '%q' "$PROJECT_ROOT")
 BACKEND_BIND=$(printf '%q' "$BACKEND_BIND")
 WEB_BIND=$(printf '%q' "$WEB_BIND")
+PUBLIC_WEB_BIND=$(printf '%q' "$PUBLIC_WEB_BIND")
 LIVEKIT_IMAGE=$(printf '%q' "$LIVEKIT_IMAGE")
 GO_IMAGE=$(printf '%q' "$GO_IMAGE")
 NODE_IMAGE=$(printf '%q' "$NODE_IMAGE")
@@ -93,7 +94,7 @@ build_web() {
 
 build_selected() {
   if ((SELECT_BACKEND)); then build_backend; fi
-  if ((SELECT_WEB)); then build_web; fi
+  if web_selected; then build_web; fi
 }
 
 prepare_installation() {

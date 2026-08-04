@@ -6,7 +6,7 @@ clear_selected_caches() {
     rm -rf -- "$BUILD_CACHE/backend-src" "$BUILD_CACHE/go-cache" "$BUILD_CACHE/go-mod" "$BUILD_CACHE/threaden-backend.new"
     install -d -m 0750 -o threaden -g threaden "$BUILD_CACHE/go-cache" "$BUILD_CACHE/go-mod"
   fi
-  if ((SELECT_WEB)); then
+  if web_selected; then
     rm -rf -- "$BUILD_CACHE/web-src" "$NGINX_CACHE"/*
     local dir
     for dir in client_temp proxy_temp fastcgi_temp uwsgi_temp scgi_temp; do
@@ -42,6 +42,12 @@ kill_stale_threaden_processes() {
   if ((SELECT_WEB)) && [[ -r /run/threaden-web/nginx.pid ]]; then
     local pid="$(cat /run/threaden-web/nginx.pid 2>/dev/null || true)"
     if [[ "$pid" =~ ^[0-9]+$ ]] && tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -Fq "$CONFIG_DIR/nginx.conf"; then
+      kill -QUIT "$pid" 2>/dev/null || true
+    fi
+  fi
+  if ((SELECT_PUBLIC)) && [[ -r /run/threaden-public-web/nginx.pid ]]; then
+    local pid="$(cat /run/threaden-public-web/nginx.pid 2>/dev/null || true)"
+    if [[ "$pid" =~ ^[0-9]+$ ]] && tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -Fq "$CONFIG_DIR/nginx-public.conf"; then
       kill -QUIT "$pid" 2>/dev/null || true
     fi
   fi

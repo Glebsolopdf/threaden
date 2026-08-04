@@ -20,3 +20,5 @@
 @import "./customization/chrome.css";
 @import "./customization/dialogs.css";
 @import "./usability.css";
+@import "./themes/light.css";
+@import "./themes/forest.css";

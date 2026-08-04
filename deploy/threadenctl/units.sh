@@ -189,12 +189,14 @@ install_units() {
   log "installing systemd units"
   ((SELECT_BACKEND)) && render_backend_unit
   ((SELECT_WEB)) && { render_nginx_config; render_web_unit; }
+  ((SELECT_PUBLIC)) && { render_public_nginx_config; render_public_web_unit; }
   ((SELECT_LIVEKIT)) && render_livekit_unit
   local units=() paths=() unit
   mapfile -t units < <(selected_units)
   for unit in "${units[@]}"; do paths+=("$UNIT_DIR/$unit"); done
   systemd-analyze verify "${paths[@]}" >/dev/null
   ((SELECT_WEB)) && { install -d -m 0750 -o threaden -g threaden /run/threaden-web; runuser -u threaden -- nginx -t -q -c "$CONFIG_DIR/nginx.conf"; }
+  ((SELECT_PUBLIC)) && { install -d -m 0750 -o threaden -g threaden /run/threaden-public-web; runuser -u threaden -- nginx -t -q -c "$PUBLIC_WEB_CONFIG"; }
   systemctl daemon-reload
   systemctl reset-failed "${units[@]}" >/dev/null 2>&1 || true
   systemctl enable "${units[@]}" >/dev/null
@@ -231,12 +233,14 @@ start_selected() {
   fi
   ((SELECT_BACKEND)) && { systemctl start "$BACKEND_UNIT"; wait_http "$BACKEND_UNIT" "http://127.0.0.1:$(port_from_bind "$BACKEND_BIND")/readyz"; }
   ((SELECT_WEB)) && { systemctl start "$WEB_UNIT"; wait_http "$WEB_UNIT" "http://127.0.0.1:$(port_from_bind "$WEB_BIND")/"; }
+  ((SELECT_PUBLIC)) && { systemctl start "$PUBLIC_WEB_UNIT"; wait_http "$PUBLIC_WEB_UNIT" "http://127.0.0.1:$(port_from_bind "$PUBLIC_WEB_BIND")/"; }
   log "healthy: $(selected_names)"
 }
 
 stop_selected() {
   log "stopping: $(selected_names)"
   ((SELECT_WEB)) && systemctl stop "$WEB_UNIT" || true
+  ((SELECT_PUBLIC)) && systemctl stop "$PUBLIC_WEB_UNIT" || true
   ((SELECT_BACKEND)) && systemctl stop "$BACKEND_UNIT" || true
   ((SELECT_LIVEKIT)) && systemctl stop "$LIVEKIT_UNIT" || true
 }

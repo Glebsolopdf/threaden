@@ -11,6 +11,8 @@ export interface WebPreferences {
   debugErrors: boolean;
 }
 
+export type Theme = 'dark' | 'light' | 'forest';
+
 const AUDIO_KEY = 'voice_rooms_audio_preferences';
 const WEB_KEY = 'voice_rooms_web_preferences';
 const THEME_KEY = 'voice_rooms_theme';
@@ -21,7 +23,7 @@ export class PreferencesService {
     inputDeviceId: '', outputDeviceId: '', microphoneEnabled: false, outputVolume: 100,
   }));
   readonly web = signal<WebPreferences>(this.read(WEB_KEY, { debugErrors: false }));
-  readonly theme = signal<'default'>(this.read(THEME_KEY, 'default'));
+  readonly theme = signal<Theme>(this.readTheme());
 
   constructor() {
     document.documentElement.dataset['theme'] = this.theme();
@@ -37,6 +39,17 @@ export class PreferencesService {
     const value = { ...this.web(), ...patch };
     this.web.set(value);
     this.write(WEB_KEY, value);
+  }
+
+  setTheme(theme: Theme): void {
+    this.theme.set(theme);
+    document.documentElement.dataset['theme'] = theme;
+    this.write(THEME_KEY, theme);
+  }
+
+  private readTheme(): Theme {
+    const storedTheme = this.read<Theme>(THEME_KEY, 'dark');
+    return storedTheme === 'light' || storedTheme === 'forest' ? storedTheme : 'dark';
   }
 
   private read<T>(key: string, fallback: T): T {
