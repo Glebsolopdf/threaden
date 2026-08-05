@@ -8,10 +8,10 @@
   gap: 0.45rem;
   align-items: center;
   padding: 0.5rem;
-  border: 1px solid rgb(255 255 255 / 10%);
+  border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgb(18 19 24 / 88%);
-  box-shadow: var(--shadow), inset 0 1px 0 rgb(255 255 255 / 8%);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  box-shadow: var(--shadow), inset 0 1px 0 var(--line-soft);
   backdrop-filter: blur(18px);
   touch-action: none;
   transition: opacity 180ms ease, transform 180ms ease;
@@ -36,7 +36,7 @@
   border-radius: 999px;
   background: repeating-linear-gradient(
     to bottom,
-    rgb(255 255 255 / 42%) 0 0.16rem,
+    var(--muted) 0 0.16rem,
     transparent 0.16rem 0.36rem
   );
   cursor: grab;
@@ -55,11 +55,11 @@
   width: 2.25rem;
   height: 2.25rem;
   place-items: center;
-  border: 1px solid rgb(255 255 255 / 14%);
+  border: 1px solid var(--line);
   border-radius: 50%;
   color: #fff;
   background: linear-gradient(135deg, color-mix(in srgb, var(--avatar-bg, #283a63) 86%, #fff 5%), var(--avatar-bg, #283a63));
-  box-shadow: 0 0 0 0.18rem rgb(18 19 24 / 92%);
+  box-shadow: 0 0 0 0.18rem var(--panel);
   font-size: 0.78rem;
   font-weight: 850;
   overflow: hidden;
@@ -97,19 +97,21 @@
   border: 1px solid var(--line-soft);
   border-radius: 50%;
   color: var(--text);
-  background: rgb(35 38 47 / 92%);
+  background: var(--panel-hover);
   cursor: pointer;
   transition: background-color 150ms ease, transform 120ms ease, border-color 150ms ease;
 }
 
-.room-widget__button:hover { border-color: rgb(255 255 255 / 18%); background: #2a2e39; }
+.room-widget__button:hover { border-color: var(--accent-border); background: var(--line); }
 .room-widget__button:active { transform: scale(0.94); }
 .room-widget__button[aria-pressed="true"] { color: #101216; background: var(--text); }
 .room-widget__button img {
   width: 1.15rem;
   height: 1.15rem;
-  filter: invert(1);
+  filter: brightness(0) invert(1);
 }
+
+html[data-theme="light"] .room-widget__button img { filter: none; }
 
 .room-widget__button[aria-pressed="true"] img { filter: none; }
 

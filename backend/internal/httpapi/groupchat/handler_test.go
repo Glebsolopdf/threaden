@@ -88,6 +88,7 @@ func (h *harness) do(t *testing.T, method, path string, body string) {
 	r := chi.NewRouter()
 	r.Get("/groups/{id}/messages", h.handler.Messages)
 	r.Post("/groups/{id}/messages", h.handler.Send)
+	r.Delete("/groups/{id}/messages/{messageID}", h.handler.Delete)
 	r.Post("/groups/{id}/typing", h.handler.Typing)
 	r.Post("/groups/{id}/read", h.handler.Read)
 	rr := httptest.NewRecorder()
@@ -134,6 +135,30 @@ func TestSendCreatesMessage(t *testing.T) {
 	}
 	if len(messages) != 1 || messages[0].Body != "hello" {
 		t.Fatalf("message not persisted: %+v", messages)
+	}
+}
+
+func TestSendReplyAndDeleteMessage(t *testing.T) {
+	h := newHarness(t)
+	h.do(t, http.MethodPost, "/groups/"+h.groupID+"/messages", `{"body":"original"}`)
+	var original model.GroupMessage
+	if err := json.Unmarshal([]byte(h.last.body), &original); err != nil {
+		t.Fatal(err)
+	}
+	h.do(t, http.MethodPost, "/groups/"+h.groupID+"/messages", `{"body":"answer","reply_to_id":"`+original.ID+`"}`)
+	if h.last.status != http.StatusCreated {
+		t.Fatalf("reply: expected 201, got %d", h.last.status)
+	}
+	var reply model.GroupMessage
+	if err := json.Unmarshal([]byte(h.last.body), &reply); err != nil {
+		t.Fatal(err)
+	}
+	if reply.ReplyTo == nil || reply.ReplyTo.ID != original.ID {
+		t.Fatalf("reply reference missing: %+v", reply.ReplyTo)
+	}
+	h.do(t, http.MethodDelete, "/groups/"+h.groupID+"/messages/"+original.ID, "")
+	if h.last.status != http.StatusNoContent {
+		t.Fatalf("delete: expected 204, got %d", h.last.status)
 	}
 }
 

@@ -47,8 +47,15 @@ export interface GroupMessage {
   author: User;
   body: string;
   created_at: string;
+  reply_to?: MessageReference;
   edited_at?: string;
   read?: boolean;
+}
+
+export interface MessageReference {
+  id: string;
+  author: User;
+  body: string;
 }
 
 export interface GroupMemberEvent {

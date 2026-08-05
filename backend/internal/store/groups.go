@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"voice-rooms/internal/model"
+	"voice-rooms/internal/store/groupmessages"
 )
 
 type NewGroup struct{ ID, Visibility, OwnerID, Name, Avatar, InviteToken string }
@@ -179,49 +180,26 @@ func (s *Store) hydrateGroup(ctx context.Context, g model.Group) (model.Group, e
 }
 
 func (s *Store) Messages(ctx context.Context, groupID string, cutoff time.Time, limit int, reader string) ([]model.GroupMessage, error) {
-	rows, e := s.db.QueryContext(ctx, `SELECT m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at,CASE WHEN m.author_id=? AND EXISTS(SELECT 1 FROM group_message_reads r WHERE r.message_id=m.id AND r.user_id<>m.author_id) THEN 1 ELSE 0 END FROM group_messages m JOIN users u ON u.id=m.author_id WHERE m.group_id=? AND m.created_at>=? ORDER BY m.created_at DESC LIMIT ?`, reader, groupID, cutoff.Unix(), limit)
+	out, e := groupmessages.List(ctx, s.db, groupID, cutoff, limit, reader)
 	if e != nil {
 		return nil, e
 	}
-	defer rows.Close()
-	out := []model.GroupMessage{}
-	for rows.Next() {
-		var m model.GroupMessage
-		var a, c, read int64
-		if e = rows.Scan(&m.ID, &m.GroupID, &m.Body, &c, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &a, &read); e != nil {
+	for i := range out {
+		var read int64
+		e = s.db.QueryRowContext(ctx, `SELECT CASE WHEN EXISTS(SELECT 1 FROM group_message_reads r WHERE r.message_id=? AND r.user_id<>?) THEN 1 ELSE 0 END`, out[i].ID, reader).Scan(&read)
+		if e != nil {
 			return nil, e
 		}
-		m.CreatedAt = time.Unix(c, 0).UTC()
-		m.Author.CreatedAt = time.Unix(a, 0).UTC()
-		m.Read = read != 0
-		out = append(out, m)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	for left, right := 0, len(out)-1; left < right; left, right = left+1, right-1 {
-		out[left], out[right] = out[right], out[left]
+		out[i].Read = read != 0 && reader != "" && out[i].Author.ID == reader
 	}
 	return out, nil
 }
 func (s *Store) Message(ctx context.Context, id string) (model.GroupMessage, error) {
-	var m model.GroupMessage
-	var created, authorCreated int64
-	err := s.db.QueryRowContext(ctx, `
-		SELECT m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at
-		FROM group_messages m JOIN users u ON u.id=m.author_id
-		WHERE m.id=?`, id).Scan(
-		&m.ID, &m.GroupID, &m.Body, &created,
-		&m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated)
+	m, err := groupmessages.Get(ctx, s.db, id)
 	if err == sql.ErrNoRows {
 		return m, ErrNotFound
 	}
-	if err != nil {
-		return m, err
-	}
-	m.CreatedAt = time.Unix(created, 0).UTC()
-	m.Author.CreatedAt = time.Unix(authorCreated, 0).UTC()
-	return m, nil
+	return m, err
 }
 func (s *Store) AddMessage(ctx context.Context, m model.GroupMessage) error {
 	tx, e := s.db.BeginTx(ctx, nil)
@@ -229,13 +207,26 @@ func (s *Store) AddMessage(ctx context.Context, m model.GroupMessage) error {
 		return e
 	}
 	defer tx.Rollback()
-	if _, e = tx.ExecContext(ctx, `INSERT INTO group_messages(id,group_id,author_id,body,created_at) VALUES(?,?,?,?,?)`, m.ID, m.GroupID, m.Author.ID, m.Body, m.CreatedAt.Unix()); e != nil {
+	if e = groupmessages.Add(ctx, tx, m); e != nil {
 		return fmt.Errorf("message: %w", e)
 	}
 	if _, e = tx.ExecContext(ctx, `UPDATE groups SET last_activity_at=? WHERE id=?`, m.CreatedAt.Unix(), m.GroupID); e != nil {
 		return e
 	}
 	return tx.Commit()
+}
+
+func (s *Store) DeleteMessage(ctx context.Context, id string) (string, error) {
+	groupID, err := groupmessages.Delete(ctx, s.db, id)
+	if err == sql.ErrNoRows {
+		return "", ErrNotFound
+	}
+	return groupID, err
+}
+
+func (s *Store) SetMessageReply(ctx context.Context, messageID, replyToID string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE group_messages SET reply_to_id=? WHERE id=?`, replyToID, messageID)
+	return err
 }
 func (s *Store) DeleteExpiredMessages(ctx context.Context, cutoff time.Time) error {
 	_, e := s.db.ExecContext(ctx, `DELETE FROM group_messages WHERE created_at<?`, cutoff.Unix())

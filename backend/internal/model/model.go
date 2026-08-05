@@ -61,12 +61,19 @@ type GroupMember struct {
 }
 
 type GroupMessage struct {
-	ID        string    `json:"id"`
-	GroupID   string    `json:"group_id"`
-	Author    User      `json:"author"`
-	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"created_at"`
-	Read      bool      `json:"read,omitempty"`
+	ID        string            `json:"id"`
+	GroupID   string            `json:"group_id"`
+	Author    User              `json:"author"`
+	Body      string            `json:"body"`
+	CreatedAt time.Time         `json:"created_at"`
+	ReplyTo   *MessageReference `json:"reply_to,omitempty"`
+	Read      bool              `json:"read,omitempty"`
+}
+
+type MessageReference struct {
+	ID     string `json:"id"`
+	Author User   `json:"author"`
+	Body   string `json:"body"`
 }
 
 type GroupVoiceRoom struct {

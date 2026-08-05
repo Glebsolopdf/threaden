@@ -3,11 +3,14 @@
 
 html, body { min-height: 100%; margin: 0; background: #090a0d; color: #f4f4f5; }
 body { overflow: hidden; }
+body, button, a, img, [role="button"], [role="menuitem"] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; }
 button, input, select { font: inherit; }
 [hidden] { display: none !important; }
 app-root, app-shell, app-home, app-group, app-discover, app-settings, app-profile, app-voice, app-login, app-register { display: block; min-width: 0; min-height: 0; }
 app-root, app-shell { width: 100%; min-height: 100%; }
-.messenger { min-height: 100vh; height: 100dvh; background: #090a0d; overflow: hidden; }
+.messenger { min-height: var(--app-height, 100dvh); height: var(--app-height, 100dvh); background: #090a0d; overflow: hidden; }
+@media (max-width: 56rem) { .messenger { min-height: 100svh; height: 100svh; } }
 .rail img, .group-header img, .voice-room img, .room-widget img { display: block; width: 1.25rem; height: 1.25rem; object-fit: contain; }
 .rail-logo img { width: 1.65rem; height: 1.65rem; }
 .workspace > router-outlet + * { display: block; width: 100%; min-width: 0; min-height: 0; height: 100%; }
@@ -17,7 +20,7 @@ app-home, app-group, app-discover, app-settings, app-profile, app-voice { height
 .clickable { cursor: pointer; }
 .validation-error { color: #ff9f9f; font-size: .84rem; margin: .35rem 0 0; }
 .inline-actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; }
-.dialog-backdrop { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .65); backdrop-filter: blur(8px); }
+.dialog-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / .65); backdrop-filter: blur(8px); }
 .dialog-card { width: min(32rem, 100%); max-height: min(88dvh, 50rem); overflow: auto; border: 1px solid rgb(255 255 255 / .11); border-radius: 1.25rem; padding: 1.25rem; background: #111318; box-shadow: 0 2rem 5rem rgb(0 0 0 / .5); }
 .dialog-card h2 { margin-top: 0; }
 .dialog-card menu { display: flex; justify-content: flex-end; gap: .75rem; padding: 0; margin: 1.25rem 0 0; }

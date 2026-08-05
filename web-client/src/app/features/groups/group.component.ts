@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/api/api.service';
-import type { GroupMember, GroupProfile, GroupVoiceRoom } from '../../core/api/models';
+import type { GroupMember, GroupMessage, GroupProfile, GroupVoiceRoom } from '../../core/api/models';
 import { AuthStore } from '../../core/auth/auth.store';
 import { GroupsStore } from '../../core/events/groups.store';
 import { NotificationStore } from '../../core/notifications/notification.store';
@@ -40,13 +40,18 @@ import { GroupMessageListComponent } from './group-message-list.component';
           </div>
         </header>
 
-        <app-group-message-list [messages]="groups.messages()" [loading]="groups.messagesLoading()" [currentUserId]="auth.user()?.id" />
+        <app-group-message-list [messages]="groups.messages()" [loading]="groups.messagesLoading()" [currentUserId]="auth.user()?.id" [groupOwnerId]="group.owner.id" (reply)="beginReply($event)" (remove)="deleteMessage($event)" />
 
         @if (groups.currentIsMember()) {
-          <form class="composer" [formGroup]="messageForm" (ngSubmit)="sendMessage()" autocomplete="off">
-            <input formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true" (input)="typingState.notify(groupId(), messageForm.controls.body.value.trim().length > 0)">
-            <button type="submit" [disabled]="messageForm.invalid || sending()">{{ sending() ? 'Отправка…' : 'Отправить' }}</button>
-          </form>
+          <div class="composer-stack">
+            @if (replyingTo(); as reply) {
+              <div class="reply-banner"><span><strong>В ответ {{ reply.author.display_name }}</strong><small>{{ reply.body }}</small></span><button type="button" aria-label="Отменить ответ" (click)="cancelReply()">×</button></div>
+            }
+            <form class="composer" [formGroup]="messageForm" (ngSubmit)="sendMessage()" autocomplete="off">
+              <input #messageInput formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true" (pointerdown)="focusComposer($event)" (input)="typingState.notify(groupId(), messageForm.controls.body.value.trim().length > 0)">
+              <button type="submit" [disabled]="messageForm.invalid || sending()">{{ sending() ? 'Отправка…' : 'Отправить' }}</button>
+            </form>
+          </div>
         } @else {
           <div class="join-group-dock"><button type="button" [disabled]="joining()" (click)="joinGroup()">{{ joining() ? 'Присоединяем…' : 'Присоединиться к группе' }}</button></div>
         }
@@ -145,7 +150,9 @@ export class GroupComponent {
   protected readonly profileOpen = signal(false);
   protected readonly deleteConfirmOpen = signal(false);
   protected readonly typingLabel = computed(() => this.typingState.labelFor(this.groupId(), this.auth.user()?.id));
+  protected readonly replyingTo = signal<GroupMessage | null>(null);
   protected readonly profile = signal<GroupProfile | null>(null);
+  private readonly messageInput = viewChild<ElementRef<HTMLInputElement>>('messageInput');
   protected readonly messageForm = new FormGroup({ body: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(2000)] }) });
   protected readonly voiceForm = new FormGroup({ name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(80)] }) });
   constructor() {
@@ -169,9 +176,24 @@ export class GroupComponent {
     const body = this.messageForm.controls.body.value;
     this.messageForm.reset({ body: '' }); this.typingState.notify(this.groupId(), false);
     this.sending.set(true);
-    try { await this.groups.sendMessage(body); }
+    try { await this.groups.sendMessage(body, this.replyingTo()?.id ?? ''); this.replyingTo.set(null); }
     catch (error) { this.messageForm.setValue({ body }); this.typingState.notify(this.groupId(), body.trim().length > 0); this.notifications.error(error, 'Не удалось отправить сообщение'); }
     finally { this.sending.set(false); }
+  }
+
+  protected beginReply(message: GroupMessage): void {
+    this.replyingTo.set(message);
+    queueMicrotask(() => this.messageInput()?.nativeElement.focus({ preventScroll: true }));
+  }
+  protected focusComposer(event: PointerEvent): void {
+    if (event.pointerType === 'mouse' && !window.matchMedia('(pointer: coarse) and (hover: none)').matches) return;
+    const input = this.messageInput()?.nativeElement;
+    if (input && document.activeElement !== input) input.focus({ preventScroll: true });
+  }
+  protected cancelReply(): void { this.replyingTo.set(null); }
+  protected async deleteMessage(message: GroupMessage): Promise<void> {
+    try { await this.groups.deleteMessage(message.id); }
+    catch (error) { this.notifications.error(error, 'Не удалось удалить сообщение'); }
   }
 
   protected async joinGroup(): Promise<void> {

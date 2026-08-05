@@ -41,6 +41,22 @@ func (s *Service) MarkRead(ctx context.Context, id, userID, messageID string) er
 }
 
 func (s *Service) Send(ctx context.Context, id string, u model.User, body, idempotencyKey string) (model.GroupMessage, error) {
+	return s.send(ctx, id, u, body, nil, idempotencyKey)
+}
+
+func (s *Service) SendReply(ctx context.Context, id string, u model.User, body, replyToID, idempotencyKey string) (model.GroupMessage, error) {
+	var reply *model.MessageReference
+	if replyToID != "" {
+		original, err := s.store.Message(ctx, replyToID)
+		if err != nil || original.GroupID != id {
+			return model.GroupMessage{}, ErrInvalid
+		}
+		reply = &model.MessageReference{ID: original.ID, Author: original.Author, Body: original.Body}
+	}
+	return s.send(ctx, id, u, body, reply, idempotencyKey)
+}
+
+func (s *Service) send(ctx context.Context, id string, u model.User, body string, reply *model.MessageReference, idempotencyKey string) (model.GroupMessage, error) {
 	if !s.member(ctx, id, u.ID) {
 		return model.GroupMessage{}, ErrForbidden
 	}
@@ -76,10 +92,35 @@ func (s *Service) Send(ctx context.Context, id string, u model.User, body, idemp
 			return model.GroupMessage{}, ErrInvalid
 		}
 	}
-	m := model.GroupMessage{ID: mid, GroupID: id, Author: u, Body: body, CreatedAt: s.now().UTC()}
+	m := model.GroupMessage{ID: mid, GroupID: id, Author: u, Body: body, CreatedAt: s.now().UTC(), ReplyTo: reply}
 	if e = s.store.AddMessage(ctx, m); e != nil {
 		return m, e
 	}
 	s.publishGroup(ctx, id, "message_created", m)
 	return m, nil
+}
+
+func (s *Service) DeleteMessage(ctx context.Context, groupID, id string, u model.User) error {
+	message, err := s.store.Message(ctx, id)
+	if err != nil {
+		return mapErr(err)
+	}
+	if message.GroupID != groupID {
+		return ErrNotFound
+	}
+	if !s.member(ctx, message.GroupID, u.ID) {
+		return ErrForbidden
+	}
+	group, err := s.store.Group(ctx, message.GroupID)
+	if err != nil {
+		return mapErr(err)
+	}
+	if message.Author.ID != u.ID && group.Owner.ID != u.ID {
+		return ErrForbidden
+	}
+	if _, err = s.store.DeleteMessage(ctx, id); err != nil {
+		return mapErr(err)
+	}
+	s.publishGroup(ctx, message.GroupID, "message_deleted", hub.MessageDeletedEvent{MessageID: id})
+	return nil
 }
