@@ -56,7 +56,12 @@ export class TypingStore {
     const request = (previous ?? Promise.resolve())
       .catch(() => undefined)
       .then(() => firstValueFrom(this.api.setTyping(groupID, active)))
-      .then(() => undefined);
+      .then(
+        () => undefined,
+        () => {
+          if (active && this.requests.get(groupID) === request) this.localActive.delete(groupID);
+        },
+      );
     this.requests.set(groupID, request);
     void request.finally(() => {
       if (this.requests.get(groupID) === request) this.requests.delete(groupID);

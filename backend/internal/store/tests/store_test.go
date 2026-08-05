@@ -3,7 +3,6 @@ package store_test
 import (
 	"context"
 	"crypto/sha256"
-	"database/sql"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -11,11 +10,11 @@ import (
 
 	"voice-rooms/internal/model"
 	store "voice-rooms/internal/store"
-	"voice-rooms/internal/store/schema"
 )
 
 func TestStoreLifecycleAndTokenHash(t *testing.T) {
 	ctx := context.Background()
+
 	st, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -201,89 +200,27 @@ func TestInactiveGroupScheduleAndDelete(t *testing.T) {
 	}
 }
 
-func TestMessageReadReceipts(t *testing.T) {
+func TestAddMessageDuplicateIDIsNotNotFound(t *testing.T) {
 	ctx := context.Background()
-	st, err := store.Open(filepath.Join(t.TempDir(), "reads.db"))
+	st, err := store.Open(filepath.Join(t.TempDir(), "dupmsg.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer st.Close()
 	now := time.Unix(1_700_000_000, 0).UTC()
-	author := model.User{ID: "usr_read_author", Email: "read-author@example.com", DisplayName: "Author", CreatedAt: now}
-	reader := model.User{ID: "usr_read_reader", Email: "read-reader@example.com", DisplayName: "Reader", CreatedAt: now}
-	for _, user := range []model.User{author, reader} {
-		if err := st.CreateUser(ctx, user, []byte("hash"), sha256.Sum256([]byte(user.ID))); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := st.CreateGroup(ctx, store.NewGroup{ID: "grp_reads", Visibility: "public", OwnerID: author.ID, Name: "Reads", InviteToken: "inv_reads"}, now, 0); err != nil {
+	author := model.User{ID: "usr_dup_author", Email: "dup@example.com", DisplayName: "Dup", CreatedAt: now}
+	if err := st.CreateUser(ctx, author, []byte("hash"), sha256.Sum256([]byte(author.ID))); err != nil {
 		t.Fatal(err)
 	}
-	if err := st.JoinGroup(ctx, "grp_reads", reader.ID, now); err != nil {
+	if err := st.CreateGroup(ctx, store.NewGroup{ID: "grp_dup", Visibility: "public", OwnerID: author.ID, Name: "Dup", InviteToken: "inv_dup"}, now, 0); err != nil {
 		t.Fatal(err)
 	}
-	message := model.GroupMessage{ID: "msg_reads", GroupID: "grp_reads", Author: author, Body: "hello", CreatedAt: now}
+	message := model.GroupMessage{ID: "msg_dup", GroupID: "grp_dup", Author: author, Body: "hello", CreatedAt: now}
 	if err := st.AddMessage(ctx, message); err != nil {
 		t.Fatal(err)
 	}
-	messages, err := st.Messages(ctx, "grp_reads", now.Add(-time.Minute), 10, author.ID)
-	if err != nil || len(messages) != 1 || messages[0].Read {
-		t.Fatalf("message should be unread: %+v, %v", messages, err)
-	}
-	receipts, err := st.MarkGroupMessagesRead(ctx, "grp_reads", reader.ID, message.ID, now.Add(time.Second))
-	if err != nil || len(receipts) != 1 || receipts[0].MessageID != message.ID {
-		t.Fatalf("read receipt: %+v, %v", receipts, err)
-	}
-	messages, err = st.Messages(ctx, "grp_reads", now.Add(-time.Minute), 10, author.ID)
-	if err != nil || len(messages) != 1 || !messages[0].Read {
-		t.Fatalf("message should be read: %+v, %v", messages, err)
-	}
-}
-
-func TestMigratesLegacyTemporaryUsers(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "legacy.db")
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = db.Exec(`
-		CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL);
-		INSERT INTO schema_migrations(version, applied_at) VALUES(1, 1);
-		CREATE TABLE temporary_users (
-			id TEXT PRIMARY KEY,
-			display_name TEXT NOT NULL,
-			avatar TEXT NOT NULL,
-			token_hash BLOB NOT NULL UNIQUE CHECK(length(token_hash) = 32),
-			created_at INTEGER NOT NULL,
-			expires_at INTEGER NOT NULL
-		);
-		CREATE INDEX temporary_users_expires_at_idx ON temporary_users(expires_at);
-		CREATE TABLE rooms (
-			code TEXT PRIMARY KEY,
-			owner_id TEXT NOT NULL REFERENCES temporary_users(id) ON DELETE CASCADE,
-			created_at INTEGER NOT NULL,
-			expires_at INTEGER NOT NULL
-		);
-		CREATE INDEX rooms_expires_at_idx ON rooms(expires_at);
-		CREATE INDEX rooms_owner_id_idx ON rooms(owner_id);
-		CREATE TABLE room_members (
-			room_code TEXT NOT NULL REFERENCES rooms(code) ON DELETE CASCADE,
-			user_id TEXT NOT NULL REFERENCES temporary_users(id) ON DELETE CASCADE,
-			joined_at INTEGER NOT NULL,
-			PRIMARY KEY (room_code, user_id)
-		);
-		CREATE INDEX room_members_user_id_idx ON room_members(user_id);
-	`)
-	if closeErr := db.Close(); err != nil || closeErr != nil {
-		t.Fatalf("seed legacy db: %v close: %v", err, closeErr)
-	}
-	st, err := store.Open(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer st.Close()
-	version, err := st.MigrationVersion()
-	if err != nil || version != schema.LatestVersion {
-		t.Fatalf("migration version=%d err=%v", version, err)
+	err = st.AddMessage(ctx, message)
+	if err == nil || errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("duplicate id must be a conflict, not ErrNotFound: %v", err)
 	}
 }

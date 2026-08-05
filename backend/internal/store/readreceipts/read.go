@@ -3,6 +3,7 @@ package readreceipts
 import (
 	"context"
 	"database/sql"
+	"strings"
 )
 
 type Receipt struct{ MessageID, AuthorID string }
@@ -19,10 +20,36 @@ func Mark(ctx context.Context, db *sql.DB, groupID, userID, messageID string, no
 	} else if err != nil {
 		return nil, err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT OR IGNORE INTO group_message_reads(message_id,user_id,read_at) SELECT id,?,? FROM group_messages WHERE group_id=? AND created_at<=?`, userID, now, groupID, created); err != nil {
+	rows, err := tx.QueryContext(ctx, `INSERT OR IGNORE INTO group_message_reads(message_id,user_id,read_at) SELECT id,?,? FROM group_messages WHERE group_id=? AND created_at<=? RETURNING message_id`, userID, now, groupID, created)
+	if err != nil {
 		return nil, err
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT DISTINCT m.id,m.author_id FROM group_messages m JOIN group_message_reads r ON r.message_id=m.id WHERE m.group_id=? AND r.user_id=? AND m.author_id<>? AND m.created_at<=?`, groupID, userID, userID, created)
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return nil, err
+	}
+	if err = rows.Close(); err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, tx.Commit()
+	}
+	placeholders := strings.TrimRight(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, 0, len(ids)+1)
+	for _, id := range ids {
+		args = append(args, id)
+	}
+	args = append(args, userID)
+	rows, err = tx.QueryContext(ctx, `SELECT m.id,m.author_id FROM group_messages m WHERE m.id IN (`+placeholders+`) AND m.author_id<>?`, args...)
 	if err != nil {
 		return nil, err
 	}

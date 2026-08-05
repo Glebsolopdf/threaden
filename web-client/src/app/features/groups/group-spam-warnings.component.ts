@@ -1,6 +1,14 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import type { GroupSpamWarning } from '../../core/api/models';
 
+const reasonLabels: Record<string, string> = {
+  near_duplicate_messages: 'Почти одинаковые сообщения',
+  repeated_messages: 'Повторы сообщений',
+  content_spam: 'Массовый спам',
+  message_rate_limit: 'Массовый спам',
+  group_rate_limit: 'Массовый спам',
+};
+
 @Component({
   selector: 'app-group-spam-warnings',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,8 +28,6 @@ import type { GroupSpamWarning } from '../../core/api/models';
 })
 export class GroupSpamWarningsComponent {
   readonly warnings = input<GroupSpamWarning[]>([]);
-  protected label(reason: string): string {
-    return reason === 'near_duplicate_messages' ? 'Почти одинаковые сообщения' : reason === 'repeated_messages' ? 'Повторы сообщений' : 'Массовый спам';
-  }
+  protected label(reason: string): string { return reasonLabels[reason] ?? 'Массовый спам'; }
   protected date(value: string): string { return new Date(value).toLocaleString(); }
 }

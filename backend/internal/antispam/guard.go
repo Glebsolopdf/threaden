@@ -53,39 +53,25 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 	now := g.now().UTC()
 	normalized := normalize(body)
 	if normalized != "" {
-		deleted, err := g.store.DeleteRecentRepeatedMessages(ctx, groupID, user.ID, normalized, now.Add(-g.cfg.MessageLimit.Refill), 20)
+		deleted, err := g.store.DeleteRecentRepeatedMessages(ctx, groupID, user.ID, normalized, now.Add(-g.cfg.MessageLimit.Refill), recentPurgeLimit)
 		if err != nil {
 			return Result{}, err
 		}
 		if deleted > 0 {
-			result, err := g.evaluateGroup(ctx, groupID, body, "repeated_messages", now)
+			result, err := g.recordGroupWarning(ctx, groupID, body, reasonRepeatedMessages, now)
 			if err != nil {
 				return Result{}, err
 			}
 			return result, g.warnOnce(user.ID, now)
 		}
 	}
-	if recent, err := g.store.Messages(ctx, groupID, now.Add(-g.cfg.MessageLimit.Refill), 20, ""); err != nil {
+	if recent, err := g.store.Messages(ctx, groupID, now.Add(-g.cfg.MessageLimit.Refill), recentScanLimit, ""); err != nil {
 		return Result{}, err
-	} else if similar, users := countSimilarMessages(body, recent); similar >= 3 && users >= 2 {
-		if _, err := g.store.DeleteRecentMessagesByAuthor(ctx, groupID, user.ID, now.Add(-g.cfg.MessageLimit.Refill), 20); err != nil {
-			return Result{}, err
-		}
-		result, err := g.evaluateGroup(ctx, groupID, body, "near_duplicate_messages", now)
-		if err != nil {
-			return Result{}, err
-		}
-		return result, g.warnOnce(user.ID, now)
+	} else if similar, users := countSimilarMessages(body, recent); similar >= minSimilarMessages && users >= minSimilarUsers {
+		return g.punish(ctx, groupID, user.ID, body, reasonNearDuplicateMessages, now)
 	}
 	if looksLikeContentSpam(body, g.cfg) {
-		if _, err := g.store.DeleteRecentMessagesByAuthor(ctx, groupID, user.ID, now.Add(-g.cfg.MessageLimit.Refill), 20); err != nil {
-			return Result{}, err
-		}
-		result, err := g.evaluateGroup(ctx, groupID, body, "content_spam", now)
-		if err != nil {
-			return Result{}, err
-		}
-		return result, g.warnOnce(user.ID, now)
+		return g.punish(ctx, groupID, user.ID, body, reasonContentSpam, now)
 	}
 	limit := g.cfg.MessageLimit
 	if now.Sub(user.CreatedAt) < g.cfg.NewAccountAge {
@@ -94,30 +80,27 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 	if decision, err := g.limiter.Allow(ctx, "message:user", abuse.Subject("user", user.ID), limit); err != nil {
 		return Result{}, err
 	} else if !decision.Allowed {
-		if _, err := g.store.DeleteRecentMessagesByAuthor(ctx, groupID, user.ID, now.Add(-g.cfg.MessageLimit.Refill), 20); err != nil {
-			return Result{}, err
-		}
-		result, err := g.evaluateGroup(ctx, groupID, body, "message_rate_limit", now)
-		if err != nil {
-			return Result{}, err
-		}
-		return result, g.warnOnce(user.ID, now)
+		return g.punish(ctx, groupID, user.ID, body, reasonMessageRateLimit, now)
 	}
 	groupLimit := abuse.Limit{Capacity: limit.Capacity * 2, Refill: limit.Refill}
 	if decision, err := g.limiter.Allow(ctx, "message:group", groupID, groupLimit); err != nil {
 		return Result{}, err
 	} else if !decision.Allowed {
-		if _, err := g.store.DeleteRecentMessagesByAuthor(ctx, groupID, user.ID, now.Add(-g.cfg.MessageLimit.Refill), 20); err != nil {
-			return Result{}, err
-		}
-		result, err := g.evaluateGroup(ctx, groupID, body, "group_rate_limit", now)
-		if err != nil {
-			return Result{}, err
-		}
-		return result, g.warnOnce(user.ID, now)
+		return g.punish(ctx, groupID, user.ID, body, reasonGroupRateLimit, now)
 	}
 	g.clearWarning(user.ID)
 	return Result{}, nil
+}
+
+func (g *Guard) punish(ctx context.Context, groupID, userID, body, reason string, now time.Time) (Result, error) {
+	if _, err := g.store.DeleteRecentMessagesByAuthor(ctx, groupID, userID, now.Add(-g.cfg.MessageLimit.Refill), recentPurgeLimit); err != nil {
+		return Result{}, err
+	}
+	result, err := g.recordGroupWarning(ctx, groupID, body, reason, now)
+	if err != nil {
+		return Result{}, err
+	}
+	return result, g.warnOnce(userID, now)
 }
 
 func (g *Guard) Reserve(ctx context.Context, groupID, userID, key, responseID string) (string, bool, error) {
@@ -174,6 +157,11 @@ func normalize(body string) string { return strings.ToLower(strings.TrimSpace(bo
 func (g *Guard) warnOnce(userID string, now time.Time) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	for id, until := range g.warned {
+		if !until.After(now) {
+			delete(g.warned, id)
+		}
+	}
 	if until, ok := g.warned[userID]; ok && until.After(now) {
 		return ErrMessageRateLimited
 	}

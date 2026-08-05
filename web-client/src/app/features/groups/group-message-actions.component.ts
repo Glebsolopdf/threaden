@@ -37,7 +37,6 @@ export class GroupMessageActionsComponent {
   private startY = 0;
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly menu = viewChild<ElementRef<HTMLElement>>('menu');
-  private static active?: GroupMessageActionsComponent;
 
   @HostListener('contextmenu', ['$event'])
   protected showMenu(event: MouseEvent): void { event.preventDefault(); this.openMenu(event.clientX, event.clientY); }
@@ -78,6 +77,11 @@ export class GroupMessageActionsComponent {
     if (!(event.target instanceof Node) || !(event.target as Node).parentElement?.closest('app-group-message-actions')) this.closeMenu();
   }
 
+  @HostListener('document:contextmenu', ['$event'])
+  protected closeOnContextMenu(event: Event): void {
+    if (!(event.target instanceof Node) || !this.host.nativeElement.contains(event.target)) this.closeMenu(true);
+  }
+
   @HostListener('document:keydown.escape')
   protected closeOnEscape(): void { this.closeMenu(); }
 
@@ -92,8 +96,6 @@ export class GroupMessageActionsComponent {
   protected swipeTransform(): string { return `translateY(-50%) scale(${0.72 + this.swipeOpacity() * 0.28})`; }
 
   private openMenu(clientX: number, clientY: number): void {
-    GroupMessageActionsComponent.active?.closeMenu(true);
-    GroupMessageActionsComponent.active = this;
     if (this.closeTimer !== undefined) window.clearTimeout(this.closeTimer);
     this.menuMounted.set(true);
     requestAnimationFrame(() => {
@@ -113,7 +115,6 @@ export class GroupMessageActionsComponent {
 
   private closeMenu(immediate = false): void {
     if (!this.menuMounted()) return;
-    if (GroupMessageActionsComponent.active === this) GroupMessageActionsComponent.active = undefined;
     if (immediate) {
       this.open.set(false);
       this.menuMounted.set(false);

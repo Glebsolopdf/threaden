@@ -70,6 +70,10 @@ export interface GroupMessageReadEvent {
   message_id: string;
 }
 
+export interface GroupMessageDeletedEvent {
+  message_id: string;
+}
+
 export type GroupMemberEventType = 'member_joined' | 'member_left' | 'member_removed';
 
 export interface GroupVoiceRoom {

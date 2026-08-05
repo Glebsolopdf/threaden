@@ -110,7 +110,7 @@ export class GroupsStore {
     await this.openGroup(group.id);
   }
 
-  async sendMessage(body: string, replyToID = ''): Promise<void> {
+  async sendMessage(body: string, replyTo: GroupMessage | null = null): Promise<void> {
     const current = this.current();
     const user = this.auth.user();
     const text = body.trim();
@@ -127,12 +127,13 @@ export class GroupsStore {
         author: user,
         body: text,
         created_at: new Date().toISOString(),
+        reply_to: replyTo ? { id: replyTo.id, author: replyTo.author, body: replyTo.body } : undefined,
       },
     };
     this.messages.update((items) => [...items, pending]);
 
     try {
-      const sent = await firstValueFrom(replyToID ? this.api.sendReply(current.id, text, replyToID) : this.api.sendMessage(current.id, text));
+      const sent = await firstValueFrom(replyTo ? this.api.sendReply(current.id, text, replyTo.id) : this.api.sendMessage(current.id, text));
       this.messages.update((items) => replaceOptimisticMessage(items, optimisticId, sent));
       this.scheduleRefresh();
     } catch (error) {

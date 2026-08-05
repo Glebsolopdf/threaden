@@ -167,6 +167,11 @@ func isConstraint(err error) bool {
 	return errors.As(err, &sqliteErr) && sqliteErr.Code()&0xff == 19
 }
 
+func isForeignKey(err error) bool {
+	var sqliteErr *sqlite3.Error
+	return errors.As(err, &sqliteErr) && sqliteErr.Code() == 787
+}
+
 func collectIDs(rows *sql.Rows, err error) ([]string, error) {
 	if err != nil {
 		return nil, err

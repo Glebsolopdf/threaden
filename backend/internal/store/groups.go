@@ -180,19 +180,7 @@ func (s *Store) hydrateGroup(ctx context.Context, g model.Group) (model.Group, e
 }
 
 func (s *Store) Messages(ctx context.Context, groupID string, cutoff time.Time, limit int, reader string) ([]model.GroupMessage, error) {
-	out, e := groupmessages.List(ctx, s.db, groupID, cutoff, limit, reader)
-	if e != nil {
-		return nil, e
-	}
-	for i := range out {
-		var read int64
-		e = s.db.QueryRowContext(ctx, `SELECT CASE WHEN EXISTS(SELECT 1 FROM group_message_reads r WHERE r.message_id=? AND r.user_id<>?) THEN 1 ELSE 0 END`, out[i].ID, reader).Scan(&read)
-		if e != nil {
-			return nil, e
-		}
-		out[i].Read = read != 0 && reader != "" && out[i].Author.ID == reader
-	}
-	return out, nil
+	return groupmessages.List(ctx, s.db, groupID, cutoff, limit, reader)
 }
 func (s *Store) Message(ctx context.Context, id string) (model.GroupMessage, error) {
 	m, err := groupmessages.Get(ctx, s.db, id)
@@ -208,6 +196,9 @@ func (s *Store) AddMessage(ctx context.Context, m model.GroupMessage) error {
 	}
 	defer tx.Rollback()
 	if e = groupmessages.Add(ctx, tx, m); e != nil {
+		if isForeignKey(e) {
+			return ErrNotFound
+		}
 		return fmt.Errorf("message: %w", e)
 	}
 	if _, e = tx.ExecContext(ctx, `UPDATE groups SET last_activity_at=? WHERE id=?`, m.CreatedAt.Unix(), m.GroupID); e != nil {
@@ -224,10 +215,6 @@ func (s *Store) DeleteMessage(ctx context.Context, id string) (string, error) {
 	return groupID, err
 }
 
-func (s *Store) SetMessageReply(ctx context.Context, messageID, replyToID string) error {
-	_, err := s.db.ExecContext(ctx, `UPDATE group_messages SET reply_to_id=? WHERE id=?`, replyToID, messageID)
-	return err
-}
 func (s *Store) DeleteExpiredMessages(ctx context.Context, cutoff time.Time) error {
 	_, e := s.db.ExecContext(ctx, `DELETE FROM group_messages WHERE created_at<?`, cutoff.Unix())
 	return e

@@ -3,6 +3,7 @@ package groupchat
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -36,6 +37,7 @@ type recorder struct {
 }
 
 type harness struct {
+	st       *store.Store
 	handler  *Handler
 	user     model.User
 	groupID  string
@@ -58,7 +60,7 @@ func newHarness(t *testing.T) *harness {
 	if err := st.CreateGroup(context.Background(), store.NewGroup{ID: "grp_1", Visibility: "public", OwnerID: user.ID, Name: "Rooms", Avatar: "👥", InviteToken: "inv_1"}, now, 3); err != nil {
 		t.Fatal(err)
 	}
-	h := &harness{user: user, groupID: "grp_1"}
+	h := &harness{st: st, user: user, groupID: "grp_1"}
 	h.handler = New(appgroups.New(st, voiceStub{}, hub.New()), Hooks{
 		WriteJSON: func(_ http.ResponseWriter, status int, v any) { h.record(status, v) },
 		WriteError: func(_ http.ResponseWriter, r *http.Request, status int, code, msg string) {
@@ -94,7 +96,7 @@ func (h *harness) do(t *testing.T, method, path string, body string) {
 	rr := httptest.NewRecorder()
 	r.ServeHTTP(rr, req)
 	if h.last.status == 0 {
-		h.last = recorder{status: rr.Code}
+		h.last = recorder{status: rr.Code, err: h.last.err}
 	}
 }
 
@@ -159,6 +161,57 @@ func TestSendReplyAndDeleteMessage(t *testing.T) {
 	h.do(t, http.MethodDelete, "/groups/"+h.groupID+"/messages/"+original.ID, "")
 	if h.last.status != http.StatusNoContent {
 		t.Fatalf("delete: expected 204, got %d", h.last.status)
+	}
+}
+
+func TestDeleteRequiresAuthorOrOwner(t *testing.T) {
+	h := newHarness(t)
+	now := h.user.CreatedAt
+	owner := h.user
+	other := model.User{ID: "usr_2", Email: "b@example.com", DisplayName: "B", CreatedAt: now}
+	if err := h.st.CreateUser(context.Background(), other, []byte("p"), [32]byte{1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.st.JoinGroup(context.Background(), h.groupID, other.ID, now); err != nil {
+		t.Fatal(err)
+	}
+	h.do(t, http.MethodPost, "/groups/"+h.groupID+"/messages", `{"body":"mine"}`)
+	var sent model.GroupMessage
+	if err := json.Unmarshal([]byte(h.last.body), &sent); err != nil {
+		t.Fatal(err)
+	}
+	h.user = other
+	h.do(t, http.MethodDelete, "/groups/"+h.groupID+"/messages/"+sent.ID, "")
+	if h.writeErr == 0 || !errors.Is(h.last.err, appgroups.ErrForbidden) {
+		t.Fatalf("non-author delete: expected forbidden error, got err=%v status=%d writeErr=%d", h.last.err, h.last.status, h.writeErr)
+	}
+	h.do(t, http.MethodPost, "/groups/"+h.groupID+"/messages", `{"body":"theirs"}`)
+	var theirs model.GroupMessage
+	if err := json.Unmarshal([]byte(h.last.body), &theirs); err != nil {
+		t.Fatal(err)
+	}
+	h.user = owner
+	h.writeErr = 0
+	h.do(t, http.MethodDelete, "/groups/"+h.groupID+"/messages/"+theirs.ID, "")
+	if h.writeErr != 0 || h.last.status != http.StatusNoContent {
+		t.Fatalf("owner delete: expected 204, got %d err %v", h.last.status, h.last.err)
+	}
+}
+
+func TestReplyToDeletedMessageFails(t *testing.T) {
+	h := newHarness(t)
+	h.do(t, http.MethodPost, "/groups/"+h.groupID+"/messages", `{"body":"original"}`)
+	var original model.GroupMessage
+	if err := json.Unmarshal([]byte(h.last.body), &original); err != nil {
+		t.Fatal(err)
+	}
+	h.do(t, http.MethodDelete, "/groups/"+h.groupID+"/messages/"+original.ID, "")
+	if h.last.status != http.StatusNoContent {
+		t.Fatalf("delete: expected 204, got %d", h.last.status)
+	}
+	h.do(t, http.MethodPost, "/groups/"+h.groupID+"/messages", `{"body":"answer","reply_to_id":"`+original.ID+`"}`)
+	if h.writeErr == 0 || !errors.Is(h.last.err, appgroups.ErrNotFound) {
+		t.Fatalf("reply to deleted message: expected not-found error, got %v", h.last.err)
 	}
 }
 

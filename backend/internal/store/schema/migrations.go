@@ -2,43 +2,19 @@ package schema
 
 import "fmt"
 
-const LatestVersion = 15
+const LatestVersion = 16
+
+var migrations = []string{
+	migration1, migration2, migration3, migration4, migration5, migration6, migration7,
+	migration8, migration9, migration10, migration11, migration12, migration13, migration14,
+	migration15, migration16,
+}
 
 func Migration(version int) (string, error) {
-	switch version {
-	case 1:
-		return migration1, nil
-	case 2:
-		return migration2, nil
-	case 3:
-		return migration3, nil
-	case 4:
-		return migration4, nil
-	case 5:
-		return migration5, nil
-	case 6:
-		return migration6, nil
-	case 7:
-		return migration7, nil
-	case 8:
-		return migration8, nil
-	case 9:
-		return migration9, nil
-	case 10:
-		return migration10, nil
-	case 11:
-		return migration11, nil
-	case 12:
-		return migration12, nil
-	case 13:
-		return migration13, nil
-	case 14:
-		return migration14, nil
-	case 15:
-		return migration15, nil
-	default:
+	if version < 1 || version > LatestVersion {
 		return "", fmt.Errorf("unknown migration version %d", version)
 	}
+	return migrations[version-1], nil
 }
 
 const migration1 = `
@@ -191,7 +167,7 @@ CREATE INDEX IF NOT EXISTS group_members_group_joined_idx ON group_members(group
 
 const migration6 = `
 	UPDATE users SET avatar = '' WHERE avatar = '🙂';
-	`
+`
 
 const migration7 = `
 	ALTER TABLE groups ADD COLUMN scheduled_for_deletion_at INTEGER;
@@ -218,12 +194,12 @@ const migration7 = `
 		ON groups(protected_from_auto_delete, scheduled_for_deletion_at, last_activity_at, created_at);
 	CREATE INDEX IF NOT EXISTS rate_limit_buckets_expires_idx ON rate_limit_buckets(expires_at);
 	CREATE INDEX IF NOT EXISTS idempotency_keys_expires_idx ON idempotency_keys(expires_at);
-	`
+`
 
 const migration8 = `
 	ALTER TABLE rooms ADD COLUMN empty_since_at INTEGER;
 	CREATE INDEX IF NOT EXISTS rooms_empty_since_idx ON rooms(empty_since_at);
-	`
+`
 
 const migration9 = `
 	CREATE TABLE IF NOT EXISTS sessions (
@@ -244,7 +220,7 @@ const migration9 = `
 
 	DELETE FROM rooms;
 	UPDATE groups SET avatar = '👥' WHERE length(avatar) < 1 OR length(avatar) > 8;
-	`
+`
 
 const migration10 = `
 	ALTER TABLE sessions ADD COLUMN reviewed_at INTEGER;
@@ -284,7 +260,7 @@ const migration12 = `
 
 	CREATE INDEX IF NOT EXISTS account_bans_user_created_idx ON account_bans(user_id, created_at);
 	CREATE INDEX IF NOT EXISTS account_bans_created_idx ON account_bans(created_at);
-	`
+`
 const migration13 = `
 	CREATE TABLE IF NOT EXISTS group_spam_warnings (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

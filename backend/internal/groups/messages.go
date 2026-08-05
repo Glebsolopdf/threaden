@@ -48,7 +48,10 @@ func (s *Service) SendReply(ctx context.Context, id string, u model.User, body, 
 	var reply *model.MessageReference
 	if replyToID != "" {
 		original, err := s.store.Message(ctx, replyToID)
-		if err != nil || original.GroupID != id {
+		if err != nil {
+			return model.GroupMessage{}, mapErr(err)
+		}
+		if original.GroupID != id {
 			return model.GroupMessage{}, ErrInvalid
 		}
 		reply = &model.MessageReference{ID: original.ID, Author: original.Author, Body: original.Body}
@@ -94,7 +97,7 @@ func (s *Service) send(ctx context.Context, id string, u model.User, body string
 	}
 	m := model.GroupMessage{ID: mid, GroupID: id, Author: u, Body: body, CreatedAt: s.now().UTC(), ReplyTo: reply}
 	if e = s.store.AddMessage(ctx, m); e != nil {
-		return m, e
+		return m, mapErr(e)
 	}
 	s.publishGroup(ctx, id, "message_created", m)
 	return m, nil

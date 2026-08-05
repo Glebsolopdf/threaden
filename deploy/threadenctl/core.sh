@@ -109,7 +109,7 @@ parse_args() {
       --web) SELECT_WEB=1; EXPLICIT_SELECTION=1 ;;
       --public) SELECT_PUBLIC=1; EXPLICIT_SELECTION=1 ;;
       --livekit) SELECT_LIVEKIT=1; EXPLICIT_SELECTION=1 ;;
-      --all) SELECT_BACKEND=1; SELECT_PUBLIC=1; SELECT_LIVEKIT=1; EXPLICIT_SELECTION=1 ;;
+      --all) SELECT_BACKEND=1; SELECT_WEB=1; SELECT_PUBLIC=1; SELECT_LIVEKIT=1; EXPLICIT_SELECTION=1 ;;
       --full) FULL_RESTART=1 ;;
       --root) shift; (($#)) || die "--root requires a path"; PROJECT_ROOT="$1" ;;
       --yes|-y) ASSUME_YES=1 ;;

@@ -3,6 +3,7 @@ package groupmessages
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -15,21 +16,22 @@ type DB interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
-const selectMessage = `
-	SELECT m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at,
-		rm.id,rm.body,ru.id,ru.display_name,ru.avatar,ru.created_at
-	FROM group_messages m
+const selectList = `m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at,
+	rm.id,rm.body,ru.id,ru.display_name,ru.avatar,ru.created_at,m.reply_snapshot`
+
+const fromMessage = ` FROM group_messages m
 	JOIN users u ON u.id=m.author_id
 	LEFT JOIN group_messages rm ON rm.id=m.reply_to_id
 	LEFT JOIN users ru ON ru.id=rm.author_id`
 
-func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
+func scan(row interface{ Scan(...any) error }, extra ...any) (model.GroupMessage, error) {
 	var m model.GroupMessage
 	var created, authorCreated int64
-	var replyID, replyBody, replyAuthorID, replyName, replyAvatar sql.NullString
+	var replyID, replyBody, replyAuthorID, replyName, replyAvatar, replySnapshot sql.NullString
 	var replyCreated sql.NullInt64
-	err := row.Scan(&m.ID, &m.GroupID, &m.Body, &created, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated,
-		&replyID, &replyBody, &replyAuthorID, &replyName, &replyAvatar, &replyCreated)
+	dest := []any{&m.ID, &m.GroupID, &m.Body, &created, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated,
+		&replyID, &replyBody, &replyAuthorID, &replyName, &replyAvatar, &replyCreated, &replySnapshot}
+	err := row.Scan(append(dest, extra...)...)
 	if err == sql.ErrNoRows {
 		return m, sql.ErrNoRows
 	}
@@ -38,6 +40,13 @@ func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
 	}
 	m.CreatedAt = time.Unix(created, 0).UTC()
 	m.Author.CreatedAt = time.Unix(authorCreated, 0).UTC()
+	if replySnapshot.Valid {
+		var ref model.MessageReference
+		if json.Unmarshal([]byte(replySnapshot.String), &ref) == nil {
+			m.ReplyTo = &ref
+			return m, nil
+		}
+	}
 	if replyID.Valid {
 		m.ReplyTo = &model.MessageReference{ID: replyID.String, Body: replyBody.String, Author: model.User{ID: replyAuthorID.String, DisplayName: replyName.String, Avatar: replyAvatar.String}}
 		if replyCreated.Valid {
@@ -48,17 +57,19 @@ func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
 }
 
 func List(ctx context.Context, db DB, groupID string, cutoff time.Time, limit int, reader string) ([]model.GroupMessage, error) {
-	rows, err := db.QueryContext(ctx, selectMessage+` WHERE m.group_id=? AND m.created_at>=? ORDER BY m.created_at DESC LIMIT ?`, groupID, cutoff.Unix(), limit)
+	rows, err := db.QueryContext(ctx, `SELECT `+selectList+`, EXISTS(SELECT 1 FROM group_message_reads r WHERE r.message_id=m.id AND r.user_id<>?) `+fromMessage+` WHERE m.group_id=? AND m.created_at>=? ORDER BY m.created_at DESC LIMIT ?`, reader, groupID, cutoff.Unix(), limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := []model.GroupMessage{}
 	for rows.Next() {
-		m, scanErr := scan(rows)
+		var read int64
+		m, scanErr := scan(rows, &read)
 		if scanErr != nil {
 			return nil, scanErr
 		}
+		m.Read = read != 0 && reader != "" && m.Author.ID == reader
 		out = append(out, m)
 	}
 	if err := rows.Err(); err != nil {
@@ -71,15 +82,18 @@ func List(ctx context.Context, db DB, groupID string, cutoff time.Time, limit in
 }
 
 func Get(ctx context.Context, db DB, id string) (model.GroupMessage, error) {
-	return scan(db.QueryRowContext(ctx, selectMessage+` WHERE m.id=?`, id))
+	return scan(db.QueryRowContext(ctx, `SELECT `+selectList+` `+fromMessage+` WHERE m.id=?`, id))
 }
 
 func Add(ctx context.Context, db DB, m model.GroupMessage) error {
-	var replyID any
+	var replyID, replySnapshot any
 	if m.ReplyTo != nil {
 		replyID = m.ReplyTo.ID
+		if snapshot, err := json.Marshal(m.ReplyTo); err == nil {
+			replySnapshot = string(snapshot)
+		}
 	}
-	_, err := db.ExecContext(ctx, `INSERT INTO group_messages(id,group_id,author_id,body,created_at,reply_to_id) VALUES(?,?,?,?,?,?)`, m.ID, m.GroupID, m.Author.ID, m.Body, m.CreatedAt.Unix(), replyID)
+	_, err := db.ExecContext(ctx, `INSERT INTO group_messages(id,group_id,author_id,body,created_at,reply_to_id,reply_snapshot) VALUES(?,?,?,?,?,?,?)`, m.ID, m.GroupID, m.Author.ID, m.Body, m.CreatedAt.Unix(), replyID, replySnapshot)
 	return err
 }
 

@@ -176,7 +176,7 @@ export class GroupComponent {
     const body = this.messageForm.controls.body.value;
     this.messageForm.reset({ body: '' }); this.typingState.notify(this.groupId(), false);
     this.sending.set(true);
-    try { await this.groups.sendMessage(body, this.replyingTo()?.id ?? ''); this.replyingTo.set(null); }
+    try { await this.groups.sendMessage(body, this.replyingTo()); this.replyingTo.set(null); }
     catch (error) { this.messageForm.setValue({ body }); this.typingState.notify(this.groupId(), body.trim().length > 0); this.notifications.error(error, 'Не удалось отправить сообщение'); }
     finally { this.sending.set(false); }
   }
