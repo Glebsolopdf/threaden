@@ -29,7 +29,8 @@ func New(service *appgroups.Service, hooks Hooks) *Handler {
 }
 
 type messageRequest struct {
-	Body string `json:"body"`
+	Body      string `json:"body"`
+	ReplyToID string `json:"reply_to_id"`
 }
 type typingRequest struct {
 	Active bool `json:"active"`
@@ -67,12 +68,20 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 	if !h.decode(w, r, &v) {
 		return
 	}
-	m, e := h.service.Send(r.Context(), chi.URLParam(r, "id"), h.hooks.CurrentUser(r), v.Body, r.Header.Get("Idempotency-Key"))
+	m, e := h.service.SendReply(r.Context(), chi.URLParam(r, "id"), h.hooks.CurrentUser(r), v.Body, v.ReplyToID, r.Header.Get("Idempotency-Key"))
 	if e != nil {
 		h.hooks.WriteGroupError(w, r, e)
 		return
 	}
 	h.hooks.WriteJSON(w, http.StatusCreated, m)
+}
+
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	if e := h.service.DeleteMessage(r.Context(), chi.URLParam(r, "id"), chi.URLParam(r, "messageID"), h.hooks.CurrentUser(r)); e != nil {
+		h.hooks.WriteGroupError(w, r, e)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) Typing(w http.ResponseWriter, r *http.Request) {

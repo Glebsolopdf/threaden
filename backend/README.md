@@ -115,6 +115,8 @@ JSON и не доступен JavaScript. Для CLI остаётся совме
 | `POST` | `/v1/rooms/{code}/join` | сессия |
 | `DELETE` | `/v1/rooms/{code}/members/me` | сессия |
 | `DELETE` | `/v1/rooms/{code}` | владелец |
+| `POST` | `/v1/groups/{id}/messages` | сессия; поддерживает `reply_to_id` |
+| `DELETE` | `/v1/groups/{id}/messages/{messageID}` | автор сообщения или владелец группы |
 | `GET` | `/v1/discover/groups?q=&limit=&offset=` | нет |
 | `GET` | `/healthz`, `/readyz` | нет |
 

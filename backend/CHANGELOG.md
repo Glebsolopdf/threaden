@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added message replies and author/owner deletion with real-time updates.
+
 ## 0.3.3 - 2026-08-01
 
 - Replaced the fixed 24-hour IP ban with an escalating ladder

@@ -2,7 +2,7 @@ package schema
 
 import "fmt"
 
-const LatestVersion = 14
+const LatestVersion = 15
 
 func Migration(version int) (string, error) {
 	switch version {
@@ -34,6 +34,8 @@ func Migration(version int) (string, error) {
 		return migration13, nil
 	case 14:
 		return migration14, nil
+	case 15:
+		return migration15, nil
 	default:
 		return "", fmt.Errorf("unknown migration version %d", version)
 	}
@@ -282,8 +284,7 @@ const migration12 = `
 
 	CREATE INDEX IF NOT EXISTS account_bans_user_created_idx ON account_bans(user_id, created_at);
 	CREATE INDEX IF NOT EXISTS account_bans_created_idx ON account_bans(created_at);
-`
-
+	`
 const migration13 = `
 	CREATE TABLE IF NOT EXISTS group_spam_warnings (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,

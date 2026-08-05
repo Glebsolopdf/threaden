@@ -110,7 +110,7 @@ export class GroupsStore {
     await this.openGroup(group.id);
   }
 
-  async sendMessage(body: string): Promise<void> {
+  async sendMessage(body: string, replyToID = ''): Promise<void> {
     const current = this.current();
     const user = this.auth.user();
     const text = body.trim();
@@ -132,7 +132,7 @@ export class GroupsStore {
     this.messages.update((items) => [...items, pending]);
 
     try {
-      const sent = await firstValueFrom(this.api.sendMessage(current.id, text));
+      const sent = await firstValueFrom(replyToID ? this.api.sendReply(current.id, text, replyToID) : this.api.sendMessage(current.id, text));
       this.messages.update((items) => replaceOptimisticMessage(items, optimisticId, sent));
       this.scheduleRefresh();
     } catch (error) {
@@ -151,6 +151,17 @@ export class GroupsStore {
 
   markMessageRead(messageID: string): void {
     this.messages.update((items) => items.map((item) => isSystemMessage(item) || item.message.id !== messageID ? item : { ...item, message: { ...item.message, read: true } }));
+  }
+
+  async deleteMessage(messageID: string): Promise<void> {
+    const current = this.current();
+    if (!current) return;
+    await firstValueFrom(this.api.deleteMessage(current.id, messageID));
+    this.removeMessage(messageID);
+  }
+
+  removeMessage(messageID: string): void {
+    this.messages.update((items) => items.filter((item) => isSystemMessage(item) || item.message.id !== messageID));
   }
 
   private markRead(groupID: string, messageID: string): void {

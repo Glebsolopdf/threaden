@@ -1,0 +1,99 @@
+/* Touch-first refinements for the app shell and overlays. */
+@media (max-width: 56rem) {
+  .mobile-sidebar-button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .rail-icon,
+  .round-action,
+  .group-header__icon,
+  .group-header button,
+  .group-info-dialog__close,
+  .group-invite-row button,
+  .group-voice__delete,
+  .avatar-picker-button,
+  .profile-danger-zone__delete,
+  .room-widget__button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  .rail-icon,
+  .round-action,
+  .group-header__icon,
+  .group-info-dialog__close,
+  .group-invite-row button,
+  .group-voice__delete,
+  .avatar-picker-button,
+  .profile-danger-zone__delete,
+  .room-widget__button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .group-header {
+    padding-right: max(0.7rem, env(safe-area-inset-right));
+    padding-left: max(4.2rem, calc(env(safe-area-inset-left) + 4.2rem));
+  }
+
+  .voice-room__header,
+  .composer,
+  .dialog-card form {
+    padding-right: max(0.7rem, env(safe-area-inset-right));
+    padding-left: max(0.7rem, env(safe-area-inset-left));
+  }
+
+  .composer input,
+  .composer button,
+  #discover-search,
+  .list-panel input,
+  dialog input,
+  dialog select,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"] {
+    min-height: 2.35rem;
+    font-size: max(1rem, 16px);
+  }
+
+  .auth-page .page-logo,
+  .auth-page .text-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+  }
+
+  .dialog-card menu,
+  dialog menu,
+  .confirm-dialog__actions {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .composer {
+    gap: 0.4rem;
+  }
+
+  .composer button {
+    padding-inline: 0.7rem;
+  }
+
+  .voice-participants {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .voice-participant-card {
+    min-height: 7.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-sidebar-button,
+  .rail,
+  .list-panel,
+  .room-widget {
+    transition-duration: 1ms;
+  }
+}

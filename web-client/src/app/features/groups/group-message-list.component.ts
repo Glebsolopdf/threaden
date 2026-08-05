@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, ElementRef, effect, input, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, input, output, viewChild } from '@angular/core';
+import type { GroupMessage } from '../../core/api/models';
 import { chatMessage, isSystemMessage, systemMessageText, type MessageView } from '../../core/events/groups.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
+import { GroupMessageActionsComponent } from './group-message-actions.component';
 
 @Component({
   selector: 'app-group-message-list',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AvatarComponent],
+  imports: [AvatarComponent, GroupMessageActionsComponent],
   template: `
     <div #messageList class="message-list">
       @if (loading()) {
@@ -32,8 +34,10 @@ import { AvatarComponent } from '../../shared/avatar/avatar.component';
               }
               <div class="chat-message__bubble">
                 @if (!isOwn(chat) && !isCompact(index)) { <strong class="chat-message__author">{{ chat.message.author.display_name }}</strong> }
+                @if (chat.message.reply_to; as reply) { <div class="message-reply-preview"><strong>В ответ {{ reply.author.display_name }}</strong><span>{{ reply.body }}</span></div> }
                 <p>{{ chat.message.body }}</p>
                 <footer><time [attr.datetime]="chat.message.created_at">{{ formatTime(chat.message.created_at) }}</time>@if (isOwn(chat) && chat.status === 'sent') { <span class="message-status" [attr.aria-label]="chat.message.read ? 'Прочитано' : 'Отправлено'">{{ chat.message.read ? '✓✓' : '✓' }}</span> }{{ statusSuffix(chat) }}</footer>
+                @if (chat.status === 'sent') { <app-group-message-actions [message]="chat.message" [own]="isOwn(chat)" [canDelete]="isOwn(chat) || groupOwnerId() === currentUserId()" (reply)="reply.emit($event)" (remove)="remove.emit($event)" /> }
               </div>
             </article>
           } @else {
@@ -48,6 +52,9 @@ export class GroupMessageListComponent {
   readonly messages = input<MessageView[]>([]);
   readonly loading = input(false);
   readonly currentUserId = input<string | undefined>(undefined);
+  readonly groupOwnerId = input<string | undefined>(undefined);
+  readonly reply = output<GroupMessage>();
+  readonly remove = output<GroupMessage>();
   private readonly messageList = viewChild<ElementRef<HTMLElement>>('messageList');
   protected readonly skeletons = Array.from({ length: 7 }, (_, index) => index);
   protected readonly chatMessage = chatMessage;
