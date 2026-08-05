@@ -21,13 +21,7 @@
   font-size: clamp(1.25rem, 2.6vw, 1.8rem);
   font-weight: 600;
   letter-spacing: -0.01em;
-  background: linear-gradient(105deg, #f4f4f5 30%, #c7d6ff 50%, #f4f4f5 70%);
-  background-size: 300% 100%;
-  background-position: 100% 50%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: welcome-shimmer 9s ease-in-out infinite;
+  color: var(--text);
 }
 
 .welcome__subtitle {
@@ -42,17 +36,12 @@
   min-height: 8rem;
   border: 1px solid var(--line-soft);
   border-radius: 1.4rem;
-  background: linear-gradient(180deg, rgb(255 255 255 / 2.5%), rgb(255 255 255 / 1%));
+  background: var(--panel-soft);
 }
 
 @keyframes welcome-card-in {
   from { opacity: 0; transform: translateY(0.5rem); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes welcome-shimmer {
-  from { background-position: 200% 50%; }
-  to { background-position: -200% 50%; }
 }
 
 @media (max-width: 30rem) {

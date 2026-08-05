@@ -11,7 +11,7 @@ export interface WebPreferences {
   debugErrors: boolean;
 }
 
-export type Theme = 'dark' | 'light' | 'forest';
+export type Theme = 'dark' | 'light' | 'forest' | 'burgundy' | 'purple';
 
 const AUDIO_KEY = 'voice_rooms_audio_preferences';
 const WEB_KEY = 'voice_rooms_web_preferences';
@@ -49,7 +49,7 @@ export class PreferencesService {
 
   private readTheme(): Theme {
     const storedTheme = this.read<Theme>(THEME_KEY, 'dark');
-    return storedTheme === 'light' || storedTheme === 'forest' ? storedTheme : 'dark';
+    return storedTheme === 'light' || storedTheme === 'forest' || storedTheme === 'burgundy' || storedTheme === 'purple' ? storedTheme : 'dark';
   }
 
   private read<T>(key: string, fallback: T): T {

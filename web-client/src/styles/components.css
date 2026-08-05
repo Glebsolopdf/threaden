@@ -1,7 +1,7 @@
 .panel {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgb(24 25 31 / 96%), rgb(18 19 24 / 96%));
+  background: var(--panel);
   box-shadow: var(--shadow);
 }
 
@@ -21,7 +21,7 @@
 }
 
 .brand--small {
-  color: #f1f1f3;
+  color: var(--text);
   font-size: 0.9rem;
 }
 
@@ -45,6 +45,14 @@ input[type="file"] {
   color: var(--text);
   background: var(--panel-soft);
   padding: 0.7rem 0.85rem;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="file"]:focus {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent-soft);
 }
 
 input[type="text"]::placeholder,
@@ -81,6 +89,8 @@ input[type="password"]::placeholder {
   color: var(--action-text);
   background: var(--action-bg);
 }
+
+.button--primary:hover:not(:disabled) { background: var(--action-bg-hover); }
 
 .button--secondary {
   width: 100%;

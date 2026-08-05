@@ -9,6 +9,11 @@
   --faint: #5e6068;
   --line: #24262e;
   --line-soft: #1a1c22;
+  --accent: #aeb2bd;
+  --accent-hover: #ffffff;
+  --accent-deep: #555a66;
+  --accent-soft: rgb(255 255 255 / 10%);
+  --accent-border: rgb(255 255 255 / 10%);
   --action-bg: #f4f4f5;
   --action-bg-hover: #ffffff;
   --action-text: #15161b;

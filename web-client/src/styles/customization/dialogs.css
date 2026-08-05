@@ -356,3 +356,11 @@
 .customization-panel__theme-preview--forest b { background: #557a48; }
 .customization-panel__theme-preview--forest b:first-child { background: #254f32; }
 .customization-panel__theme-preview--forest b:last-child { background: #9dbb63; }
+.customization-panel__theme-preview--burgundy { background: #1b1016; }
+.customization-panel__theme-preview--burgundy b { background: #76203a; }
+.customization-panel__theme-preview--burgundy b:first-child { background: #b23b59; }
+.customization-panel__theme-preview--burgundy b:last-child { background: #d45a77; }
+.customization-panel__theme-preview--purple { background: #171321; }
+.customization-panel__theme-preview--purple b { background: #62429b; }
+.customization-panel__theme-preview--purple b:first-child { background: #9b7ad1; }
+.customization-panel__theme-preview--purple b:last-child { background: #b18de8; }

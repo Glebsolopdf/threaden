@@ -1,0 +1,55 @@
+html[data-theme="purple"] {
+  color-scheme: dark;
+  --bg: #0d0b14;
+  --panel: #171321;
+  --panel-soft: #110e19;
+  --panel-hover: #241c34;
+  --text: #f5f1fb;
+  --muted: #aaa0bb;
+  --faint: #70657e;
+  --line: #32284a;
+  --line-soft: #241c34;
+  --accent: #9b7ad1;
+  --accent-hover: #b18de8;
+  --accent-deep: #62429b;
+  --accent-soft: rgb(155 122 209 / 16%);
+  --accent-border: rgb(155 122 209 / 34%);
+  --action-bg: #a985e2;
+  --action-bg-hover: #b995ed;
+  --action-text: #180f26;
+  --action-border: rgb(205 175 244 / 62%);
+  --sent-bg: #62429b;
+  --sent-text: #f8f2ff;
+  --positive: #d9c6f6;
+  --positive-soft: rgb(155 122 209 / 18%);
+  --shadow: 0 24px 70px rgb(0 0 0 / 52%);
+  --radius: 10px;
+}
+
+html[data-theme="purple"] body,
+html[data-theme="purple"] .messenger,
+html[data-theme="purple"] .workspace,
+html[data-theme="purple"] .voice-room { background: var(--bg); }
+html[data-theme="purple"] .rail { background: #120e1b; }
+html[data-theme="purple"] .list-panel,
+html[data-theme="purple"] .group-header,
+html[data-theme="purple"] .composer,
+html[data-theme="purple"] .voice-room__header,
+html[data-theme="purple"] .voice-room__controls { background: var(--panel); }
+html[data-theme="purple"] .panel,
+html[data-theme="purple"] .dialog-card,
+html[data-theme="purple"] .group-info-dialog,
+html[data-theme="purple"] .group-voice-dialog,
+html[data-theme="purple"] .account-dialog { background: var(--panel); }
+html[data-theme="purple"] .group-row.is-active,
+html[data-theme="purple"] .rail-icon.is-active { border-color: var(--accent-border); background: var(--accent-soft); }
+html[data-theme="purple"] .group-row.is-active::before { background: var(--accent); }
+html[data-theme="purple"] .chat-message__bubble { background: #211a2c; }
+html[data-theme="purple"] .chat-message--own .chat-message__bubble { background: var(--sent-bg); }
+html[data-theme="purple"] .group-menu__dropdown,
+html[data-theme="purple"] .voice-device-menu,
+html[data-theme="purple"] .screen-share-mode-menu,
+html[data-theme="purple"] .screen-share-card__menu { background: var(--panel); }
+html[data-theme="purple"] .profile-popover { border-color: var(--line); background: var(--panel-soft); }
+html[data-theme="purple"] .profile-popover:hover,
+html[data-theme="purple"] .group-header button:hover { background: var(--panel-hover); }
