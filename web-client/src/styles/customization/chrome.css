@@ -30,6 +30,10 @@
   background: var(--sent-bg);
 }
 
+.themed-button, .composer button, .join-group-dock button, .button--primary {
+  box-shadow: 0 8px 22px rgb(118 32 58 / 24%);
+}
+
 .profile-popover {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -42,7 +46,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--text);
-  background: rgb(18 19 24 / 92%);
+  background: var(--panel-soft);
   cursor: pointer;
 }
 

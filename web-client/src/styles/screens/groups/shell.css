@@ -1,4 +1,4 @@
-body:has(.messenger) { overflow: hidden; background: #090a0d; }
+body:has(.messenger) { overflow: hidden; background: var(--bg); }
 
 .messenger {
   position: relative;
@@ -8,7 +8,7 @@ body:has(.messenger) { overflow: hidden; background: #090a0d; }
   height: var(--app-height, 100dvh);
   grid-template-columns: 4.25rem 18.5rem minmax(0, 1fr);
   color: var(--text);
-  background: #090a0d;
+  background: var(--bg);
 }
 
 .rail,.list-panel,.workspace { min-width: 0; }
@@ -48,6 +48,7 @@ body:has(.messenger) { overflow: hidden; background: #090a0d; }
   transition: background-color 150ms ease, color 150ms ease, transform 120ms ease;
 }
 .rail-icon:hover,.rail-icon:focus-visible { color: var(--text); background: var(--panel-hover); }
+.rail-icon.is-active { color: var(--text); background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
 .rail-icon:active,.round-action:active,.group-row:active { transform: scale(0.96); }
 .rail-icon img {
   width: 1.18rem;
@@ -65,7 +66,7 @@ body:has(.messenger) { overflow: hidden; background: #090a0d; }
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
   border-right: 1px solid var(--line);
-  background: rgb(18 19 24 / 98%);
+  background: var(--panel);
 }
 .list-panel > header {
   display: flex;
@@ -97,6 +98,7 @@ body:has(.messenger) { overflow: hidden; background: #090a0d; }
   transition: background-color 150ms ease, border-color 150ms ease, transform 120ms ease;
 }
 .group-row:hover,.group-row:focus-visible { border-color: var(--line); background: var(--panel-hover); }
+.group-row.is-active { border-color: var(--accent-border); background: var(--accent-soft); }
 .group-row > span:last-child { min-width: 0; }
 .group-row strong,.group-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group-row strong { font-size: 0.88rem; }
@@ -117,7 +119,7 @@ body:has(.messenger) { overflow: hidden; background: #090a0d; }
 }
 .avatar img { width: 100%; height: 100%; object-fit: cover; outline: 1px solid oklch(1 0 0 / 0.1); }
 
-.workspace { display: grid; min-height: 0; grid-template-rows: minmax(0, 1fr); overflow: hidden; background: rgb(9 10 13 / 96%); }
+.workspace { display: grid; min-height: 0; grid-template-rows: minmax(0, 1fr); overflow: hidden; background: var(--bg); }
 .empty-state { width: min(100% - 2rem, 26rem); place-self: center; color: var(--muted); font-size: 0.95rem; line-height: 1.6; text-align: center; }
 .empty-state::before { display: block; margin-bottom: 0.65rem; color: var(--text); content: "Ваши группы"; font-size: 1.25rem; font-weight: 700; }
 
@@ -295,5 +297,4 @@ body:has(.messenger) { overflow: hidden; background: #090a0d; }
     height: 100%;
     grid-template-rows: auto auto minmax(0, 1fr);
   }
-  #discover-search { margin: 0.75rem 0.75rem 0; width: calc(100% - 1.5rem); }
-}
+  #discover-search { margin: 0.75rem 0.75rem 0; width: calc(100% - 1.5rem); } }

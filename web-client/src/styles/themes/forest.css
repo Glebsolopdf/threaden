@@ -9,6 +9,7 @@ html[data-theme="forest"] {
   --faint: oklch(0.56 0.04 135);
   --line: oklch(0.38 0.05 145);
   --line-soft: oklch(0.3 0.04 145);
+  --accent-border: var(--line);
   --action-bg: oklch(0.72 0.14 125);
   --action-bg-hover: oklch(0.8 0.14 125);
   --action-text: oklch(0.18 0.04 145);

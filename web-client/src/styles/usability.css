@@ -106,9 +106,9 @@ select:disabled {
 }
 
 .group-filter:focus {
-  border-color: rgb(255 255 255 / 24%) !important;
-  background: rgb(255 255 255 / 7%) !important;
-  box-shadow: 0 0 0 3px rgb(255 255 255 / 6%);
+  border-color: var(--accent) !important;
+  background: var(--panel-soft) !important;
+  box-shadow: 0 0 0 3px var(--accent-soft);
   outline: none;
 }
 
@@ -118,8 +118,8 @@ select:disabled {
 }
 
 .group-row.is-active {
-  border-color: rgb(255 255 255 / 10%);
-  background: linear-gradient(90deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 5%));
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
 }
 
 .group-row.is-active::before {
@@ -127,7 +127,7 @@ select:disabled {
   inset: 0.65rem auto 0.65rem 0;
   width: 2px;
   border-radius: 999px;
-  background: var(--text);
+  background: var(--accent);
   content: "";
 }
 

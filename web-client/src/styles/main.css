@@ -1,4 +1,4 @@
-@import "./variables.css";
+@import "./foundation/variables.css";
 @import "./base.css";
 @import "./layout.css";
 @import "./components.css";
@@ -22,3 +22,6 @@
 @import "./usability.css";
 @import "./themes/light.css";
 @import "./themes/forest.css";
+@import "./themes/burgundy.css";
+@import "./themes/purple.css";
+@import "./responsive/mobile.css";
