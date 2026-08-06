@@ -33,7 +33,7 @@ sudo ./threadenctl.sh status
 `restart` только перезапускает сервисы; для полной пересборки используйте
 `restart --full`.
 
-## Безопасность 
+## Безопасность
 
 - браузерная сессия хранится в `HttpOnly`, `SameSite=Strict` cookie;
 - сессии имеют абсолютный и idle TTL и отзываются сервером при logout;
@@ -49,4 +49,4 @@ sudo ./threadenctl.sh status
 
 ## Лицензия
 
-GPL-3.0. См. [`LICENSE`](LICENSE).
+BSD-3 Clause. См. [`LICENSE`](LICENSE).
