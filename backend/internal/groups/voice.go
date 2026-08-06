@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"voice-rooms/internal/model"
+	"voice-rooms/internal/publicview"
 	"voice-rooms/internal/store"
 )
 
@@ -47,7 +48,7 @@ func (s *Service) CreateVoice(ctx context.Context, gid string, u model.User, nam
 	if e != nil {
 		return model.GroupVoiceRoom{}, e
 	}
-	s.publishGroup(ctx, gid, "group_updated", g)
+	s.publishGroup(ctx, gid, "group_updated", publicview.GroupView(g))
 	return g.VoiceRooms[len(g.VoiceRooms)-1], nil
 }
 
@@ -73,7 +74,7 @@ func (s *Service) DeleteVoice(ctx context.Context, id string, u model.User) erro
 	if e != nil {
 		return e
 	}
-	s.publishGroup(ctx, r.GroupID, "group_updated", updated)
+	s.publishGroup(ctx, r.GroupID, "group_updated", publicview.GroupView(updated))
 	return nil
 }
 

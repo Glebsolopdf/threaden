@@ -235,7 +235,7 @@ func TestCleanupTerminatesExpiredRooms(t *testing.T) {
 	if len(voice.deleted) != 1 || voice.deleted[0] != room.Code {
 		t.Fatalf("cleanup did not terminate room: %v", voice.deleted)
 	}
-	if _, err := service.GetRoom(context.Background(), room.Code); !Is(err, ErrNotFound) {
+	if _, err := service.GetRoom(context.Background(), room.Code, owner.User.ID); !Is(err, ErrNotFound) {
 		t.Fatalf("expired room remains: %v", err)
 	}
 }

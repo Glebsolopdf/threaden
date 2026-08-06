@@ -74,7 +74,7 @@ JSON и не доступен JavaScript. Для CLI остаётся совме
 | `SESSION_COOKIE_SECURE` | Требовать HTTPS для cookie; в production должно быть `true` |
 | `MAX_ROOM_PARTICIPANTS` | Лимит участников комнаты |
 | `CORS_ALLOWED_ORIGINS` | Разрешённые origins через запятую; в production не используйте `*` |
-| `TRUSTED_PROXIES` | Прокси, которым разрешены forwarding-заголовки |
+| `TRUSTED_PROXIES` | Разделённые запятыми IP/CIDR доверенных непосредственных proxy; без значения forwarding-заголовки игнорируются |
 | `RATE_LIMIT_BUCKET_TTL` | TTL persistent rate-limit bucket |
 | `MAX_USER_GROUPS` | Максимум групп, которыми может владеть аккаунт |
 | `DISCOVER_MIN_MEMBERS` | Минимум участников для показа в Discover |
@@ -86,6 +86,12 @@ JSON и не доступен JavaScript. Для CLI остаётся совме
 | `ACCOUNT_BAN_DELETION_COUNT` | Число банов максимального уровня за окно до авто-удаления аккаунта |
 
 Остальные cleanup- и anti-spam-переменные перечислены в `.env.example`.
+
+`TRUSTED_PROXIES` должен содержать только конкретные адреса или узкие CIDR
+ваших reverse proxy (например, `127.0.0.1,::1`). Backend принимает
+`X-Forwarded-For` только от такого непосредственного peer, разбирает цепочку
+справа налево и при некорректной цепочке использует TCP peer. Нельзя указывать
+`0.0.0.0/0` или `::/0`.
 
 Изменение профиля и удаление аватара ограничены до одного действия раз в 3 минуты;
 создание групп — до одной группы раз в 3 минуты, а владение — до `MAX_USER_GROUPS`

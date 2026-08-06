@@ -6,6 +6,7 @@ import (
 
 	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
+	"voice-rooms/internal/publicview"
 )
 
 type Profile struct {
@@ -18,6 +19,9 @@ func (s *Service) Profile(ctx context.Context, groupID string, user model.User) 
 	group, err := s.Get(ctx, groupID, &user)
 	if err != nil {
 		return Profile{}, err
+	}
+	if !s.member(ctx, groupID, user.ID) {
+		return Profile{}, ErrForbidden
 	}
 	members, err := s.store.GroupMembers(ctx, groupID, group.Owner.ID)
 	if err != nil {
@@ -96,7 +100,7 @@ func (s *Service) RemoveMember(ctx context.Context, groupID, memberID string, us
 		return Profile{}, err
 	}
 	s.hub.Publish(members, hub.Event{Type: "member_removed", GroupID: groupID, Data: hub.MemberEvent{Member: member}})
-	s.hub.Publish(members, hub.Event{Type: "group_updated", GroupID: groupID, Data: updated.Group})
+	s.hub.Publish(members, hub.Event{Type: "group_updated", GroupID: groupID, Data: publicview.GroupView(updated.Group)})
 	return updated, nil
 }
 

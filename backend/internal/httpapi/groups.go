@@ -10,6 +10,7 @@ import (
 	appgroups "voice-rooms/internal/groups"
 	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
+	"voice-rooms/internal/publicview"
 )
 
 type groupHandler struct{ service *appgroups.Service }
@@ -32,7 +33,7 @@ func (h groupHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusCreated, g)
+	writeJSON(w, http.StatusCreated, publicview.GroupWithInvite(g))
 }
 func (h groupHandler) profile(w http.ResponseWriter, r *http.Request) {
 	profile, e := h.service.Profile(r.Context(), chi.URLParam(r, "id"), currentUser(r))
@@ -40,7 +41,8 @@ func (h groupHandler) profile(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, profile)
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, publicview.ProfileView(profile.Group, profile.Members, profile.SpamWarnings))
 }
 func (h groupHandler) delete(w http.ResponseWriter, r *http.Request) {
 	if e := h.service.Delete(r.Context(), chi.URLParam(r, "id"), currentUser(r)); e != nil {
@@ -62,7 +64,7 @@ func (h groupHandler) removeMember(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, profile)
+	writeJSON(w, http.StatusOK, publicview.ProfileView(profile.Group, profile.Members, profile.SpamWarnings))
 }
 func (h groupHandler) list(w http.ResponseWriter, r *http.Request) {
 	gs, e := h.service.List(r.Context(), currentUser(r))
@@ -70,7 +72,7 @@ func (h groupHandler) list(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, gs)
+	writeJSON(w, http.StatusOK, publicview.Groups(gs))
 }
 func (h groupHandler) discover(w http.ResponseWriter, r *http.Request) {
 	limit, offset, ok := discoverPage(w, r)
@@ -82,7 +84,7 @@ func (h groupHandler) discover(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, gs)
+	writeJSON(w, http.StatusOK, publicview.Groups(gs))
 }
 
 func discoverPage(w http.ResponseWriter, r *http.Request) (int, int, bool) {
@@ -115,7 +117,7 @@ func (h groupHandler) get(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, g)
+	writeJSON(w, http.StatusOK, publicview.GroupView(g))
 }
 func (h groupHandler) join(w http.ResponseWriter, r *http.Request) {
 	g, e := h.service.Join(r.Context(), chi.URLParam(r, "id"), currentUser(r), false)
@@ -123,7 +125,7 @@ func (h groupHandler) join(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, g)
+	writeJSON(w, http.StatusOK, publicview.GroupView(g))
 }
 func (h groupHandler) invite(w http.ResponseWriter, r *http.Request) {
 	g, e := h.service.Invite(r.Context(), chi.URLParam(r, "token"))
@@ -131,7 +133,7 @@ func (h groupHandler) invite(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, g)
+	writeJSON(w, http.StatusOK, publicview.GroupView(g))
 }
 func (h groupHandler) joinInvite(w http.ResponseWriter, r *http.Request) {
 	preview, e := h.service.Invite(r.Context(), chi.URLParam(r, "token"))
@@ -144,7 +146,7 @@ func (h groupHandler) joinInvite(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusOK, g)
+	writeJSON(w, http.StatusOK, publicview.GroupView(g))
 }
 func (h groupHandler) createVoice(w http.ResponseWriter, r *http.Request) {
 	var v voiceRoomRequest
@@ -156,7 +158,7 @@ func (h groupHandler) createVoice(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	writeJSON(w, http.StatusCreated, room)
+	writeJSON(w, http.StatusCreated, publicview.VoiceRoom{ID: room.ID, GroupID: room.GroupID, Name: room.Name, CreatedAt: room.CreatedAt, ParticipantCount: room.ParticipantCount})
 }
 func (h groupHandler) joinVoice(w http.ResponseWriter, r *http.Request) {
 	join, e := h.service.JoinVoice(r.Context(), chi.URLParam(r, "id"), currentUser(r))
@@ -186,7 +188,7 @@ func (h groupHandler) events(w http.ResponseWriter, r *http.Request) {
 	events, stop := h.service.Subscribe(currentUser(r).ID)
 	defer stop()
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 	flusher, ok := w.(http.Flusher)

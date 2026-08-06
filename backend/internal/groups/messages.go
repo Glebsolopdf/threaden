@@ -9,12 +9,12 @@ import (
 	"voice-rooms/internal/antispam"
 	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
+	"voice-rooms/internal/publicview"
 )
 
 func (s *Service) Messages(ctx context.Context, id string, u *model.User, limit int) ([]model.GroupMessage, error) {
-	_, e := s.Get(ctx, id, u)
-	if e != nil {
-		return nil, e
+	if u == nil || !s.member(ctx, id, u.ID) {
+		return nil, ErrForbidden
 	}
 	reader := ""
 	if u != nil {
@@ -96,7 +96,7 @@ func (s *Service) send(ctx context.Context, id string, u model.User, body string
 	if e = s.store.AddMessage(ctx, m); e != nil {
 		return m, e
 	}
-	s.publishGroup(ctx, id, "message_created", m)
+	s.publishGroup(ctx, id, "message_created", publicview.MessageView(m))
 	return m, nil
 }
 

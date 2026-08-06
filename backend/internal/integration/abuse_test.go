@@ -153,6 +153,7 @@ func TestBanCleanupRemovesRecentMessagesAndDisconnectsVoice(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("X-Forwarded-For", "198.51.100.10")
+	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -199,6 +200,7 @@ func TestRepeatedMessagesAreDeletedByAntispam(t *testing.T) {
 		t.Fatal(err)
 	}
 	req.Header.Set("X-Forwarded-For", "198.51.100.11")
+	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatal(err)

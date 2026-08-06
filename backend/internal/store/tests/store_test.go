@@ -58,7 +58,7 @@ func TestStoreLifecycleAndTokenHash(t *testing.T) {
 	if _, err := st.JoinRoom(ctx, "AB12", second.ID, now, 2); err != nil {
 		t.Fatalf("repeat join must be idempotent: %v", err)
 	}
-	room, err := st.GetRoom(ctx, "AB12", now, 2)
+	room, err := st.GetRoom(ctx, "AB12", owner.ID, now, 2)
 	if err != nil || room.ParticipantCount != 2 {
 		t.Fatalf("unexpected room: %+v, %v", room, err)
 	}
@@ -108,7 +108,7 @@ func TestEmptyRoomIsCleanupCandidateAfterGrace(t *testing.T) {
 	if err := st.DeleteEmptyRoom(ctx, "CD34", now.Add(time.Minute)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := st.GetRoom(ctx, "CD34", now.Add(3*time.Minute), 2); !errors.Is(err, store.ErrNotFound) {
+	if _, err := st.GetRoom(ctx, "CD34", owner.ID, now.Add(3*time.Minute), 2); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("empty room remains: %v", err)
 	}
 }

@@ -25,7 +25,7 @@ func (s *Service) CreateRoom(ctx context.Context, owner model.User) (model.Room,
 		}
 		err = s.store.InsertRoom(ctx, code, owner.ID, s.now().UTC(), s.roomTTL)
 		if err == nil {
-			return s.GetRoom(ctx, code)
+			return s.GetRoom(ctx, code, owner.ID)
 		}
 		if !store.Is(err, store.ErrConflict) {
 			return model.Room{}, translateStoreError(err)
@@ -47,8 +47,8 @@ func (s *Service) roomCode() (string, error) {
 	return string(code), nil
 }
 
-func (s *Service) GetRoom(ctx context.Context, code string) (model.Room, error) {
-	room, err := s.store.GetRoom(ctx, code, s.now(), s.maxMembers)
+func (s *Service) GetRoom(ctx context.Context, code, userID string) (model.Room, error) {
+	room, err := s.store.GetRoom(ctx, code, userID, s.now(), s.maxMembers)
 	return room, translateStoreError(err)
 }
 

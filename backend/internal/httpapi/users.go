@@ -16,6 +16,7 @@ import (
 	"voice-rooms/internal/app"
 	avatarutil "voice-rooms/internal/avatar"
 	"voice-rooms/internal/model"
+	"voice-rooms/internal/publicview"
 )
 
 type userHandler struct {
@@ -95,7 +96,7 @@ func readAuth(w http.ResponseWriter, r *http.Request, registering bool) (authReq
 func (h userHandler) writeAuth(w http.ResponseWriter, status int, created app.CreatedUser) {
 	h.setSessionCookie(w, created.SessionToken)
 	w.Header().Set("Cache-Control", "no-store")
-	writeJSON(w, status, created.User)
+	writeJSON(w, status, publicview.OwnUser(created.User))
 }
 
 func (h userHandler) setSessionCookie(w http.ResponseWriter, token string) {
@@ -116,7 +117,8 @@ func (h userHandler) clearSessionCookie(w http.ResponseWriter) {
 }
 
 func (h userHandler) me(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, currentUser(r))
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, publicview.OwnUser(currentUser(r)))
 }
 
 func (h userHandler) updateProfile(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +137,8 @@ func (h userHandler) updateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.groups.PublishProfileUpdated(r.Context(), updated)
-	writeJSON(w, http.StatusOK, updated)
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, publicview.OwnUser(updated))
 }
 
 func (h userHandler) deleteAvatar(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +153,8 @@ func (h userHandler) deleteAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.groups.PublishProfileUpdated(r.Context(), updated)
-	writeJSON(w, http.StatusOK, updated)
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, publicview.OwnUser(updated))
 }
 
 func (h userHandler) deleteUser(w http.ResponseWriter, r *http.Request) {

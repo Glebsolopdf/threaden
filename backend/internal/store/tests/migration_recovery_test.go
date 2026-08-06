@@ -21,6 +21,7 @@ func TestMigration12RecoversMissingIPBansTable(t *testing.T) {
 		CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL);
 		INSERT INTO schema_migrations(version, applied_at) VALUES(11, 1);
 		CREATE TABLE users (id TEXT PRIMARY KEY);
+		CREATE TABLE group_messages (id TEXT PRIMARY KEY);
 	`)
 	if closeErr := db.Close(); err != nil || closeErr != nil {
 		t.Fatalf("seed incomplete v11 database: %v close: %v", err, closeErr)

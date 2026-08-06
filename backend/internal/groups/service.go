@@ -13,6 +13,7 @@ import (
 	avatarutil "voice-rooms/internal/avatar"
 	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
+	"voice-rooms/internal/publicview"
 	"voice-rooms/internal/store"
 )
 
@@ -110,7 +111,7 @@ func (s *Service) Get(ctx context.Context, id string, u *model.User) (model.Grou
 		return g, mapErr(e)
 	}
 	if g.Visibility == "private" && (u == nil || !s.member(ctx, id, u.ID)) {
-		return model.Group{}, ErrForbidden
+		return model.Group{}, ErrNotFound
 	}
 	return s.withOnline(g), nil
 }
@@ -155,7 +156,7 @@ func (s *Service) Join(ctx context.Context, id string, u model.User, byInvite bo
 	if !alreadyMember {
 		s.publishGroup(ctx, id, "member_joined", hub.NewMemberEvent(u))
 	}
-	s.publishGroup(ctx, id, "group_updated", g)
+	s.publishGroup(ctx, id, "group_updated", publicview.GroupView(g))
 	return s.Get(ctx, id, &u)
 }
 func (s *Service) member(ctx context.Context, id, user string) bool {
@@ -192,7 +193,18 @@ func (s *Service) withOnline(g model.Group) model.Group {
 func (s *Service) publishGroup(ctx context.Context, id, typ string, data any) {
 	ids, e := s.store.GroupMemberIDs(ctx, id)
 	if e == nil {
-		s.hub.Publish(ids, hub.Event{Type: typ, GroupID: id, Data: data})
+		s.hub.Publish(ids, hub.Event{Type: typ, GroupID: id, Data: publicEventData(data)})
+	}
+}
+
+func publicEventData(data any) any {
+	switch value := data.(type) {
+	case model.Group:
+		return publicview.GroupView(value)
+	case model.GroupMessage:
+		return publicview.MessageView(value)
+	default:
+		return data
 	}
 }
 func (s *Service) PublishProfileUpdated(ctx context.Context, user model.User) {
@@ -236,7 +248,7 @@ func (s *Service) publishPresence(userID string) {
 		return
 	}
 	for _, group := range items {
-		s.publishGroup(context.Background(), group.ID, "presence_updated", s.withOnline(group))
+		s.publishGroup(context.Background(), group.ID, "presence_updated", publicview.GroupView(s.withOnline(group)))
 	}
 }
 func (s *Service) Cleanup(ctx context.Context) {

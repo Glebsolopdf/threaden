@@ -34,7 +34,7 @@ func (s *Store) InsertRoom(ctx context.Context, code, ownerID string, now time.T
 	return nil
 }
 
-func (s *Store) GetRoom(ctx context.Context, code string, now time.Time, max int) (model.Room, error) {
+func (s *Store) GetRoom(ctx context.Context, code, userID string, now time.Time, max int) (model.Room, error) {
 	var room model.Room
 	var created, expires int64
 	var ownerCreated int64
@@ -45,8 +45,9 @@ func (s *Store) GetRoom(ctx context.Context, code string, now time.Time, max int
 		          JOIN users member ON member.id = rm.user_id
 		         WHERE rm.room_code = r.code)
 		FROM rooms r JOIN users u ON u.id = r.owner_id
-		WHERE r.code = ? AND r.expires_at > ?`,
-		code, now.Unix()).Scan(
+		WHERE r.code = ? AND r.expires_at > ?
+		  AND EXISTS (SELECT 1 FROM room_members rm WHERE rm.room_code = r.code AND rm.user_id = ?)`,
+		code, now.Unix(), userID).Scan(
 		&room.Code, &created, &expires, &room.Owner.ID, &room.Owner.DisplayName,
 		&room.Owner.Avatar, &ownerCreated, &room.ParticipantCount)
 	if err == sql.ErrNoRows {
@@ -129,7 +130,7 @@ func (s *Store) JoinRoom(ctx context.Context, code, userID string, now time.Time
 	if err = tx.Commit(); err != nil {
 		return model.Room{}, fmt.Errorf("commit join: %w", err)
 	}
-	return s.GetRoom(ctx, code, now, max)
+	return s.GetRoom(ctx, code, userID, now, max)
 }
 
 func (s *Store) LeaveRoom(ctx context.Context, code, userID string, now time.Time) error {

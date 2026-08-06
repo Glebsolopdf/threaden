@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 	"strconv"
 	"strings"
@@ -143,8 +144,16 @@ func Load() (Config, error) {
 			cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, origin)
 		}
 	}
-	for _, proxy := range strings.Split(getenv("TRUSTED_PROXIES", "127.0.0.1,::1"), ",") {
+	for _, proxy := range strings.Split(getenv("TRUSTED_PROXIES", ""), ",") {
 		if proxy = strings.TrimSpace(proxy); proxy != "" {
+			if addr, err := netip.ParseAddr(proxy); err != nil {
+				prefix, prefixErr := netip.ParsePrefix(proxy)
+				if prefixErr != nil || prefix.Bits() == 0 {
+					return Config{}, fmt.Errorf("TRUSTED_PROXIES contains an invalid or broad entry")
+				}
+			} else if !addr.IsValid() {
+				return Config{}, fmt.Errorf("TRUSTED_PROXIES contains an invalid entry")
+			}
 			cfg.TrustedProxies = append(cfg.TrustedProxies, proxy)
 		}
 	}

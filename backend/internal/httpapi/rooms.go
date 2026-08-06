@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"voice-rooms/internal/app"
+	"voice-rooms/internal/publicview"
 )
 
 var roomCodePattern = regexp.MustCompile(`^[A-HJ-NP-Z2-9]{26}$`)
@@ -21,7 +22,7 @@ func (h roomHandler) create(w http.ResponseWriter, r *http.Request) {
 		writeAppError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, room)
+	writeJSON(w, http.StatusCreated, publicview.RoomView(room))
 }
 
 func (h roomHandler) get(w http.ResponseWriter, r *http.Request) {
@@ -29,12 +30,13 @@ func (h roomHandler) get(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	room, err := h.service.GetRoom(r.Context(), code)
+	room, err := h.service.GetRoom(r.Context(), code, currentUser(r).ID)
 	if err != nil {
 		writeAppError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, room)
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, http.StatusOK, publicview.RoomView(room))
 }
 
 func (h roomHandler) join(w http.ResponseWriter, r *http.Request) {

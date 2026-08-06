@@ -101,7 +101,7 @@ location / {
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto https;
     proxy_buffering off;
     proxy_read_timeout 3600s;
@@ -110,3 +110,6 @@ location / {
 
 TLS, сертификаты и публичные домены остаются ответственностью внешнего reverse
 proxy. Не выставляйте backend-порт `18080` напрямую в интернет.
+В `TRUSTED_PROXIES` указывайте только адреса непосредственных proxy (для этой
+схемы — `127.0.0.1,::1`); не передавайте клиентский forwarding-заголовок дальше
+как есть.

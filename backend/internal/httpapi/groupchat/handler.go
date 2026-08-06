@@ -8,6 +8,7 @@ import (
 
 	appgroups "voice-rooms/internal/groups"
 	"voice-rooms/internal/model"
+	"voice-rooms/internal/publicview"
 )
 
 type Hooks struct {
@@ -60,7 +61,8 @@ func (h *Handler) Messages(w http.ResponseWriter, r *http.Request) {
 		h.hooks.WriteGroupError(w, r, e)
 		return
 	}
-	h.hooks.WriteJSON(w, http.StatusOK, m)
+	w.Header().Set("Cache-Control", "no-store")
+	h.hooks.WriteJSON(w, http.StatusOK, publicview.Messages(m))
 }
 
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
@@ -73,7 +75,8 @@ func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
 		h.hooks.WriteGroupError(w, r, e)
 		return
 	}
-	h.hooks.WriteJSON(w, http.StatusCreated, m)
+	w.Header().Set("Cache-Control", "no-store")
+	h.hooks.WriteJSON(w, http.StatusCreated, publicview.MessageView(m))
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {

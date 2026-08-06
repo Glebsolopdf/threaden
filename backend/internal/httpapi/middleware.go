@@ -14,6 +14,7 @@ import (
 
 	"voice-rooms/internal/abuse"
 	"voice-rooms/internal/app"
+	"voice-rooms/internal/clientip"
 	"voice-rooms/internal/model"
 )
 
@@ -268,19 +269,7 @@ func sessionSubject(token string) string {
 }
 
 func clientIP(r *http.Request, trusted []string) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		host = r.RemoteAddr
-	}
-	if slices.Contains(trusted, host) {
-		if forwarded := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0]); forwarded != "" {
-			return forwarded
-		}
-		if real := strings.TrimSpace(r.Header.Get("X-Real-IP")); real != "" {
-			return real
-		}
-	}
-	return host
+	return clientip.Resolve(r.RemoteAddr, r.Header.Get("X-Forwarded-For"), trusted)
 }
 
 func maskedIP(value string) string {
