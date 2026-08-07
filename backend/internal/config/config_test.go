@@ -52,3 +52,25 @@ func TestLoadUsesIPv4LoopbackForPublicLiveKit(t *testing.T) {
 		t.Fatalf("unexpected public LiveKit URL: %q", cfg.LiveKitPublicURL)
 	}
 }
+
+func TestLoadEnablesInactiveGroupDeletionByDefault(t *testing.T) {
+	previous, existed := os.LookupEnv("GROUP_CLEANUP_DRY_RUN")
+	if err := os.Unsetenv("GROUP_CLEANUP_DRY_RUN"); err != nil {
+		t.Fatalf("unset GROUP_CLEANUP_DRY_RUN: %v", err)
+	}
+	t.Cleanup(func() {
+		if existed {
+			_ = os.Setenv("GROUP_CLEANUP_DRY_RUN", previous)
+		} else {
+			_ = os.Unsetenv("GROUP_CLEANUP_DRY_RUN")
+		}
+	})
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load default config: %v", err)
+	}
+	if cfg.GroupCleanupDryRun {
+		t.Fatal("inactive group cleanup must not default to dry-run")
+	}
+}

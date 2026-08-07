@@ -168,7 +168,7 @@ func (s *Store) ScheduleInactiveGroups(ctx context.Context, cutoff, scheduledAt 
 	return int(n), nil
 }
 
-func (s *Store) DeleteScheduledGroups(ctx context.Context, now time.Time, limit int) ([]string, error) {
+func (s *Store) DeleteScheduledGroups(ctx context.Context, now, inactiveBefore time.Time, limit int) ([]string, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("begin scheduled group delete: %w", err)
@@ -179,8 +179,9 @@ func (s *Store) DeleteScheduledGroups(ctx context.Context, now time.Time, limit 
 		WHERE protected_from_auto_delete = 0
 		  AND scheduled_for_deletion_at IS NOT NULL
 		  AND scheduled_for_deletion_at <= ?
+		  AND last_activity_at < ?
 		ORDER BY scheduled_for_deletion_at
-		LIMIT ?`, now.Unix(), limit)
+		LIMIT ?`, now.Unix(), inactiveBefore.Unix(), limit)
 	if err != nil {
 		return nil, err
 	}

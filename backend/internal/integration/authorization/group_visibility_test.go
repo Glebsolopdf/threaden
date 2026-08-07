@@ -62,14 +62,15 @@ func TestMembershipMessagePersistsAndSupportsActions(t *testing.T) {
 		t.Fatalf("messages: %d %s", status, body)
 	}
 	var messages []struct {
-		ID   string `json:"id"`
-		Kind string `json:"kind"`
-		Body string `json:"body"`
+		ID    string `json:"id"`
+		Kind  string `json:"kind"`
+		Event string `json:"event"`
+		Body  string `json:"body"`
 	}
 	if err := json.Unmarshal(body, &messages); err != nil {
 		t.Fatal(err)
 	}
-	if len(messages) == 0 || messages[0].Kind != "system" || messages[0].Body != "К чату присоединился участник: system-member" {
+	if len(messages) == 0 || messages[0].Kind != "system" || messages[0].Event != "member_joined" || messages[0].Body != "" {
 		t.Fatalf("membership message missing: %s", body)
 	}
 	id := messages[0].ID

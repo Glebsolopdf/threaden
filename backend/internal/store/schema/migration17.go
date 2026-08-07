@@ -65,3 +65,8 @@ UPDATE group_messages SET created_at_nanos = created_at * 1000000000 WHERE creat
 UPDATE group_members SET joined_at_nanos = joined_at * 1000000000 WHERE joined_at_nanos = 0;
 CREATE INDEX IF NOT EXISTS group_messages_created_nanos_idx ON group_messages(group_id, created_at_nanos);
 `
+
+const migration20 = `
+ALTER TABLE group_messages ADD COLUMN event TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS group_messages_event_idx ON group_messages(group_id, event, created_at);
+`

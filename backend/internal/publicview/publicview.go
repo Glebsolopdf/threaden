@@ -28,6 +28,7 @@ type Member struct {
 type MessageReference struct {
 	ID     string `json:"id"`
 	Kind   string `json:"kind,omitempty"`
+	Event  string `json:"event,omitempty"`
 	Author User   `json:"author"`
 	Body   string `json:"body"`
 }
@@ -35,6 +36,7 @@ type Message struct {
 	ID        string            `json:"id"`
 	GroupID   string            `json:"group_id"`
 	Kind      string            `json:"kind,omitempty"`
+	Event     string            `json:"event,omitempty"`
 	Author    User              `json:"author"`
 	Body      string            `json:"body"`
 	CreatedAt time.Time         `json:"created_at"`
@@ -93,9 +95,9 @@ func OwnUser(u model.User) SelfUser {
 func MessageView(m model.GroupMessage) Message {
 	var reply *MessageReference
 	if m.ReplyTo != nil {
-		reply = &MessageReference{ID: m.ReplyTo.ID, Kind: m.ReplyTo.Kind, Author: PublicUser(m.ReplyTo.Author), Body: m.ReplyTo.Body}
+		reply = &MessageReference{ID: m.ReplyTo.ID, Kind: m.ReplyTo.Kind, Event: m.ReplyTo.Event, Author: PublicUser(m.ReplyTo.Author), Body: m.ReplyTo.Body}
 	}
-	return Message{ID: m.ID, GroupID: m.GroupID, Kind: m.Kind, Author: PublicUser(m.Author), Body: m.Body, CreatedAt: m.CreatedAt, ReplyTo: reply, Read: m.Read}
+	return Message{ID: m.ID, GroupID: m.GroupID, Kind: m.Kind, Event: m.Event, Author: PublicUser(m.Author), Body: m.Body, CreatedAt: m.CreatedAt, ReplyTo: reply, Read: m.Read}
 }
 func Messages(items []model.GroupMessage) []Message {
 	out := make([]Message, len(items))

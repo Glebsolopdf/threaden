@@ -16,8 +16,8 @@ type DB interface {
 }
 
 const selectMessage = `
-	SELECT m.id,m.group_id,m.kind,m.body,m.created_at,m.created_at_nanos,u.id,u.display_name,u.avatar,u.created_at,
-		rm.id,rm.kind,rm.body,ru.id,ru.display_name,ru.avatar,ru.created_at
+	SELECT m.id,m.group_id,m.kind,m.event,m.body,m.created_at,m.created_at_nanos,u.id,u.display_name,u.avatar,u.created_at,
+		rm.id,rm.kind,rm.event,rm.body,ru.id,ru.display_name,ru.avatar,ru.created_at
 	FROM group_messages m
 	JOIN users u ON u.id=m.author_id
 	LEFT JOIN group_messages rm ON rm.id=m.reply_to_id
@@ -26,10 +26,10 @@ const selectMessage = `
 func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
 	var m model.GroupMessage
 	var created, createdNanos, authorCreated int64
-	var replyID, replyKind, replyBody, replyAuthorID, replyName, replyAvatar sql.NullString
+	var replyID, replyKind, replyEvent, replyBody, replyAuthorID, replyName, replyAvatar sql.NullString
 	var replyCreated sql.NullInt64
-	err := row.Scan(&m.ID, &m.GroupID, &m.Kind, &m.Body, &created, &createdNanos, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated,
-		&replyID, &replyKind, &replyBody, &replyAuthorID, &replyName, &replyAvatar, &replyCreated)
+	err := row.Scan(&m.ID, &m.GroupID, &m.Kind, &m.Event, &m.Body, &created, &createdNanos, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated,
+		&replyID, &replyKind, &replyEvent, &replyBody, &replyAuthorID, &replyName, &replyAvatar, &replyCreated)
 	if err == sql.ErrNoRows {
 		return m, sql.ErrNoRows
 	}
@@ -46,7 +46,7 @@ func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
 	}
 	m.Author.CreatedAt = time.Unix(authorCreated, 0).UTC()
 	if replyID.Valid {
-		m.ReplyTo = &model.MessageReference{ID: replyID.String, Kind: replyKind.String, Body: replyBody.String, Author: model.User{ID: replyAuthorID.String, DisplayName: replyName.String, Avatar: replyAvatar.String}}
+		m.ReplyTo = &model.MessageReference{ID: replyID.String, Kind: replyKind.String, Event: replyEvent.String, Body: replyBody.String, Author: model.User{ID: replyAuthorID.String, DisplayName: replyName.String, Avatar: replyAvatar.String}}
 		if replyCreated.Valid {
 			m.ReplyTo.Author.CreatedAt = time.Unix(replyCreated.Int64, 0).UTC()
 		}
@@ -90,7 +90,7 @@ func Add(ctx context.Context, db DB, m model.GroupMessage) error {
 	if kind != "system" {
 		kind = "chat"
 	}
-	_, err := db.ExecContext(ctx, `INSERT INTO group_messages(id,group_id,author_id,body,created_at,reply_to_id,kind,created_at_nanos) VALUES(?,?,?,?,?,?,?,?)`, m.ID, m.GroupID, m.Author.ID, m.Body, m.CreatedAt.Unix(), replyID, kind, m.CreatedAt.UnixNano())
+	_, err := db.ExecContext(ctx, `INSERT INTO group_messages(id,group_id,author_id,body,created_at,reply_to_id,kind,event,created_at_nanos) VALUES(?,?,?,?,?,?,?,?,?)`, m.ID, m.GroupID, m.Author.ID, m.Body, m.CreatedAt.Unix(), replyID, kind, m.Event, m.CreatedAt.UnixNano())
 	return err
 }
 

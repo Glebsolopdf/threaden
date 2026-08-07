@@ -3,7 +3,6 @@ package groups
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -18,12 +17,7 @@ func (s *Service) addMembershipMessage(ctx context.Context, groupID string, acto
 	if err != nil {
 		return model.GroupMessage{}, err
 	}
-	text := map[string]string{
-		"joined":  "К чату присоединился участник",
-		"left":    "Из чата вышел участник",
-		"removed": "Из чата исключён участник",
-	}[action]
-	message := model.GroupMessage{ID: id, GroupID: groupID, Kind: "system", Author: actor, Body: fmt.Sprintf("%s: %s", text, actor.DisplayName), CreatedAt: s.now().UTC()}
+	message := model.GroupMessage{ID: id, GroupID: groupID, Kind: "system", Event: "member_" + action, Author: actor, CreatedAt: s.now().UTC()}
 	if err := s.store.AddMessage(ctx, message); err != nil {
 		return model.GroupMessage{}, err
 	}
@@ -81,7 +75,7 @@ func (s *Service) SendReply(ctx context.Context, id string, u model.User, body, 
 		if err != nil || original.GroupID != id {
 			return model.GroupMessage{}, ErrInvalid
 		}
-		reply = &model.MessageReference{ID: original.ID, Kind: original.Kind, Author: original.Author, Body: original.Body}
+		reply = &model.MessageReference{ID: original.ID, Kind: original.Kind, Event: original.Event, Author: original.Author, Body: original.Body}
 	}
 	return s.send(ctx, id, u, body, reply, idempotencyKey)
 }

@@ -185,7 +185,7 @@ func (s *Store) hydrateGroup(ctx context.Context, g model.Group) (model.Group, e
 	}
 	var m model.GroupMessage
 	var created, authorCreated int64
-	err := s.db.QueryRowContext(ctx, `SELECT m.id,m.group_id,m.kind,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at FROM group_messages m JOIN users u ON u.id=m.author_id WHERE m.group_id=? ORDER BY m.created_at_nanos DESC, m.created_at DESC LIMIT 1`, g.ID).Scan(&m.ID, &m.GroupID, &m.Kind, &m.Body, &created, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated)
+	err := s.db.QueryRowContext(ctx, `SELECT m.id,m.group_id,m.kind,m.event,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at FROM group_messages m JOIN users u ON u.id=m.author_id WHERE m.group_id=? ORDER BY m.created_at_nanos DESC, m.created_at DESC LIMIT 1`, g.ID).Scan(&m.ID, &m.GroupID, &m.Kind, &m.Event, &m.Body, &created, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated)
 	if err == nil {
 		m.CreatedAt = time.Unix(created, 0).UTC()
 		m.Author.CreatedAt = time.Unix(authorCreated, 0).UTC()
@@ -228,7 +228,7 @@ func (s *Store) AddMessage(ctx context.Context, m model.GroupMessage) error {
 	if e = groupmessages.Add(ctx, tx, m); e != nil {
 		return fmt.Errorf("message: %w", e)
 	}
-	if _, e = tx.ExecContext(ctx, `UPDATE groups SET last_activity_at=? WHERE id=?`, m.CreatedAt.Unix(), m.GroupID); e != nil {
+	if _, e = tx.ExecContext(ctx, `UPDATE groups SET last_activity_at=?, scheduled_for_deletion_at=NULL WHERE id=?`, m.CreatedAt.Unix(), m.GroupID); e != nil {
 		return e
 	}
 	return tx.Commit()

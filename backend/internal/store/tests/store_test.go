@@ -189,10 +189,10 @@ func TestInactiveGroupScheduleAndDelete(t *testing.T) {
 	if err != nil || count != 1 {
 		t.Fatalf("schedule count=%d err=%v", count, err)
 	}
-	if deleted, err := st.DeleteScheduledGroups(ctx, now, 10); err != nil || len(deleted) != 0 {
+	if deleted, err := st.DeleteScheduledGroups(ctx, now, now.Add(-7*24*time.Hour), 10); err != nil || len(deleted) != 0 {
 		t.Fatalf("deleted before grace: %+v err=%v", deleted, err)
 	}
-	deleted, err := st.DeleteScheduledGroups(ctx, now.Add(2*time.Hour), 10)
+	deleted, err := st.DeleteScheduledGroups(ctx, now.Add(2*time.Hour), now.Add(-7*24*time.Hour), 10)
 	if err != nil || len(deleted) != 1 || deleted[0] != "grp_cleanup" {
 		t.Fatalf("deleted after grace: %+v err=%v", deleted, err)
 	}

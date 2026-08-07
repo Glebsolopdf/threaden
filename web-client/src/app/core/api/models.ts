@@ -51,6 +51,7 @@ export interface GroupMessage {
   id: string;
   group_id: string;
   kind?: 'chat' | 'system';
+  event?: GroupSystemEvent;
   author: User;
   body: string;
   created_at: string;
@@ -59,9 +60,12 @@ export interface GroupMessage {
   read?: boolean;
 }
 
+export type GroupSystemEvent = 'member_joined' | 'member_left' | 'member_removed';
+
 export interface MessageReference {
   id: string;
   kind?: 'chat' | 'system';
+  event?: GroupSystemEvent;
   author: User;
   body: string;
 }

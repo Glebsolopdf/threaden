@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../api/api.service';
-import type { GroupInfo, GroupMessage } from '../api/models';
+import type { GroupInfo, GroupMessage, GroupSystemEvent } from '../api/models';
 import { AuthStore } from '../auth/auth.store';
 
 export interface ChatMessageView {
@@ -216,7 +216,15 @@ export function chatMessage(item: MessageView): ChatMessageView | null {
 }
 
 export function systemMessageText(item: MessageView): string {
-  return isSystemMessage(item) ? item.body : '';
+  if (!isSystemMessage(item)) return '';
+  const prefix = systemEventPrefix(item.message.event);
+  return prefix ? `${prefix}: ${item.message.author.display_name}` : item.body;
+}
+
+function systemEventPrefix(event?: GroupSystemEvent): string {
+  return event === 'member_joined' ? 'К чату присоединился участник'
+    : event === 'member_left' ? 'Из чата вышел участник'
+      : event === 'member_removed' ? 'Из чата исключён участник' : '';
 }
 
 function replaceOptimisticMessage(items: MessageView[], optimisticId: string, sent: GroupMessage): MessageView[] {

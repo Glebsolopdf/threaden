@@ -4,7 +4,7 @@ import { of, Subject } from 'rxjs';
 import type { GroupMessage, User } from '../api/models';
 import { ApiService } from '../api/api.service';
 import { AuthStore } from '../auth/auth.store';
-import { chatMessage, GroupsStore } from './groups.store';
+import { chatMessage, GroupsStore, systemMessageText } from './groups.store';
 
 describe('GroupsStore', () => {
   it('merges an SSE message that arrives before the send response', async () => {
@@ -36,7 +36,7 @@ describe('GroupsStore', () => {
     expect(store.messages()).toMatchObject([{ message, status: 'sent', animate: 'outgoing' }]);
   });
 
-  it('keeps a persisted system message in the common message stream', () => {
+  it('renders a structured persisted system message with client-owned copy', () => {
     TestBed.configureTestingModule({
       providers: [
         GroupsStore,
@@ -49,10 +49,34 @@ describe('GroupsStore', () => {
     const message: GroupMessage = {
       id: 'system-1', group_id: 'group-1', kind: 'system',
       author: { id: 'user-2', email: '', display_name: 'Глеб', created_at: '' },
-      body: 'Глеб исключён из чата', created_at: '2026-01-01T00:00:00Z',
+      body: '', event: 'member_removed', created_at: '2026-01-01T00:00:00Z',
     };
     store.mergeMessage(message);
 
-    expect(store.messages()).toMatchObject([{ kind: 'system', body: 'Глеб исключён из чата', message }]);
+    const item = store.messages()[0];
+    expect(item).toMatchObject({ kind: 'system', body: '', message });
+    expect(systemMessageText(item)).toBe('Из чата исключён участник: Глеб');
+  });
+
+  it('keeps the backend body for legacy system messages without an event', () => {
+    const message = {
+      id: 'legacy-system', group_id: 'group-1', kind: 'system' as const,
+      author: { id: 'user-2', email: '', display_name: 'Глеб', created_at: '' },
+      body: 'Старое системное сообщение', created_at: '2026-01-01T00:00:00Z',
+    };
+    expect(systemMessageText({ kind: 'system', id: message.id, message, body: message.body, animate: 'incoming' })).toBe(message.body);
+  });
+
+  it('uses the existing copy for every membership event', () => {
+    const author = { id: 'user-2', email: '', display_name: 'Глеб', created_at: '' };
+    const cases = [
+      ['member_joined', 'К чату присоединился участник: Глеб'],
+      ['member_left', 'Из чата вышел участник: Глеб'],
+      ['member_removed', 'Из чата исключён участник: Глеб'],
+    ] as const;
+    for (const [event, text] of cases) {
+      const message: GroupMessage = { id: event, group_id: 'group-1', kind: 'system', event, author, body: '', created_at: '' };
+      expect(systemMessageText({ kind: 'system', id: event, message, body: '', animate: 'incoming' })).toBe(text);
+    }
   });
 });

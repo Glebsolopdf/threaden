@@ -137,7 +137,7 @@ func Load() (Config, error) {
 	if cfg.AccountBanDeletionCount, err = positiveInt("ACCOUNT_BAN_DELETION_COUNT", 5); err != nil {
 		return Config{}, err
 	}
-	cfg.GroupCleanupDryRun = boolValue("GROUP_CLEANUP_DRY_RUN", true)
+	cfg.GroupCleanupDryRun = boolValue("GROUP_CLEANUP_DRY_RUN", false)
 	cfg.SessionCookieSecure = boolValue("SESSION_COOKIE_SECURE", false)
 	for _, origin := range strings.Split(getenv("CORS_ALLOWED_ORIGINS", "*"), ",") {
 		if origin = strings.TrimSpace(origin); origin != "" {

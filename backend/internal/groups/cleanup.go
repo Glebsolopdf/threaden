@@ -72,7 +72,7 @@ func (s *Service) cleanupInactiveGroups(ctx context.Context) {
 		logGroupCleanup(cfg, ctx, slog.LevelError, "schedule inactive groups", "error", err)
 		return
 	}
-	deleted, err := s.store.DeleteScheduledGroups(ctx, now, cfg.BatchSize)
+	deleted, err := s.store.DeleteScheduledGroups(ctx, now, now.Add(-cfg.InactiveAfter), cfg.BatchSize)
 	if err != nil {
 		logGroupCleanup(cfg, ctx, slog.LevelError, "delete scheduled groups", "error", err)
 		return

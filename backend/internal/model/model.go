@@ -73,6 +73,7 @@ type GroupMessage struct {
 	ID        string            `json:"id"`
 	GroupID   string            `json:"group_id"`
 	Kind      string            `json:"kind,omitempty"`
+	Event     string            `json:"event,omitempty"`
 	Author    User              `json:"author"`
 	Body      string            `json:"body"`
 	CreatedAt time.Time         `json:"created_at"`
@@ -83,6 +84,7 @@ type GroupMessage struct {
 type MessageReference struct {
 	ID     string `json:"id"`
 	Kind   string `json:"kind,omitempty"`
+	Event  string `json:"event,omitempty"`
 	Author User   `json:"author"`
 	Body   string `json:"body"`
 }
