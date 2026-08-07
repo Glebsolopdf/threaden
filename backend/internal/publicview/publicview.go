@@ -33,6 +33,7 @@ type MessageReference struct {
 type Message struct {
 	ID        string            `json:"id"`
 	GroupID   string            `json:"group_id"`
+	Kind      string            `json:"kind,omitempty"`
 	Author    User              `json:"author"`
 	Body      string            `json:"body"`
 	CreatedAt time.Time         `json:"created_at"`
@@ -47,20 +48,21 @@ type VoiceRoom struct {
 	ParticipantCount int       `json:"participant_count"`
 }
 type Group struct {
-	ID               string      `json:"id"`
-	Visibility       string      `json:"visibility"`
-	Owner            User        `json:"owner"`
-	Name             string      `json:"name"`
-	Avatar           string      `json:"avatar"`
-	InviteToken      string      `json:"invite_token,omitempty"`
-	CreatedAt        time.Time   `json:"created_at"`
-	LastActivityAt   time.Time   `json:"last_activity_at"`
-	MemberCount      int         `json:"member_count"`
-	OnlineCount      int         `json:"online_count"`
-	LastMessage      *Message    `json:"last_message,omitempty"`
-	VoiceRooms       []VoiceRoom `json:"voice_rooms,omitempty"`
-	JoinBlocked      bool        `json:"join_blocked"`
-	JoinBlockedUntil *time.Time  `json:"join_blocked_until,omitempty"`
+	ID                 string      `json:"id"`
+	Visibility         string      `json:"visibility"`
+	Owner              User        `json:"owner"`
+	Name               string      `json:"name"`
+	Avatar             string      `json:"avatar"`
+	InviteToken        string      `json:"invite_token,omitempty"`
+	CreatedAt          time.Time   `json:"created_at"`
+	LastActivityAt     time.Time   `json:"last_activity_at"`
+	MemberCount        int         `json:"member_count"`
+	OnlineCount        int         `json:"online_count"`
+	LastMessage        *Message    `json:"last_message,omitempty"`
+	VoiceRooms         []VoiceRoom `json:"voice_rooms,omitempty"`
+	JoinBlocked        bool        `json:"join_blocked"`
+	JoinBlockedUntil   *time.Time  `json:"join_blocked_until,omitempty"`
+	HistoryVisibleFrom *time.Time  `json:"history_visible_from,omitempty"`
 }
 type GroupMember struct {
 	Member
@@ -92,7 +94,7 @@ func MessageView(m model.GroupMessage) Message {
 	if m.ReplyTo != nil {
 		reply = &MessageReference{ID: m.ReplyTo.ID, Author: PublicUser(m.ReplyTo.Author), Body: m.ReplyTo.Body}
 	}
-	return Message{ID: m.ID, GroupID: m.GroupID, Author: PublicUser(m.Author), Body: m.Body, CreatedAt: m.CreatedAt, ReplyTo: reply, Read: m.Read}
+	return Message{ID: m.ID, GroupID: m.GroupID, Kind: m.Kind, Author: PublicUser(m.Author), Body: m.Body, CreatedAt: m.CreatedAt, ReplyTo: reply, Read: m.Read}
 }
 func Messages(items []model.GroupMessage) []Message {
 	out := make([]Message, len(items))
@@ -111,7 +113,7 @@ func GroupView(g model.Group) Group {
 	for i, r := range g.VoiceRooms {
 		rooms[i] = VoiceRoom{ID: r.ID, GroupID: r.GroupID, Name: r.Name, CreatedAt: r.CreatedAt, ParticipantCount: r.ParticipantCount}
 	}
-	return Group{ID: g.ID, Visibility: g.Visibility, Owner: PublicUser(g.Owner), Name: g.Name, Avatar: g.Avatar, CreatedAt: g.CreatedAt, LastActivityAt: g.LastActivityAt, MemberCount: g.MemberCount, OnlineCount: g.OnlineCount, LastMessage: last, VoiceRooms: rooms, JoinBlocked: g.JoinBlocked, JoinBlockedUntil: g.JoinBlockedUntil}
+	return Group{ID: g.ID, Visibility: g.Visibility, Owner: PublicUser(g.Owner), Name: g.Name, Avatar: g.Avatar, CreatedAt: g.CreatedAt, LastActivityAt: g.LastActivityAt, MemberCount: g.MemberCount, OnlineCount: g.OnlineCount, LastMessage: last, VoiceRooms: rooms, JoinBlocked: g.JoinBlocked, JoinBlockedUntil: g.JoinBlockedUntil, HistoryVisibleFrom: g.HistoryVisibleFrom}
 }
 func GroupWithInvite(g model.Group) Group {
 	view := GroupView(g)

@@ -16,7 +16,7 @@ type DB interface {
 }
 
 const selectMessage = `
-	SELECT m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at,
+	SELECT m.id,m.group_id,m.kind,m.body,m.created_at,m.created_at_nanos,u.id,u.display_name,u.avatar,u.created_at,
 		rm.id,rm.body,ru.id,ru.display_name,ru.avatar,ru.created_at
 	FROM group_messages m
 	JOIN users u ON u.id=m.author_id
@@ -25,10 +25,10 @@ const selectMessage = `
 
 func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
 	var m model.GroupMessage
-	var created, authorCreated int64
+	var created, createdNanos, authorCreated int64
 	var replyID, replyBody, replyAuthorID, replyName, replyAvatar sql.NullString
 	var replyCreated sql.NullInt64
-	err := row.Scan(&m.ID, &m.GroupID, &m.Body, &created, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated,
+	err := row.Scan(&m.ID, &m.GroupID, &m.Kind, &m.Body, &created, &createdNanos, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated,
 		&replyID, &replyBody, &replyAuthorID, &replyName, &replyAvatar, &replyCreated)
 	if err == sql.ErrNoRows {
 		return m, sql.ErrNoRows
@@ -36,7 +36,14 @@ func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
 	if err != nil {
 		return m, err
 	}
-	m.CreatedAt = time.Unix(created, 0).UTC()
+	if m.Kind != "system" {
+		m.Kind = "chat"
+	}
+	if createdNanos > 0 {
+		m.CreatedAt = time.Unix(0, createdNanos).UTC()
+	} else {
+		m.CreatedAt = time.Unix(created, 0).UTC()
+	}
 	m.Author.CreatedAt = time.Unix(authorCreated, 0).UTC()
 	if replyID.Valid {
 		m.ReplyTo = &model.MessageReference{ID: replyID.String, Body: replyBody.String, Author: model.User{ID: replyAuthorID.String, DisplayName: replyName.String, Avatar: replyAvatar.String}}
@@ -48,7 +55,7 @@ func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
 }
 
 func List(ctx context.Context, db DB, groupID string, cutoff time.Time, limit int, reader string) ([]model.GroupMessage, error) {
-	rows, err := db.QueryContext(ctx, selectMessage+` WHERE m.group_id=? AND m.created_at>=? ORDER BY m.created_at DESC LIMIT ?`, groupID, cutoff.Unix(), limit)
+	rows, err := db.QueryContext(ctx, selectMessage+` WHERE m.group_id=? AND COALESCE(m.created_at_nanos,m.created_at*1000000000)>=? ORDER BY m.created_at_nanos DESC, m.created_at DESC LIMIT ?`, groupID, cutoff.UnixNano(), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +86,11 @@ func Add(ctx context.Context, db DB, m model.GroupMessage) error {
 	if m.ReplyTo != nil {
 		replyID = m.ReplyTo.ID
 	}
-	_, err := db.ExecContext(ctx, `INSERT INTO group_messages(id,group_id,author_id,body,created_at,reply_to_id) VALUES(?,?,?,?,?,?)`, m.ID, m.GroupID, m.Author.ID, m.Body, m.CreatedAt.Unix(), replyID)
+	kind := m.Kind
+	if kind != "system" {
+		kind = "chat"
+	}
+	_, err := db.ExecContext(ctx, `INSERT INTO group_messages(id,group_id,author_id,body,created_at,reply_to_id,kind,created_at_nanos) VALUES(?,?,?,?,?,?,?,?)`, m.ID, m.GroupID, m.Author.ID, m.Body, m.CreatedAt.Unix(), replyID, kind, m.CreatedAt.UnixNano())
 	return err
 }
 

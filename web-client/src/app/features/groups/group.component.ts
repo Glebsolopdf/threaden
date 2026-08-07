@@ -18,7 +18,10 @@ import { GroupMessageListComponent } from './group-message-list.component';
   template: `
     <section class="route-page" id="group-view">
       @if (groups.groupLoading()) {
-        <div class="page-loading">Загрузка группы…</div>
+        <div class="group-loading" aria-busy="true" aria-label="Загрузка группы">
+          <div class="group-loading__identity"><span class="skeleton group-loading__avatar"></span><span class="group-loading__copy"><span class="skeleton group-loading__line group-loading__line--title"></span><span class="skeleton group-loading__line group-loading__line--meta"></span></span></div>
+          <div class="group-loading__messages"><span class="skeleton group-loading__message"></span><span class="skeleton group-loading__message group-loading__message--own"></span><span class="skeleton group-loading__message group-loading__message--short"></span></div>
+        </div>
       } @else if (groups.current(); as group) {
         <header class="group-header">
           <a class="group-header__icon mobile-back" routerLink="/" aria-label="Назад к группам"><img src="/back.svg" alt=""></a>
@@ -40,6 +43,11 @@ import { GroupMessageListComponent } from './group-message-list.component';
           </div>
         </header>
 
+        @if (group.visibility === 'public' && !groups.currentIsMember()) {
+          <aside class="group-info-banner group-info-banner--preview" role="status"><span class="group-info-banner__mark">◌</span><span><strong>Предпросмотр группы</strong><small>Последние сообщения видны до вступления. Профиль группы доступен вам.</small></span></aside>
+        } @else if (group.history_visible_from) {
+          <aside class="group-info-banner group-info-banner--private" role="status"><span class="group-info-banner__mark">⌁</span><span><strong>История до вступления скрыта</strong><small>Вы видите сообщения, появившиеся после вашего входа в эту приватную группу.</small></span></aside>
+        }
         <app-group-message-list [messages]="groups.messages()" [loading]="groups.messagesLoading()" [currentUserId]="auth.user()?.id" [groupOwnerId]="group.owner.id" (reply)="beginReply($event)" (remove)="deleteMessage($event)" />
 
         @if (groups.currentIsMember()) {

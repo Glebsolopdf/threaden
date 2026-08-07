@@ -41,7 +41,12 @@ import { GroupMessageActionsComponent } from './group-message-actions.component'
               </div>
             </article>
           } @else {
-            <article class="system-message" animate.leave="message-leave" [attr.data-animate]="item.animate"><span>{{ systemMessageText(item) }}</span></article>
+            <article class="system-message" animate.leave="message-leave" [attr.data-animate]="item.animate">
+              <span class="system-message__body">{{ systemMessageText(item) }}</span>
+              @if (systemMessage(item); as system) {
+                <app-group-message-actions [message]="system" [own]="false" [canDelete]="groupOwnerId() === currentUserId()" (reply)="reply.emit($event)" (remove)="remove.emit($event)" />
+              }
+            </article>
           }
         } @empty { <p class="empty-copy">Сообщений пока нет</p> }
       }
@@ -59,6 +64,7 @@ export class GroupMessageListComponent {
   protected readonly skeletons = Array.from({ length: 7 }, (_, index) => index);
   protected readonly chatMessage = chatMessage;
   protected readonly systemMessageText = systemMessageText;
+  protected readonly systemMessage = (item: MessageView): GroupMessage | null => isSystemMessage(item) ? item.message : null;
   constructor() {
     effect(() => {
       this.messages();

@@ -50,6 +50,7 @@ export interface JoinResponse {
 export interface GroupMessage {
   id: string;
   group_id: string;
+  kind?: 'chat' | 'system';
   author: User;
   body: string;
   created_at: string;
@@ -101,6 +102,7 @@ export interface GroupInfo {
   voice_rooms?: GroupVoiceRoom[];
   join_blocked: boolean;
   join_blocked_until?: string;
+  history_visible_from?: string;
 }
 
 export interface GroupProfile {

@@ -16,6 +16,21 @@
   transform: translateX(-100%);
 }
 
+.group-loading { display: grid; min-height: 100%; align-content: space-between; gap: 1rem; padding: 1.15rem clamp(0.75rem, 4vw, 3.5rem); background: radial-gradient(circle at 50% 0%, rgb(255 255 255 / 4%), transparent 42%); }
+.group-loading__identity { display: flex; gap: 0.65rem; align-items: center; }
+.group-loading__avatar { width: 2.55rem; height: 2.55rem; flex: 0 0 2.55rem; animation: loader-breathe 1.8s ease-in-out infinite; }
+.group-loading__copy { display: grid; gap: 0.45rem; width: min(14rem, 60%); }
+.group-loading__line { height: 0.72rem; }
+.group-loading__line--title { width: 72%; }
+.group-loading__line--meta { width: 48%; height: 0.52rem; }
+.group-loading__messages { display: grid; gap: 0.8rem; align-content: end; }
+.group-loading__message { width: min(21rem, 72%); height: 3.25rem; border-radius: 0.8rem 0.8rem 0.8rem 0.25rem; animation: loader-rise 560ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.group-loading__message--own { justify-self: end; width: min(17rem, 58%); border-radius: 0.8rem 0.8rem 0.25rem; animation-delay: 110ms; }
+.group-loading__message--short { width: min(13rem, 46%); animation-delay: 220ms; }
+
+@keyframes loader-breathe { 50% { opacity: 0.62; transform: scale(0.96); } }
+@keyframes loader-rise { from { opacity: 0; transform: translateY(0.45rem); } to { opacity: 1; transform: translateY(0); } }
+
 .message-list:has(.skeleton-message) {
   justify-content: flex-end;
 }
@@ -177,6 +192,10 @@
 
 @keyframes skeleton-shimmer {
   100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group-loading__avatar, .group-loading__message { animation: none; }
 }
 
 @keyframes voice-connect-dot {

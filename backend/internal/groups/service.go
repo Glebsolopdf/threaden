@@ -114,7 +114,13 @@ func (s *Service) Get(ctx context.Context, id string, u *model.User) (model.Grou
 	if g.Visibility == "private" && (u == nil || !s.member(ctx, id, u.ID)) {
 		return model.Group{}, ErrNotFound
 	}
-	return s.withOnline(g), nil
+	g = s.withOnline(g)
+	if g.Visibility == "private" && u != nil && u.ID != g.Owner.ID && s.member(ctx, id, u.ID) {
+		if joined, joinErr := s.store.GroupMemberJoinedAt(ctx, id, u.ID); joinErr == nil && joined.After(g.CreatedAt) {
+			g.HistoryVisibleFrom = &joined
+		}
+	}
+	return g, nil
 }
 func (s *Service) List(ctx context.Context, u model.User) ([]model.Group, error) {
 	gs, e := s.store.UserGroups(ctx, u.ID)
@@ -164,6 +170,9 @@ func (s *Service) Join(ctx context.Context, id string, u model.User, byInvite bo
 		s.evaluateJoinAttack(ctx, id)
 	}
 	if !alreadyMember {
+		if _, e = s.addMembershipMessage(ctx, id, u, "joined"); e != nil {
+			return model.Group{}, e
+		}
 		s.publishGroup(ctx, id, "member_joined", hub.NewMemberEvent(u))
 	}
 	s.publishGroup(ctx, id, "group_updated", publicview.GroupView(g))

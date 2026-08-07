@@ -161,8 +161,8 @@ func TestAuthorizationAndPublicJSON(t *testing.T) {
 		t.Fatalf("group privacy: %d %s", status, body)
 	}
 	for _, path := range []string{"/v1/groups/" + aliceGroup + "/messages", "/v1/groups/" + aliceGroup + "/profile"} {
-		if status, _ = a.request(t, http.MethodGet, path, bob, nil); status != http.StatusForbidden {
-			t.Fatalf("foreign read %s: %d", path, status)
+		if status, _ = a.request(t, http.MethodGet, path, bob, nil); status != http.StatusOK {
+			t.Fatalf("public preview/profile %s: %d", path, status)
 		}
 	}
 	if status, _ = a.request(t, http.MethodPost, "/v1/groups/"+aliceGroup+"/messages", bob, []byte(`{"body":"no"}`)); status != http.StatusForbidden {

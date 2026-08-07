@@ -41,6 +41,10 @@ func TestGroupsPrivacyInviteAndMessages(t *testing.T) {
 	if status != http.StatusCreated || !bytes.Contains(body, []byte("hello group")) {
 		t.Fatalf("send: %d %s", status, body)
 	}
+	status, body, _ = api.request(t, http.MethodGet, "/v1/groups/"+public.ID+"/messages", "", nil)
+	if status != http.StatusOK || !bytes.Contains(body, []byte("hello group")) {
+		t.Fatalf("public message preview: %d %s", status, body)
+	}
 
 	status, body, _ = api.request(t, http.MethodPost, "/v1/groups", owner, []byte(`{"name":"Private","visibility":"private"}`))
 	if status != http.StatusCreated {
@@ -89,8 +93,8 @@ func TestGroupProfileAndDeletion(t *testing.T) {
 	if bytes.Contains(body, []byte(`"description"`)) {
 		t.Fatalf("obsolete description returned: %s", body)
 	}
-	if status, _, _ = api.request(t, http.MethodGet, "/v1/groups/"+group.ID+"/profile", stranger, nil); status != http.StatusForbidden {
-		t.Fatalf("outsider profile: %d", status)
+	if status, _, _ = api.request(t, http.MethodGet, "/v1/groups/"+group.ID+"/profile", stranger, nil); status != http.StatusOK {
+		t.Fatalf("public outsider profile: %d", status)
 	}
 	if status, _, _ = api.request(t, http.MethodDelete, "/v1/groups/"+group.ID+"/members/"+removableID, member, nil); status != http.StatusForbidden {
 		t.Fatalf("non-owner remove member: %d", status)

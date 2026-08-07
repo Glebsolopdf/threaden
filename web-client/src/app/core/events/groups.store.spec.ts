@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
-import { Subject } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import type { GroupMessage, User } from '../api/models';
 import { ApiService } from '../api/api.service';
 import { AuthStore } from '../auth/auth.store';
@@ -17,7 +17,7 @@ describe('GroupsStore', () => {
     TestBed.configureTestingModule({
       providers: [
         GroupsStore,
-        { provide: ApiService, useValue: { sendMessage: () => response.asObservable() } },
+        { provide: ApiService, useValue: { sendMessage: () => response.asObservable(), groups: () => of([]) } },
         { provide: AuthStore, useValue: { user: signal(user) } },
       ],
     });
@@ -36,19 +36,23 @@ describe('GroupsStore', () => {
     expect(store.messages()).toMatchObject([{ message, status: 'sent', animate: 'outgoing' }]);
   });
 
-  it('adds a readable system message for another member activity', () => {
+  it('keeps a persisted system message in the common message stream', () => {
     TestBed.configureTestingModule({
       providers: [
         GroupsStore,
-        { provide: ApiService, useValue: {} },
+        { provide: ApiService, useValue: { markGroupRead: () => of(undefined), groups: () => of([]) } },
         { provide: AuthStore, useValue: { user: signal({ id: 'user-1' }) } },
       ],
     });
     const store = TestBed.inject(GroupsStore);
     store.current.set({ id: 'group-1' } as never);
+    const message: GroupMessage = {
+      id: 'system-1', group_id: 'group-1', kind: 'system',
+      author: { id: 'user-2', email: '', display_name: 'Глеб', created_at: '' },
+      body: 'Глеб исключён из чата', created_at: '2026-01-01T00:00:00Z',
+    };
+    store.mergeMessage(message);
 
-    store.addSystemMessage('member_removed', 'group-1', { id: 'user-2', display_name: 'Глеб' });
-
-    expect(store.messages()).toMatchObject([{ kind: 'system', body: 'Из чата исключён участник: Глеб' }]);
+    expect(store.messages()).toMatchObject([{ kind: 'system', body: 'Глеб исключён из чата', message }]);
   });
 });

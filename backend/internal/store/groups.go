@@ -45,6 +45,19 @@ func (s *Store) IsGroupMember(ctx context.Context, groupID, userID string) (bool
 	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM group_members WHERE group_id=? AND user_id=?`, groupID, userID).Scan(&n)
 	return n > 0, err
 }
+
+func (s *Store) GroupMemberJoinedAt(ctx context.Context, groupID, userID string) (time.Time, error) {
+	var joined int64
+	var joinedNanos int64
+	err := s.db.QueryRowContext(ctx, `SELECT joined_at,joined_at_nanos FROM group_members WHERE group_id=? AND user_id=?`, groupID, userID).Scan(&joined, &joinedNanos)
+	if err == sql.ErrNoRows {
+		return time.Time{}, ErrNotFound
+	}
+	if joinedNanos > 0 {
+		return time.Unix(0, joinedNanos).UTC(), err
+	}
+	return time.Unix(joined, 0).UTC(), err
+}
 func (s *Store) GroupMemberIDs(ctx context.Context, groupID string) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT user_id FROM group_members WHERE group_id=?`, groupID)
 	if err != nil {
@@ -62,7 +75,7 @@ func (s *Store) GroupMemberIDs(ctx context.Context, groupID string) ([]string, e
 	return ids, rows.Err()
 }
 func (s *Store) JoinGroup(ctx context.Context, groupID, userID string, now time.Time) error {
-	result, err := s.db.ExecContext(ctx, `INSERT INTO group_members(group_id,user_id,joined_at) SELECT id,?,? FROM groups WHERE id=?`, userID, now.Unix(), groupID)
+	result, err := s.db.ExecContext(ctx, `INSERT INTO group_members(group_id,user_id,joined_at,joined_at_nanos) SELECT id,?,?,? FROM groups WHERE id=?`, userID, now.Unix(), now.UnixNano(), groupID)
 	if err != nil {
 		if isConstraint(err) {
 			return nil
@@ -172,7 +185,7 @@ func (s *Store) hydrateGroup(ctx context.Context, g model.Group) (model.Group, e
 	}
 	var m model.GroupMessage
 	var created, authorCreated int64
-	err := s.db.QueryRowContext(ctx, `SELECT m.id,m.group_id,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at FROM group_messages m JOIN users u ON u.id=m.author_id WHERE m.group_id=? ORDER BY m.created_at DESC LIMIT 1`, g.ID).Scan(&m.ID, &m.GroupID, &m.Body, &created, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated)
+	err := s.db.QueryRowContext(ctx, `SELECT m.id,m.group_id,m.kind,m.body,m.created_at,u.id,u.display_name,u.avatar,u.created_at FROM group_messages m JOIN users u ON u.id=m.author_id WHERE m.group_id=? ORDER BY m.created_at_nanos DESC, m.created_at DESC LIMIT 1`, g.ID).Scan(&m.ID, &m.GroupID, &m.Kind, &m.Body, &created, &m.Author.ID, &m.Author.DisplayName, &m.Author.Avatar, &authorCreated)
 	if err == nil {
 		m.CreatedAt = time.Unix(created, 0).UTC()
 		m.Author.CreatedAt = time.Unix(authorCreated, 0).UTC()

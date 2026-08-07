@@ -128,8 +128,10 @@ JSON и не доступен JavaScript. Для CLI остаётся совме
 | `POST` | `/v1/rooms/{code}/join` | сессия |
 | `DELETE` | `/v1/rooms/{code}/members/me` | сессия |
 | `DELETE` | `/v1/rooms/{code}` | владелец |
+| `GET` | `/v1/groups/{id}/messages` | preview public-группы; private — только участнику, с момента вступления |
 | `POST` | `/v1/groups/{id}/messages` | сессия; поддерживает `reply_to_id` |
 | `DELETE` | `/v1/groups/{id}/messages/{messageID}` | автор сообщения или владелец группы |
+| `GET` | `/v1/groups/{id}/profile` | сессия; public — без членства, private — только участнику |
 | `GET` | `/v1/discover/groups?q=&limit=&offset=` | нет |
 | `GET` | `/healthz`, `/readyz` | нет |
 

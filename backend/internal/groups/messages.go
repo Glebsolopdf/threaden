@@ -3,6 +3,7 @@ package groups
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,15 +13,40 @@ import (
 	"voice-rooms/internal/publicview"
 )
 
+func (s *Service) addMembershipMessage(ctx context.Context, groupID string, actor model.User, action string) (model.GroupMessage, error) {
+	id, err := s.ID("msg_")
+	if err != nil {
+		return model.GroupMessage{}, err
+	}
+	verb := map[string]string{"joined": "присоединился к чату", "left": "вышел из чата", "removed": "исключён из чата"}[action]
+	message := model.GroupMessage{ID: id, GroupID: groupID, Kind: "system", Author: actor, Body: fmt.Sprintf("%s %s", actor.DisplayName, verb), CreatedAt: s.now().UTC()}
+	if err := s.store.AddMessage(ctx, message); err != nil {
+		return model.GroupMessage{}, err
+	}
+	s.publishGroup(ctx, groupID, "message_created", publicview.MessageView(message))
+	return message, nil
+}
+
 func (s *Service) Messages(ctx context.Context, id string, u *model.User, limit int) ([]model.GroupMessage, error) {
-	if u == nil || !s.member(ctx, id, u.ID) {
-		return nil, ErrForbidden
+	group, err := s.store.Group(ctx, id)
+	if err != nil {
+		return nil, mapErr(err)
 	}
 	reader := ""
+	cutoff := s.now().Add(-7 * 24 * time.Hour)
 	if u != nil {
 		reader = u.ID
 	}
-	return s.store.Messages(ctx, id, s.now().Add(-7*24*time.Hour), limit, reader)
+	if group.Visibility == "private" {
+		if u == nil || !s.member(ctx, id, u.ID) {
+			return nil, ErrForbidden
+		}
+		cutoff, err = s.store.GroupMemberJoinedAt(ctx, id, u.ID)
+		if err != nil {
+			return nil, mapErr(err)
+		}
+	}
+	return s.store.Messages(ctx, id, cutoff, limit, reader)
 }
 
 func (s *Service) MarkRead(ctx context.Context, id, userID, messageID string) error {

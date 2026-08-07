@@ -2,7 +2,7 @@ package schema
 
 import "fmt"
 
-const LatestVersion = 17
+const LatestVersion = 19
 
 func Migration(version int) (string, error) {
 	switch version {
@@ -40,6 +40,10 @@ func Migration(version int) (string, error) {
 		return migration16, nil
 	case 17:
 		return migration17, nil
+	case 18:
+		return migration18, nil
+	case 19:
+		return migration19, nil
 	default:
 		return "", fmt.Errorf("unknown migration version %d", version)
 	}
@@ -248,23 +252,6 @@ const migration9 = `
 	DELETE FROM rooms;
 	UPDATE groups SET avatar = '👥' WHERE length(avatar) < 1 OR length(avatar) > 8;
 	`
-
-const migration10 = `
-	ALTER TABLE sessions ADD COLUMN reviewed_at INTEGER;
-	UPDATE sessions SET reviewed_at = created_at WHERE reviewed_at IS NULL;
-`
-
-const migration11 = `
-	CREATE TABLE IF NOT EXISTS ip_bans (
-		key TEXT PRIMARY KEY,
-		violations INTEGER NOT NULL,
-		window_start INTEGER NOT NULL,
-		until INTEGER NOT NULL,
-		updated_at INTEGER NOT NULL
-	);
-
-	CREATE INDEX IF NOT EXISTS ip_bans_until_idx ON ip_bans(until);
-`
 
 const migration12 = `
 	-- Some early v11 deployments recorded the migration before the ip_bans table

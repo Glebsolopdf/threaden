@@ -26,6 +26,7 @@ async function mount(messages: MessageView[], currentUserId = authorA.id) {
   fixture.componentRef.setInput('messages', messages);
   fixture.componentRef.setInput('loading', false);
   fixture.componentRef.setInput('currentUserId', currentUserId);
+  fixture.componentRef.setInput('groupOwnerId', authorA.id);
   fixture.detectChanges();
   await fixture.whenStable();
   return fixture.nativeElement as HTMLElement;
@@ -69,10 +70,11 @@ describe('GroupMessageListComponent', () => {
   it('renders system messages as separate articles', async () => {
     const el = await mount([
       chat('привет'),
-      { kind: 'system', id: 'system-1', body: 'Из чата исключён участник: Глеб', animate: 'incoming' },
+      { kind: 'system', id: 'system-1', message: { id: 'system-1', group_id: 'group-1', kind: 'system', author: authorB, body: 'Глеб исключён из чата', created_at: '2026-01-01T10:00:00Z' }, body: 'Глеб исключён из чата', animate: 'incoming' },
     ]);
     const system = el.querySelectorAll('article.system-message');
     expect(system.length).toBe(1);
     expect(system[0].textContent).toContain('Глеб');
+    expect(system[0].querySelector('app-group-message-actions')).not.toBeNull();
   });
 });

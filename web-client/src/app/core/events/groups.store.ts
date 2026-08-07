@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../api/api.service';
-import type { GroupInfo, GroupMemberEventType, GroupMessage } from '../api/models';
+import type { GroupInfo, GroupMessage } from '../api/models';
 import { AuthStore } from '../auth/auth.store';
 
 export interface ChatMessageView {
@@ -14,6 +14,7 @@ export interface ChatMessageView {
 export interface SystemMessageView {
   kind: 'system';
   id: string;
+  message: GroupMessage;
   body: string;
   animate: 'incoming';
 }
@@ -77,7 +78,7 @@ export class GroupsStore {
         firstValueFrom(this.api.messages(id, 50)),
       ]);
       this.current.set(group);
-      this.messages.set(messages.map((message): ChatMessageView => ({ message, status: 'sent' })));
+      this.messages.set(messages.map((message) => messageView(message)));
       const lastMessage = messages.at(-1);
       if (lastMessage && this.currentIsMember()) this.markRead(id, lastMessage.id);
       return group;
@@ -181,18 +182,6 @@ export class GroupsStore {
     this.current.update((group) => group ? ({ ...group, owner: patch(group.owner), last_message: group.last_message ? { ...group.last_message, author: patch(group.last_message.author) } : undefined }) : null);
   }
 
-  addSystemMessage(type: GroupMemberEventType, groupID: string, member: { id: string; display_name: string }): void {
-    if (this.current()?.id !== groupID || member.id === this.auth.user()?.id) return;
-    const action = type === 'member_joined'
-      ? 'К чату присоединился участник'
-      : type === 'member_left'
-        ? 'Из чата вышел участник'
-        : 'Из чата исключён участник';
-    this.messages.update((items) => [...items, {
-      kind: 'system', id: `system-${type}-${member.id}-${Date.now()}`, body: `${action}: ${member.display_name}`, animate: 'incoming',
-    }]);
-  }
-
   async createGroup(name: string, visibility: 'public' | 'private'): Promise<GroupInfo> {
     const group = await firstValueFrom(this.api.createGroup({ name: name.trim(), avatar: '', visibility }));
     await this.refresh(true);
@@ -233,12 +222,12 @@ export function systemMessageText(item: MessageView): string {
 function replaceOptimisticMessage(items: MessageView[], optimisticId: string, sent: GroupMessage): MessageView[] {
   if (!items.some((item) => !isSystemMessage(item) && item.message.id === optimisticId)) {
     return items.map((item) => !isSystemMessage(item) && item.message.id === sent.id
-      ? { ...item, message: sent, status: 'sent', animate: 'outgoing' }
+      ? messageView(sent, 'outgoing')
       : item);
   }
   return items
     .filter((item) => isSystemMessage(item) || item.message.id !== sent.id)
-    .map((item) => !isSystemMessage(item) && item.message.id === optimisticId ? { ...item, message: sent, status: 'sent', animate: 'outgoing' } : item);
+    .map((item) => !isSystemMessage(item) && item.message.id === optimisticId ? messageView(sent, 'outgoing') : item);
 }
 
 function mergeIncomingMessage(items: MessageView[], message: GroupMessage, currentUserID?: string): MessageView[] {
@@ -248,5 +237,10 @@ function mergeIncomingMessage(items: MessageView[], message: GroupMessage, curre
     return items.map((item) => item === pending ? { ...item, message, status: 'sent', animate: 'outgoing' } : item);
   }
   if (items.some((item) => !isSystemMessage(item) && item.message.id === message.id)) return items;
-  return [...items, { message, status: 'sent', animate: 'incoming' }];
+  return [...items, messageView(message, 'incoming')];
+}
+
+function messageView(message: GroupMessage, animate?: 'incoming' | 'outgoing'): MessageView {
+  if (message.kind === 'system') return { kind: 'system', id: message.id, message, body: message.body, animate: 'incoming' };
+  return { message, status: 'sent', animate };
 }

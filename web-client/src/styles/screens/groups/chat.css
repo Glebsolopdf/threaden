@@ -3,6 +3,32 @@ app-group-message-list {
   min-height: 0;
 }
 
+.group-info-banner {
+  position: absolute;
+  top: 3.8rem;
+  right: clamp(0.75rem, 4vw, 3.5rem);
+  left: clamp(0.75rem, 4vw, 3.5rem);
+  z-index: 2;
+  display: flex;
+  gap: 0.62rem;
+  align-items: center;
+  margin: 0.55rem 0 0;
+  padding: 0.62rem 0.76rem;
+  border: 1px solid var(--accent-border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0.7rem;
+  color: var(--text);
+  background: linear-gradient(110deg, var(--accent-soft), rgb(255 255 255 / 3%));
+  animation: group-banner-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+#group-view:has(.group-info-banner) .message-list { padding-top: 4.7rem; }
+.group-info-banner__mark { display: grid; width: 1.8rem; height: 1.8rem; flex: 0 0 1.8rem; place-items: center; border-radius: 50%; color: var(--accent); background: rgb(255 255 255 / 8%); font-size: 1.2rem; }
+.group-info-banner span:last-child { display: grid; gap: 0.12rem; min-width: 0; }
+.group-info-banner strong { font-size: 0.8rem; font-weight: 780; }
+.group-info-banner small { color: var(--muted); font-size: 0.72rem; line-height: 1.3; }
+.group-info-banner--private { border-color: var(--line); border-left-color: var(--muted); background: var(--panel-soft); }
+.group-info-banner--private .group-info-banner__mark { color: var(--muted); }
+
 app-group-message-list {
   display: block;
   overflow: hidden;
@@ -150,6 +176,7 @@ html[data-theme="light"] .message-actions__menu img[src="/reply.svg"], html[data
 }
 
 .system-message {
+	position: relative;
   align-self: center;
   max-width: min(32rem, 90%);
   margin: 0.42rem 0;
@@ -165,6 +192,13 @@ html[data-theme="light"] .message-actions__menu img[src="/reply.svg"], html[data
   border: 1px solid rgb(255 255 255 / 8%);
   border-radius: 999px;
   background: rgb(255 255 255 / 4%);
+}
+.system-message app-group-message-actions { opacity: 0; }
+.system-message:hover app-group-message-actions, .system-message:focus-within app-group-message-actions { opacity: 1; }
+
+@keyframes group-banner-in {
+  from { opacity: 0; transform: translateY(-0.3rem); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .composer {

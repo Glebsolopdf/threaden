@@ -20,7 +20,7 @@ func (s *Service) Profile(ctx context.Context, groupID string, user model.User) 
 	if err != nil {
 		return Profile{}, err
 	}
-	if !s.member(ctx, groupID, user.ID) {
+	if group.Visibility == "private" && !s.member(ctx, groupID, user.ID) {
 		return Profile{}, ErrForbidden
 	}
 	members, err := s.store.GroupMembers(ctx, groupID, group.Owner.ID)
@@ -64,6 +64,9 @@ func (s *Service) Leave(ctx context.Context, groupID string, user model.User) er
 	if err := s.store.LeaveGroup(ctx, groupID, user.ID); err != nil {
 		return mapErr(err)
 	}
+	if _, err := s.addMembershipMessage(ctx, groupID, user, "left"); err != nil {
+		return err
+	}
 	s.hub.Publish(members, hub.Event{Type: "member_left", GroupID: groupID, Data: hub.NewMemberEvent(user)})
 	s.publishGroup(ctx, groupID, "group_updated", group)
 	return nil
@@ -94,6 +97,9 @@ func (s *Service) RemoveMember(ctx context.Context, groupID, memberID string, us
 	}
 	if err := s.store.RemoveGroupMember(ctx, groupID, memberID); err != nil {
 		return Profile{}, mapErr(err)
+	}
+	if _, err := s.addMembershipMessage(ctx, groupID, user, "removed"); err != nil {
+		return Profile{}, err
 	}
 	updated, err := s.Profile(ctx, groupID, user)
 	if err != nil {

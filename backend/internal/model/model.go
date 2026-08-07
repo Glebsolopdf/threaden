@@ -47,20 +47,21 @@ type Room struct {
 }
 
 type Group struct {
-	ID               string           `json:"id"`
-	Visibility       string           `json:"visibility"`
-	Owner            User             `json:"owner"`
-	Name             string           `json:"name"`
-	Avatar           string           `json:"avatar"`
-	InviteToken      string           `json:"invite_token,omitempty"`
-	CreatedAt        time.Time        `json:"created_at"`
-	LastActivityAt   time.Time        `json:"last_activity_at"`
-	MemberCount      int              `json:"member_count"`
-	OnlineCount      int              `json:"online_count"`
-	LastMessage      *GroupMessage    `json:"last_message,omitempty"`
-	VoiceRooms       []GroupVoiceRoom `json:"voice_rooms,omitempty"`
-	JoinBlocked      bool             `json:"join_blocked"`
-	JoinBlockedUntil *time.Time       `json:"join_blocked_until,omitempty"`
+	ID                 string           `json:"id"`
+	Visibility         string           `json:"visibility"`
+	Owner              User             `json:"owner"`
+	Name               string           `json:"name"`
+	Avatar             string           `json:"avatar"`
+	InviteToken        string           `json:"invite_token,omitempty"`
+	CreatedAt          time.Time        `json:"created_at"`
+	LastActivityAt     time.Time        `json:"last_activity_at"`
+	MemberCount        int              `json:"member_count"`
+	OnlineCount        int              `json:"online_count"`
+	LastMessage        *GroupMessage    `json:"last_message,omitempty"`
+	VoiceRooms         []GroupVoiceRoom `json:"voice_rooms,omitempty"`
+	JoinBlocked        bool             `json:"join_blocked"`
+	JoinBlockedUntil   *time.Time       `json:"join_blocked_until,omitempty"`
+	HistoryVisibleFrom *time.Time       `json:"history_visible_from,omitempty"`
 }
 
 type GroupMember struct {
@@ -71,6 +72,7 @@ type GroupMember struct {
 type GroupMessage struct {
 	ID        string            `json:"id"`
 	GroupID   string            `json:"group_id"`
+	Kind      string            `json:"kind,omitempty"`
 	Author    User              `json:"author"`
 	Body      string            `json:"body"`
 	CreatedAt time.Time         `json:"created_at"`
