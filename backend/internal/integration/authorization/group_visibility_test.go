@@ -69,7 +69,7 @@ func TestMembershipMessagePersistsAndSupportsActions(t *testing.T) {
 	if err := json.Unmarshal(body, &messages); err != nil {
 		t.Fatal(err)
 	}
-	if len(messages) == 0 || messages[0].Kind != "system" || !bytes.Contains([]byte(messages[0].Body), []byte("присоединился")) {
+	if len(messages) == 0 || messages[0].Kind != "system" || messages[0].Body != "К чату присоединился участник: system-member" {
 		t.Fatalf("membership message missing: %s", body)
 	}
 	id := messages[0].ID

@@ -61,6 +61,7 @@ export interface GroupMessage {
 
 export interface MessageReference {
   id: string;
+  kind?: 'chat' | 'system';
   author: User;
   body: string;
 }

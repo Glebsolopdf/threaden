@@ -82,6 +82,7 @@ type GroupMessage struct {
 
 type MessageReference struct {
 	ID     string `json:"id"`
+	Kind   string `json:"kind,omitempty"`
 	Author User   `json:"author"`
 	Body   string `json:"body"`
 }

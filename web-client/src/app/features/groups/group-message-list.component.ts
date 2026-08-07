@@ -34,7 +34,7 @@ import { GroupMessageActionsComponent } from './group-message-actions.component'
               }
               <div class="chat-message__bubble">
                 @if (!isOwn(chat) && !isCompact(index)) { <strong class="chat-message__author">{{ chat.message.author.display_name }}</strong> }
-                @if (chat.message.reply_to; as reply) { <div class="message-reply-preview"><strong>В ответ {{ reply.author.display_name }}</strong><span>{{ reply.body }}</span></div> }
+                @if (chat.message.reply_to; as reply) { <div class="message-reply-preview">@if (reply.kind === 'system') { <strong>Системное уведомление</strong> } @else { <strong>В ответ {{ reply.author.display_name }}</strong> }<span>{{ reply.body }}</span></div> }
                 <p>{{ chat.message.body }}</p>
                 <footer><time [attr.datetime]="chat.message.created_at">{{ formatTime(chat.message.created_at) }}</time>@if (isOwn(chat) && chat.status === 'sent') { <span class="message-status" [attr.aria-label]="chat.message.read ? 'Прочитано' : 'Отправлено'">{{ chat.message.read ? '✓✓' : '✓' }}</span> }{{ statusSuffix(chat) }}</footer>
                 @if (chat.status === 'sent') { <app-group-message-actions [message]="chat.message" [own]="isOwn(chat)" [canDelete]="isOwn(chat) || groupOwnerId() === currentUserId()" (reply)="reply.emit($event)" (remove)="remove.emit($event)" /> }

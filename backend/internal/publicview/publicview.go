@@ -27,6 +27,7 @@ type Member struct {
 }
 type MessageReference struct {
 	ID     string `json:"id"`
+	Kind   string `json:"kind,omitempty"`
 	Author User   `json:"author"`
 	Body   string `json:"body"`
 }
@@ -92,7 +93,7 @@ func OwnUser(u model.User) SelfUser {
 func MessageView(m model.GroupMessage) Message {
 	var reply *MessageReference
 	if m.ReplyTo != nil {
-		reply = &MessageReference{ID: m.ReplyTo.ID, Author: PublicUser(m.ReplyTo.Author), Body: m.ReplyTo.Body}
+		reply = &MessageReference{ID: m.ReplyTo.ID, Kind: m.ReplyTo.Kind, Author: PublicUser(m.ReplyTo.Author), Body: m.ReplyTo.Body}
 	}
 	return Message{ID: m.ID, GroupID: m.GroupID, Kind: m.Kind, Author: PublicUser(m.Author), Body: m.Body, CreatedAt: m.CreatedAt, ReplyTo: reply, Read: m.Read}
 }
