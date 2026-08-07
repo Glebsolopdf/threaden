@@ -222,7 +222,7 @@ func TestRepeatedMessagesAreDeletedByAntispam(t *testing.T) {
 	}
 }
 
-func TestSpamWarningsAccumulateAndDeleteGroup(t *testing.T) {
+func TestSpamWarningsAccumulateAndIsolateGroup(t *testing.T) {
 	api := banAPIWith(t, func(cfg *abuse.Config) {
 		cfg.RegisterLimit = abuse.Limit{Capacity: 10, Refill: time.Hour}
 		cfg.MessageLimit = abuse.Limit{Capacity: 200, Refill: time.Second}
@@ -254,8 +254,8 @@ func TestSpamWarningsAccumulateAndDeleteGroup(t *testing.T) {
 		}
 		time.Sleep(1100 * time.Millisecond)
 	}
-	if status, _, _ := api.request(t, http.MethodGet, "/v1/groups/"+groupID, owner, nil); status != http.StatusNotFound {
-		t.Fatalf("group should be auto deleted after third warning: %d", status)
+	if status, body, _ := api.request(t, http.MethodGet, "/v1/groups/"+groupID, owner, nil); status != http.StatusOK || !bytes.Contains(body, []byte(`"join_blocked":true`)) {
+		t.Fatalf("group should remain isolated after third warning: %d %s", status, body)
 	}
 }
 

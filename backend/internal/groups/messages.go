@@ -78,10 +78,8 @@ func (s *Service) send(ctx context.Context, id string, u model.User, body string
 			return s.store.Message(ctx, mid)
 		}
 		if result, e := s.guard.Check(ctx, id, u, body); e != nil {
-			if result.DeleteGroup {
-				if members, memberErr := s.store.GroupMemberIDs(ctx, id); memberErr == nil {
-					_ = s.deleteGroup(ctx, id, members)
-				}
+			if result.IsolateGroup {
+				s.isolateMessageAttack(ctx, id, u)
 			}
 			if errors.Is(e, antispam.ErrMessageWarning) {
 				return model.GroupMessage{}, ErrWarned

@@ -102,6 +102,7 @@ export class GroupsStore {
   async joinCurrent(inviteToken = ''): Promise<void> {
     const current = this.current();
     if (!current) return;
+    if (current.join_blocked && (!current.join_blocked_until || new Date(current.join_blocked_until).getTime() > Date.now())) return;
     const group = inviteToken
       ? await firstValueFrom(this.api.joinInvite(inviteToken))
       : await firstValueFrom(this.api.joinGroup(current.id));

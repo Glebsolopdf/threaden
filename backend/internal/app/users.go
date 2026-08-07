@@ -120,6 +120,10 @@ func (s *Service) UpdateProfile(ctx context.Context, user model.User, displayNam
 	return updated, translateStoreError(err)
 }
 
+func (s *Service) Welcome(ctx context.Context, userID string) (model.WelcomeStats, error) {
+	return s.store.WelcomeStats(ctx, userID, s.now().UTC())
+}
+
 func (s *Service) DeleteAvatar(ctx context.Context, user model.User) (model.User, error) {
 	updated, err := s.store.UpdateProfile(ctx, user.ID, user.DisplayName, defaultAvatar)
 	return updated, translateStoreError(err)

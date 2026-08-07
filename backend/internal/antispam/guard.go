@@ -27,6 +27,8 @@ type Store interface {
 	CreateGroupSpamWarning(context.Context, string, string, time.Time, int, int, time.Duration, time.Duration) (int, bool, error)
 	DeleteRecentMessagesByAuthor(context.Context, string, string, time.Time, int) (int, error)
 	DeleteRecentRepeatedMessages(context.Context, string, string, string, time.Time, int) (int, error)
+	MessageCooldown(context.Context, string, string, time.Time) (time.Time, error)
+	RecordMessageViolation(context.Context, string, string, time.Time, []time.Duration) (time.Time, error)
 }
 
 type Limiter interface {
@@ -51,6 +53,20 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 		return Result{}, ErrMessageTooLong
 	}
 	now := g.now().UTC()
+	if until, err := g.store.MessageCooldown(ctx, groupID, user.ID, now); err != nil {
+		return Result{}, err
+	} else if until.After(now) {
+		return Result{}, ErrMessageRateLimited
+	}
+	if g.cfg.MinMessageInterval > 0 {
+		decision, err := g.limiter.Allow(ctx, "message:interval", abuse.Subject("user", user.ID), abuse.Limit{Capacity: 1, Refill: g.cfg.MinMessageInterval})
+		if err != nil {
+			return Result{}, err
+		}
+		if !decision.Allowed {
+			return Result{}, ErrMessageRateLimited
+		}
+	}
 	normalized := normalize(body)
 	if normalized != "" {
 		deleted, err := g.store.DeleteRecentRepeatedMessages(ctx, groupID, user.ID, normalized, now.Add(-g.cfg.MessageLimit.Refill), 20)
@@ -62,7 +78,7 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 			if err != nil {
 				return Result{}, err
 			}
-			return result, g.warnOnce(user.ID, now)
+			return g.violation(ctx, groupID, user.ID, result, now)
 		}
 	}
 	if recent, err := g.store.Messages(ctx, groupID, now.Add(-g.cfg.MessageLimit.Refill), 20, ""); err != nil {
@@ -75,7 +91,7 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 		if err != nil {
 			return Result{}, err
 		}
-		return result, g.warnOnce(user.ID, now)
+		return g.violation(ctx, groupID, user.ID, result, now)
 	}
 	if looksLikeContentSpam(body, g.cfg) {
 		if _, err := g.store.DeleteRecentMessagesByAuthor(ctx, groupID, user.ID, now.Add(-g.cfg.MessageLimit.Refill), 20); err != nil {
@@ -85,7 +101,7 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 		if err != nil {
 			return Result{}, err
 		}
-		return result, g.warnOnce(user.ID, now)
+		return g.violation(ctx, groupID, user.ID, result, now)
 	}
 	limit := g.cfg.MessageLimit
 	if now.Sub(user.CreatedAt) < g.cfg.NewAccountAge {
@@ -101,7 +117,7 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 		if err != nil {
 			return Result{}, err
 		}
-		return result, g.warnOnce(user.ID, now)
+		return g.violation(ctx, groupID, user.ID, result, now)
 	}
 	groupLimit := abuse.Limit{Capacity: limit.Capacity * 2, Refill: limit.Refill}
 	if decision, err := g.limiter.Allow(ctx, "message:group", groupID, groupLimit); err != nil {
@@ -114,10 +130,20 @@ func (g *Guard) Check(ctx context.Context, groupID string, user model.User, body
 		if err != nil {
 			return Result{}, err
 		}
-		return result, g.warnOnce(user.ID, now)
+		return g.violation(ctx, groupID, user.ID, result, now)
 	}
 	g.clearWarning(user.ID)
 	return Result{}, nil
+}
+
+func (g *Guard) violation(ctx context.Context, groupID, userID string, result Result, now time.Time) (Result, error) {
+	err := g.warnOnce(userID, now)
+	if errors.Is(err, ErrMessageRateLimited) {
+		if _, cooldownErr := g.store.RecordMessageViolation(ctx, groupID, userID, now, []time.Duration{time.Minute, 5 * time.Minute, 30 * time.Minute, 2 * time.Hour}); cooldownErr != nil {
+			return Result{}, cooldownErr
+		}
+	}
+	return result, err
 }
 
 func (g *Guard) Reserve(ctx context.Context, groupID, userID, key, responseID string) (string, bool, error) {

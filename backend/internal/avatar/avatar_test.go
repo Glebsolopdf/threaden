@@ -8,16 +8,14 @@ import (
 	"image/color"
 	"image/png"
 	"mime/multipart"
+	"net/http/httptest"
+	"os"
 	"testing"
 )
 
-type memoryFile struct{ *bytes.Reader }
-
-func (memoryFile) Close() error { return nil }
-
 func TestProcessUploadRejectsDeclaredImageBomb(t *testing.T) {
 	data := pngHeader(100_000, 100_000)
-	_, err := ProcessUpload(memoryFile{bytes.NewReader(data)}, &multipart.FileHeader{Size: int64(len(data))})
+	_, err := ProcessUpload(bytes.NewReader(data), int64(len(data)))
 	if err == nil || err.Error() != "avatar dimensions are invalid or too large" {
 		t.Fatalf("expected dimension rejection, got %v", err)
 	}
@@ -34,12 +32,47 @@ func TestProcessUploadAcceptsSmallPNG(t *testing.T) {
 	if err := png.Encode(&encoded, img); err != nil {
 		t.Fatal(err)
 	}
-	value, err := ProcessUpload(memoryFile{bytes.NewReader(encoded.Bytes())}, &multipart.FileHeader{Size: int64(encoded.Len())})
+	value, err := ProcessUpload(bytes.NewReader(encoded.Bytes()), int64(encoded.Len()))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(value) < len("data:image/jpeg;base64,") || value[:len("data:image/jpeg;base64,")] != "data:image/jpeg;base64," {
 		t.Fatalf("unexpected stored avatar: %q", value)
+	}
+}
+
+func TestReadMultipartProfileDoesNotCreateTemporaryFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	t.Setenv("TMPDIR", tempDir)
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	if err := writer.WriteField("display_name", "Avatar"); err != nil {
+		t.Fatal(err)
+	}
+	part, err := writer.CreateFormFile("avatar", "avatar.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(bytes.Repeat([]byte("x"), MaxUploadBytes+1)); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest("PATCH", "/v1/me", &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	_, err = ReadMultipartProfile(req)
+	if err == nil || err.Error() != "avatar file is too large" {
+		t.Fatalf("expected oversized avatar rejection, got %v", err)
+	}
+	entries, err := os.ReadDir(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("multipart parsing created temporary files: %v", entries)
 	}
 }
 

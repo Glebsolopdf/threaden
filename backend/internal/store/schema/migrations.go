@@ -2,7 +2,7 @@ package schema
 
 import "fmt"
 
-const LatestVersion = 15
+const LatestVersion = 17
 
 func Migration(version int) (string, error) {
 	switch version {
@@ -36,6 +36,10 @@ func Migration(version int) (string, error) {
 		return migration14, nil
 	case 15:
 		return migration15, nil
+	case 16:
+		return migration16, nil
+	case 17:
+		return migration17, nil
 	default:
 		return "", fmt.Errorf("unknown migration version %d", version)
 	}
@@ -46,8 +50,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 	version INTEGER PRIMARY KEY,
 	applied_at INTEGER NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS users (
+		CREATE TABLE IF NOT EXISTS users (
 	id TEXT PRIMARY KEY,
 	email TEXT NOT NULL UNIQUE,
 	display_name TEXT NOT NULL,
@@ -294,7 +297,6 @@ const migration13 = `
 		user_count INTEGER NOT NULL,
 		created_at INTEGER NOT NULL
 	);
-
 	CREATE INDEX IF NOT EXISTS group_spam_warnings_group_created_idx
 		ON group_spam_warnings(group_id, created_at);
 `

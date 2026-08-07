@@ -11,6 +11,7 @@ import type {
   RoomInfo,
   User,
   SecuritySession,
+  WelcomeStats,
 } from './models';
 
 export interface UploadResult {
@@ -36,6 +37,10 @@ export class ApiService {
 
   getMe(): Observable<User> {
     return this.http.get<User>('/v1/me');
+  }
+
+  welcome(): Observable<WelcomeStats> {
+    return this.http.get<WelcomeStats>('/v1/welcome');
   }
 
   updateProfile(displayName: string, avatar?: File): Observable<UploadResult> {

@@ -239,3 +239,52 @@ func TestCleanupTerminatesExpiredRooms(t *testing.T) {
 		t.Fatalf("expired room remains: %v", err)
 	}
 }
+
+func TestWelcomeStatsUseThePreviousDayOnEveryRequest(t *testing.T) {
+	ctx := context.Background()
+	st, err := store.Open(filepath.Join(t.TempDir(), "welcome.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	now := time.Unix(1_700_000_000, 0).UTC()
+	owner := model.User{ID: "usr_welcome_owner", Email: "owner@example.com", DisplayName: "Owner", CreatedAt: now.Add(-48 * time.Hour)}
+	other := model.User{ID: "usr_welcome_other", Email: "other@example.com", DisplayName: "Other", CreatedAt: now.Add(-2 * time.Hour)}
+	if err := st.CreateUser(ctx, owner, []byte("owner"), [32]byte{1}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.CreateUser(ctx, other, []byte("other"), [32]byte{2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.CreateGroup(ctx, store.NewGroup{ID: "grp_recent", Visibility: "public", OwnerID: owner.ID, Name: "Recent", Avatar: "👥", InviteToken: "invite_recent"}, now.Add(-2*time.Hour), 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.CreateGroup(ctx, store.NewGroup{ID: "grp_old", Visibility: "public", OwnerID: owner.ID, Name: "Old", Avatar: "👥", InviteToken: "invite_old"}, now.Add(-25*time.Hour), 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddMessage(ctx, model.GroupMessage{ID: "msg_other_recent", GroupID: "grp_recent", Author: other, Body: "recent", CreatedAt: now.Add(-time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddMessage(ctx, model.GroupMessage{ID: "msg_owner_recent", GroupID: "grp_recent", Author: owner, Body: "mine", CreatedAt: now.Add(-time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.AddMessage(ctx, model.GroupMessage{ID: "msg_other_old", GroupID: "grp_old", Author: other, Body: "old", CreatedAt: now.Add(-25 * time.Hour)}); err != nil {
+		t.Fatal(err)
+	}
+	service := New(st, &fakeVoice{}, time.Hour, time.Minute, 2, slog.Default())
+	service.now = func() time.Time { return now }
+	stats, err := service.Welcome(ctx, owner.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Messages != 2 || stats.NewUsers != 1 || stats.NewGroups != 1 {
+		t.Fatalf("unexpected welcome stats: %+v", stats)
+	}
+	stats, err = service.Welcome(ctx, owner.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.Messages != 2 || stats.NewUsers != 1 || stats.NewGroups != 1 {
+		t.Fatalf("welcome stats changed between requests: %+v", stats)
+	}
+}

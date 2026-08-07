@@ -6,7 +6,6 @@ import (
 	"image"
 	"image/jpeg"
 	"io"
-	"mime/multipart"
 	"net/http"
 	"strings"
 	"unicode"
@@ -49,11 +48,11 @@ func ValidSymbol(value string) bool {
 	return true
 }
 
-func ProcessUpload(file multipart.File, header *multipart.FileHeader) (string, error) {
-	if header.Size > MaxUploadBytes {
+func ProcessUpload(reader io.Reader, size int64) (string, error) {
+	if size > MaxUploadBytes {
 		return "", uploadError("avatar file is too large")
 	}
-	data, err := io.ReadAll(io.LimitReader(file, MaxUploadBytes+1))
+	data, err := io.ReadAll(io.LimitReader(reader, MaxUploadBytes+1))
 	if err != nil || len(data) == 0 {
 		return "", uploadError("avatar file is invalid")
 	}

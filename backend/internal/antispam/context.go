@@ -11,7 +11,7 @@ const (
 )
 
 type Result struct {
-	DeleteGroup bool
+	IsolateGroup bool
 }
 
 func (g *Guard) evaluateGroup(ctx context.Context, groupID, body, reason string, now time.Time) (Result, error) {
@@ -31,5 +31,5 @@ func (g *Guard) evaluateGroup(ctx context.Context, groupID, body, reason string,
 	if err != nil || !created {
 		return Result{}, err
 	}
-	return Result{DeleteGroup: warnings >= groupSpamWarningLimit}, nil
+	return Result{IsolateGroup: warnings >= groupSpamWarningLimit}, nil
 }

@@ -52,6 +52,8 @@ import { GroupMessageListComponent } from './group-message-list.component';
               <button type="submit" [disabled]="messageForm.invalid || sending()">{{ sending() ? 'Отправка…' : 'Отправить' }}</button>
             </form>
           </div>
+        } @else if (group.join_blocked) {
+          <div class="join-group-dock group-isolated" role="status">Эта группа временно изолирована</div>
         } @else {
           <div class="join-group-dock"><button type="button" [disabled]="joining()" (click)="joinGroup()">{{ joining() ? 'Присоединяем…' : 'Присоединиться к группе' }}</button></div>
         }
@@ -197,6 +199,8 @@ export class GroupComponent {
   }
 
   protected async joinGroup(): Promise<void> {
+    const group = this.groups.current();
+    if (!group || (group.join_blocked && (!group.join_blocked_until || new Date(group.join_blocked_until).getTime() > Date.now()))) return;
     this.joining.set(true);
     try { await this.groups.joinCurrent(this.inviteToken()); await this.router.navigate(['/groups', this.groups.current()?.id]); }
     catch (error) { this.notifications.error(error, 'Не удалось присоединиться к группе'); }

@@ -24,6 +24,7 @@ var (
 	ErrLimited    = errors.New("group action rate limited")
 	ErrWarned     = errors.New("group action warned")
 	ErrGroupLimit = errors.New("group limit reached")
+	ErrIsolated   = errors.New("group is temporarily isolated")
 )
 
 type Voice interface {
@@ -141,17 +142,26 @@ func (s *Service) Invite(ctx context.Context, token string) (model.Group, error)
 	g.InviteToken = ""
 	return s.withOnline(g), nil
 }
-func (s *Service) Join(ctx context.Context, id string, u model.User, byInvite bool) (model.Group, error) {
+func (s *Service) Join(ctx context.Context, id string, u model.User, byInvite bool, ip string) (model.Group, error) {
 	g, e := s.store.Group(ctx, id)
 	if e != nil {
 		return model.Group{}, mapErr(e)
 	}
+	now := s.now().UTC()
+	alreadyMember := s.member(ctx, id, u.ID)
+	_ = s.store.RecordJoinEvent(ctx, id, u.ID, ip, false, now)
 	if !byInvite && g.Visibility != "public" {
 		return model.Group{}, ErrForbidden
 	}
-	alreadyMember := s.member(ctx, id, u.ID)
-	if e = s.store.JoinGroup(ctx, id, u.ID, s.now().UTC()); e != nil {
+	if g.JoinBlocked && !alreadyMember {
+		return model.Group{}, IsolationError{Until: *g.JoinBlockedUntil}
+	}
+	if e = s.store.JoinGroup(ctx, id, u.ID, now); e != nil {
 		return model.Group{}, mapErr(e)
+	}
+	if !alreadyMember {
+		_ = s.store.RecordJoinEvent(ctx, id, u.ID, ip, true, now)
+		s.evaluateJoinAttack(ctx, id)
 	}
 	if !alreadyMember {
 		s.publishGroup(ctx, id, "member_joined", hub.NewMemberEvent(u))

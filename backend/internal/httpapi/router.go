@@ -80,7 +80,7 @@ func NewWithOptions(
 
 	users := userHandler{service: service, groups: groupService, cookieSecure: options.SessionCookieSecure}
 	rooms := roomHandler{service: service}
-	groups := groupHandler{service: groupService}
+	groups := groupHandler{service: groupService, trustedProxies: security.TrustedProxies}
 	chat := groupchat.New(groupService, groupchat.Hooks{
 		WriteJSON:       writeJSON,
 		WriteError:      writeError,
@@ -103,6 +103,7 @@ func NewWithOptions(
 		protected.Use(authenticate(service))
 		protected.Use(userRateLimit(limiter, security, logger))
 		protected.Get("/v1/me", users.me)
+		protected.Get("/v1/welcome", users.welcome)
 		protected.Patch("/v1/me/password", users.changePassword)
 		protected.Get("/v1/me/sessions", users.sessions)
 		protected.Delete("/v1/me/sessions/{id}", users.revokeSession)

@@ -121,6 +121,15 @@ func (h userHandler) me(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, publicview.OwnUser(currentUser(r)))
 }
 
+func (h userHandler) welcome(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.service.Welcome(r.Context(), currentUser(r).ID)
+	if err != nil {
+		writeAppError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, stats)
+}
+
 func (h userHandler) updateProfile(w http.ResponseWriter, r *http.Request) {
 	user := currentUser(r)
 	name, avatar, ok := readProfile(w, r, user.Avatar)
@@ -205,21 +214,16 @@ func readProfile(w http.ResponseWriter, r *http.Request, currentAvatar string) (
 		writeError(w, r, http.StatusBadRequest, "invalid_content_type", "profile update must be multipart/form-data")
 		return "", "", false
 	}
-	if err := r.ParseMultipartForm(avatarutil.MaxUploadBytes); err != nil {
-		writeError(w, r, http.StatusBadRequest, "upload_error", "avatar upload is invalid")
+	parts, err := avatarutil.ReadMultipartProfile(r)
+	if err != nil {
+		writeError(w, r, http.StatusBadRequest, "upload_error", err.Error())
 		return "", "", false
 	}
 	avatar := currentAvatar
-	file, header, err := r.FormFile("avatar")
-	if err == nil {
-		defer file.Close()
-		avatar, err = avatarutil.ProcessUpload(file, header)
-		if err != nil {
-			writeError(w, r, http.StatusBadRequest, "upload_error", err.Error())
-			return "", "", false
-		}
+	if parts.HasAvatar {
+		avatar = parts.Avatar
 	}
-	return validProfile(w, r, r.FormValue("display_name"), avatar)
+	return validProfile(w, r, parts.DisplayName, avatar)
 }
 
 func validProfile(w http.ResponseWriter, r *http.Request, name, avatar string) (string, string, bool) {

@@ -78,8 +78,8 @@ func (s *Store) JoinGroup(ctx context.Context, groupID, userID string, now time.
 
 func scanGroup(row interface{ Scan(...any) error }) (model.Group, error) {
 	var g model.Group
-	var created, activity int64
-	err := row.Scan(&g.ID, &g.Visibility, &g.Owner.ID, &g.Owner.DisplayName, &g.Owner.Avatar, &g.Name, &g.Avatar, &g.InviteToken, &created, &activity, &g.MemberCount)
+	var created, activity, isolatedUntil, isolationLevel, isolationRaisedAt int64
+	err := row.Scan(&g.ID, &g.Visibility, &g.Owner.ID, &g.Owner.DisplayName, &g.Owner.Avatar, &g.Name, &g.Avatar, &g.InviteToken, &created, &activity, &g.MemberCount, &isolatedUntil, &isolationLevel, &isolationRaisedAt)
 	if err == sql.ErrNoRows {
 		return g, ErrNotFound
 	}
@@ -88,10 +88,15 @@ func scanGroup(row interface{ Scan(...any) error }) (model.Group, error) {
 	}
 	g.CreatedAt = time.Unix(created, 0).UTC()
 	g.LastActivityAt = time.Unix(activity, 0).UTC()
+	if isolatedUntil > time.Now().Unix() {
+		until := time.Unix(isolatedUntil, 0).UTC()
+		g.JoinBlocked = true
+		g.JoinBlockedUntil = &until
+	}
 	return g, nil
 }
 
-const groupFields = `g.id,g.visibility,u.id,u.display_name,u.avatar,g.name,g.avatar,g.invite_token,g.created_at,g.last_activity_at,(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id=g.id)`
+const groupFields = `g.id,g.visibility,u.id,u.display_name,u.avatar,g.name,g.avatar,g.invite_token,g.created_at,g.last_activity_at,(SELECT COUNT(*) FROM group_members gm WHERE gm.group_id=g.id),g.isolated_until,g.isolation_level,g.isolation_raised_at`
 
 func (s *Store) Group(ctx context.Context, id string) (model.Group, error) {
 	g, e := scanGroup(s.db.QueryRowContext(ctx, `SELECT `+groupFields+` FROM groups g JOIN users u ON u.id=g.owner_id WHERE g.id=?`, id))

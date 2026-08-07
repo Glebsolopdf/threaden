@@ -11,6 +11,12 @@ type User struct {
 	Security    *SecurityState `json:"security,omitempty"`
 }
 
+type WelcomeStats struct {
+	Messages  int `json:"messages"`
+	NewUsers  int `json:"new_users"`
+	NewGroups int `json:"new_groups"`
+}
+
 type SecurityState struct {
 	CanManage bool `json:"can_manage"`
 	Alert     bool `json:"alert"`
@@ -41,18 +47,20 @@ type Room struct {
 }
 
 type Group struct {
-	ID             string           `json:"id"`
-	Visibility     string           `json:"visibility"`
-	Owner          User             `json:"owner"`
-	Name           string           `json:"name"`
-	Avatar         string           `json:"avatar"`
-	InviteToken    string           `json:"invite_token,omitempty"`
-	CreatedAt      time.Time        `json:"created_at"`
-	LastActivityAt time.Time        `json:"last_activity_at"`
-	MemberCount    int              `json:"member_count"`
-	OnlineCount    int              `json:"online_count"`
-	LastMessage    *GroupMessage    `json:"last_message,omitempty"`
-	VoiceRooms     []GroupVoiceRoom `json:"voice_rooms,omitempty"`
+	ID               string           `json:"id"`
+	Visibility       string           `json:"visibility"`
+	Owner            User             `json:"owner"`
+	Name             string           `json:"name"`
+	Avatar           string           `json:"avatar"`
+	InviteToken      string           `json:"invite_token,omitempty"`
+	CreatedAt        time.Time        `json:"created_at"`
+	LastActivityAt   time.Time        `json:"last_activity_at"`
+	MemberCount      int              `json:"member_count"`
+	OnlineCount      int              `json:"online_count"`
+	LastMessage      *GroupMessage    `json:"last_message,omitempty"`
+	VoiceRooms       []GroupVoiceRoom `json:"voice_rooms,omitempty"`
+	JoinBlocked      bool             `json:"join_blocked"`
+	JoinBlockedUntil *time.Time       `json:"join_blocked_until,omitempty"`
 }
 
 type GroupMember struct {

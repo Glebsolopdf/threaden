@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	appgroups "voice-rooms/internal/groups"
 	"voice-rooms/internal/groups/hub"
@@ -13,7 +14,10 @@ import (
 	"voice-rooms/internal/publicview"
 )
 
-type groupHandler struct{ service *appgroups.Service }
+type groupHandler struct {
+	service        *appgroups.Service
+	trustedProxies []string
+}
 type createGroupRequest struct {
 	Name       string `json:"name"`
 	Avatar     string `json:"avatar"`
@@ -120,7 +124,7 @@ func (h groupHandler) get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, publicview.GroupView(g))
 }
 func (h groupHandler) join(w http.ResponseWriter, r *http.Request) {
-	g, e := h.service.Join(r.Context(), chi.URLParam(r, "id"), currentUser(r), false)
+	g, e := h.service.Join(r.Context(), chi.URLParam(r, "id"), currentUser(r), false, clientIP(r, h.trustedProxies))
 	if e != nil {
 		writeGroupError(w, r, e)
 		return
@@ -141,7 +145,7 @@ func (h groupHandler) joinInvite(w http.ResponseWriter, r *http.Request) {
 		writeGroupError(w, r, e)
 		return
 	}
-	g, e := h.service.Join(r.Context(), preview.ID, currentUser(r), true)
+	g, e := h.service.Join(r.Context(), preview.ID, currentUser(r), true, clientIP(r, h.trustedProxies))
 	if e != nil {
 		writeGroupError(w, r, e)
 		return
@@ -229,6 +233,16 @@ func decodeGroupJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
 }
 func writeGroupError(w http.ResponseWriter, r *http.Request, e error) {
 	switch {
+	case appgroups.Is(e, appgroups.ErrIsolated):
+		if isolated, ok := e.(appgroups.IsolationError); ok {
+			seconds := max(1, int(time.Until(isolated.Until).Seconds()))
+			w.Header().Set("Retry-After", strconv.Itoa(seconds))
+			writeJSON(w, http.StatusLocked, map[string]any{"error": map[string]any{
+				"code": "group_isolated", "message": "Эта группа временно изолирована",
+				"request_id": middleware.GetReqID(r.Context()), "join_blocked_until": isolated.Until,
+			}})
+			return
+		}
 	case appgroups.Is(e, appgroups.ErrNotFound):
 		writeError(w, r, http.StatusNotFound, "not_found", "group or invitation not found")
 	case appgroups.Is(e, appgroups.ErrForbidden):

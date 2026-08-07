@@ -47,18 +47,20 @@ type VoiceRoom struct {
 	ParticipantCount int       `json:"participant_count"`
 }
 type Group struct {
-	ID             string      `json:"id"`
-	Visibility     string      `json:"visibility"`
-	Owner          User        `json:"owner"`
-	Name           string      `json:"name"`
-	Avatar         string      `json:"avatar"`
-	InviteToken    string      `json:"invite_token,omitempty"`
-	CreatedAt      time.Time   `json:"created_at"`
-	LastActivityAt time.Time   `json:"last_activity_at"`
-	MemberCount    int         `json:"member_count"`
-	OnlineCount    int         `json:"online_count"`
-	LastMessage    *Message    `json:"last_message,omitempty"`
-	VoiceRooms     []VoiceRoom `json:"voice_rooms,omitempty"`
+	ID               string      `json:"id"`
+	Visibility       string      `json:"visibility"`
+	Owner            User        `json:"owner"`
+	Name             string      `json:"name"`
+	Avatar           string      `json:"avatar"`
+	InviteToken      string      `json:"invite_token,omitempty"`
+	CreatedAt        time.Time   `json:"created_at"`
+	LastActivityAt   time.Time   `json:"last_activity_at"`
+	MemberCount      int         `json:"member_count"`
+	OnlineCount      int         `json:"online_count"`
+	LastMessage      *Message    `json:"last_message,omitempty"`
+	VoiceRooms       []VoiceRoom `json:"voice_rooms,omitempty"`
+	JoinBlocked      bool        `json:"join_blocked"`
+	JoinBlockedUntil *time.Time  `json:"join_blocked_until,omitempty"`
 }
 type GroupMember struct {
 	Member
@@ -109,7 +111,7 @@ func GroupView(g model.Group) Group {
 	for i, r := range g.VoiceRooms {
 		rooms[i] = VoiceRoom{ID: r.ID, GroupID: r.GroupID, Name: r.Name, CreatedAt: r.CreatedAt, ParticipantCount: r.ParticipantCount}
 	}
-	return Group{ID: g.ID, Visibility: g.Visibility, Owner: PublicUser(g.Owner), Name: g.Name, Avatar: g.Avatar, CreatedAt: g.CreatedAt, LastActivityAt: g.LastActivityAt, MemberCount: g.MemberCount, OnlineCount: g.OnlineCount, LastMessage: last, VoiceRooms: rooms}
+	return Group{ID: g.ID, Visibility: g.Visibility, Owner: PublicUser(g.Owner), Name: g.Name, Avatar: g.Avatar, CreatedAt: g.CreatedAt, LastActivityAt: g.LastActivityAt, MemberCount: g.MemberCount, OnlineCount: g.OnlineCount, LastMessage: last, VoiceRooms: rooms, JoinBlocked: g.JoinBlocked, JoinBlockedUntil: g.JoinBlockedUntil}
 }
 func GroupWithInvite(g model.Group) Group {
 	view := GroupView(g)

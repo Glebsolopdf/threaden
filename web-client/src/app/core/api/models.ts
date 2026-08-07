@@ -7,6 +7,12 @@ export interface User {
   security?: { can_manage: boolean; alert: boolean };
 }
 
+export interface WelcomeStats {
+  messages: number;
+  new_users: number;
+  new_groups: number;
+}
+
 export interface SecuritySession {
   id: string;
   created_at: string;
@@ -93,6 +99,8 @@ export interface GroupInfo {
   online_count: number;
   last_message?: GroupMessage;
   voice_rooms?: GroupVoiceRoom[];
+  join_blocked: boolean;
+  join_blocked_until?: string;
 }
 
 export interface GroupProfile {

@@ -30,9 +30,9 @@ func (s *Store) CreateUserWithSession(
 	}
 	defer tx.Rollback()
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO users(id, email, display_name, avatar, password_hash, token_hash, created_at, last_seen_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
-		user.ID, user.Email, user.DisplayName, user.Avatar, passwordHash, tokenHash[:], user.CreatedAt.Unix(), user.CreatedAt.Unix())
+		INSERT INTO users(id, email, display_name, avatar, password_hash, token_hash, created_at, last_seen_at, welcome_seen_at)
+		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		user.ID, user.Email, user.DisplayName, user.Avatar, passwordHash, tokenHash[:], user.CreatedAt.Unix(), user.CreatedAt.Unix(), user.CreatedAt.Unix())
 	if err != nil {
 		if isConstraint(err) {
 			return ErrConflict

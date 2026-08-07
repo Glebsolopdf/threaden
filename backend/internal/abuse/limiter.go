@@ -82,6 +82,8 @@ func EndpointLimit(cfg Config, route string) Limit {
 		return cfg.ProfileUpdateLimit
 	case "GET /v1/discover/groups":
 		return cfg.SearchLimit
+	case "GET /v1/welcome":
+		return cfg.HeavyLimit
 	case "GET /readyz", "GET /v1/events":
 		return cfg.HeavyLimit
 	default:

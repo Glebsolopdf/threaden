@@ -8,9 +8,11 @@ import (
 	"strings"
 	"time"
 
+	"voice-rooms/internal/model"
 	"voice-rooms/internal/store/rate"
 	"voice-rooms/internal/store/readreceipts"
 	"voice-rooms/internal/store/voicerooms"
+	"voice-rooms/internal/store/welcomecache"
 
 	sqlite "voice-rooms/internal/store/sqlite"
 
@@ -26,7 +28,8 @@ var (
 )
 
 type Store struct {
-	db *sql.DB
+	db           *sql.DB
+	welcomeCache welcomecache.Cache
 	*rate.Store
 	*voicerooms.VoiceRooms
 }
@@ -46,6 +49,38 @@ func Open(path string) (*Store, error) {
 
 func (s *Store) Close() error                   { return s.db.Close() }
 func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
+
+func (s *Store) WelcomeStats(ctx context.Context, userID string, now time.Time) (model.WelcomeStats, error) {
+	var exists string
+	if err := s.db.QueryRowContext(ctx, `SELECT id FROM users WHERE id=?`, userID).Scan(&exists); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return model.WelcomeStats{}, ErrNotFound
+		}
+		return model.WelcomeStats{}, fmt.Errorf("check welcome user: %w", err)
+	}
+	return s.welcomeCache.Get(now, func() (model.WelcomeStats, error) {
+		tx, err := s.db.BeginTx(ctx, nil)
+		if err != nil {
+			return model.WelcomeStats{}, fmt.Errorf("begin welcome stats: %w", err)
+		}
+		defer tx.Rollback()
+		cutoff := now.Add(-24 * time.Hour).Unix()
+		var stats model.WelcomeStats
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM group_messages WHERE created_at>=?`, cutoff).Scan(&stats.Messages); err != nil {
+			return model.WelcomeStats{}, fmt.Errorf("count welcome messages: %w", err)
+		}
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE created_at>=?`, cutoff).Scan(&stats.NewUsers); err != nil {
+			return model.WelcomeStats{}, fmt.Errorf("count welcome users: %w", err)
+		}
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM groups WHERE created_at>=?`, cutoff).Scan(&stats.NewGroups); err != nil {
+			return model.WelcomeStats{}, fmt.Errorf("count welcome groups: %w", err)
+		}
+		if err := tx.Commit(); err != nil {
+			return model.WelcomeStats{}, fmt.Errorf("commit welcome stats: %w", err)
+		}
+		return stats, nil
+	})
+}
 
 func (s *Store) MarkGroupMessagesRead(ctx context.Context, groupID, userID, messageID string, now time.Time) ([]readreceipts.Receipt, error) {
 	receipts, err := readreceipts.Mark(ctx, s.db, groupID, userID, messageID, now.Unix())
