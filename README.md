@@ -33,6 +33,12 @@ sudo ./threadenctl.sh status
 `restart` только перезапускает сервисы; для полной пересборки используйте
 `restart --full`.
 
+Проверка архитектурных лимитов исходников выполняется командой:
+
+```bash
+./scripts/verify-source-limits.sh
+```
+
 ## Безопасность 
 
 - браузерная сессия хранится в `HttpOnly`, `SameSite=Strict` cookie;

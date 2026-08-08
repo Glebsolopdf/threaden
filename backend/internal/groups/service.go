@@ -11,12 +11,12 @@ import (
 
 	"voice-rooms/internal/antispam"
 	avatarutil "voice-rooms/internal/avatar"
+	groupcleanup "voice-rooms/internal/groups/cleanup"
 	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
 	"voice-rooms/internal/publicview"
 	"voice-rooms/internal/store"
 )
-
 var (
 	ErrNotFound   = errors.New("not found")
 	ErrForbidden  = errors.New("forbidden")
@@ -38,6 +38,12 @@ type Limits struct {
 	MaxUserGroups      int
 	DiscoverMinMembers int
 }
+
+type CleanupConfig = groupcleanup.Config
+type EmergencyCleanupConfig = groupcleanup.EmergencyConfig
+type EmergencyCleanupStats = groupcleanup.Stats
+
+func DefaultCleanupConfig() CleanupConfig { return groupcleanup.DefaultConfig() }
 
 func DefaultLimits() Limits { return Limits{MaxUserGroups: 3, DiscoverMinMembers: 5} }
 
@@ -273,6 +279,17 @@ func (s *Service) publishPresence(userID string) {
 func (s *Service) Cleanup(ctx context.Context) {
 	_ = s.store.DeleteExpiredMessages(ctx, s.now().Add(-7*24*time.Hour))
 	s.cleanupInactiveGroups(ctx)
+}
+
+func (s *Service) cleanupInactiveGroups(ctx context.Context) {
+	groupcleanup.Run(ctx, s.store, s.now(), s.cleanup)
+}
+
+func (s *Service) EmergencyCleanup(ctx context.Context, cfg EmergencyCleanupConfig) EmergencyCleanupStats {
+	if cfg.Logger == nil {
+		cfg.Logger = s.cleanup.Logger
+	}
+	return groupcleanup.Emergency(ctx, s.store, s.now(), cfg)
 }
 func mapErr(e error) error {
 	if store.Is(e, store.ErrNotFound) {

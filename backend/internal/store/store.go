@@ -11,6 +11,7 @@ import (
 	"voice-rooms/internal/model"
 	"voice-rooms/internal/store/rate"
 	"voice-rooms/internal/store/readreceipts"
+	roomstore "voice-rooms/internal/store/rooms"
 	"voice-rooms/internal/store/voicerooms"
 	"voice-rooms/internal/store/welcomecache"
 
@@ -31,6 +32,7 @@ type Store struct {
 	db           *sql.DB
 	welcomeCache welcomecache.Cache
 	*rate.Store
+	*roomstore.Repository
 	*voicerooms.VoiceRooms
 }
 
@@ -39,7 +41,11 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{db: db, Store: rate.New(db), VoiceRooms: voicerooms.New(db, ErrNotFound, ErrRoomFull)}
+	s := &Store{
+		db: db, Store: rate.New(db),
+		Repository: roomstore.New(db, ErrNotFound, ErrConflict, ErrForbidden, ErrRoomFull),
+		VoiceRooms: voicerooms.New(db, ErrNotFound, ErrRoomFull),
+	}
 	if err := sqlite.Migrate(context.Background(), db); err != nil {
 		db.Close()
 		return nil, err
@@ -49,6 +55,8 @@ func Open(path string) (*Store, error) {
 
 func (s *Store) Close() error                   { return s.db.Close() }
 func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
+
+func Is(err, target error) bool { return errors.Is(err, target) }
 
 func (s *Store) WelcomeStats(ctx context.Context, userID string, now time.Time) (model.WelcomeStats, error) {
 	var exists string

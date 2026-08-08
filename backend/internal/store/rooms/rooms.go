@@ -1,4 +1,4 @@
-package store
+package rooms
 
 import (
 	"context"
@@ -7,10 +7,23 @@ import (
 	"fmt"
 	"time"
 
+	sqlite3 "modernc.org/sqlite"
 	"voice-rooms/internal/model"
 )
 
-func (s *Store) InsertRoom(ctx context.Context, code, ownerID string, now time.Time, ttl time.Duration) error {
+type Repository struct {
+	db        *sql.DB
+	notFound  error
+	conflict  error
+	forbidden error
+	roomFull  error
+}
+
+func New(db *sql.DB, notFound, conflict, forbidden, roomFull error) *Repository {
+	return &Repository{db: db, notFound: notFound, conflict: conflict, forbidden: forbidden, roomFull: roomFull}
+}
+
+func (s *Repository) InsertRoom(ctx context.Context, code, ownerID string, now time.Time, ttl time.Duration) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin create room: %w", err)
@@ -20,7 +33,7 @@ func (s *Store) InsertRoom(ctx context.Context, code, ownerID string, now time.T
 	if _, err = tx.ExecContext(ctx, `INSERT INTO rooms(code, owner_id, created_at, expires_at) VALUES(?, ?, ?, ?)`,
 		code, ownerID, now.Unix(), expires); err != nil {
 		if isConstraint(err) {
-			return ErrConflict
+			return s.conflict
 		}
 		return fmt.Errorf("insert room: %w", err)
 	}
@@ -34,7 +47,7 @@ func (s *Store) InsertRoom(ctx context.Context, code, ownerID string, now time.T
 	return nil
 }
 
-func (s *Store) GetRoom(ctx context.Context, code, userID string, now time.Time, max int) (model.Room, error) {
+func (s *Repository) GetRoom(ctx context.Context, code, userID string, now time.Time, max int) (model.Room, error) {
 	var room model.Room
 	var created, expires int64
 	var ownerCreated int64
@@ -51,7 +64,7 @@ func (s *Store) GetRoom(ctx context.Context, code, userID string, now time.Time,
 		&room.Code, &created, &expires, &room.Owner.ID, &room.Owner.DisplayName,
 		&room.Owner.Avatar, &ownerCreated, &room.ParticipantCount)
 	if err == sql.ErrNoRows {
-		return model.Room{}, ErrNotFound
+		return model.Room{}, s.notFound
 	}
 	if err != nil {
 		return model.Room{}, fmt.Errorf("get room: %w", err)
@@ -85,7 +98,7 @@ func (s *Store) GetRoom(ctx context.Context, code, userID string, now time.Time,
 	return room, nil
 }
 
-func (s *Store) JoinRoom(ctx context.Context, code, userID string, now time.Time, max int) (model.Room, error) {
+func (s *Repository) JoinRoom(ctx context.Context, code, userID string, now time.Time, max int) (model.Room, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return model.Room{}, fmt.Errorf("begin join room: %w", err)
@@ -98,7 +111,7 @@ func (s *Store) JoinRoom(ctx context.Context, code, userID string, now time.Time
 		WHERE r.code = ? AND r.expires_at > ?`,
 		code, now.Unix()).Scan(&expires)
 	if err == sql.ErrNoRows {
-		return model.Room{}, ErrNotFound
+		return model.Room{}, s.notFound
 	}
 	if err != nil {
 		return model.Room{}, fmt.Errorf("find room for join: %w", err)
@@ -114,12 +127,12 @@ func (s *Store) JoinRoom(ctx context.Context, code, userID string, now time.Time
 			return model.Room{}, fmt.Errorf("count members: %w", err)
 		}
 		if count >= max {
-			return model.Room{}, ErrRoomFull
+			return model.Room{}, s.roomFull
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO room_members(room_code, user_id, joined_at) VALUES(?, ?, ?)`,
 			code, userID, now.Unix()); err != nil {
 			if isConstraint(err) {
-				return model.Room{}, ErrConflict
+				return model.Room{}, s.conflict
 			}
 			return model.Room{}, fmt.Errorf("join room: %w", err)
 		}
@@ -133,7 +146,7 @@ func (s *Store) JoinRoom(ctx context.Context, code, userID string, now time.Time
 	return s.GetRoom(ctx, code, userID, now, max)
 }
 
-func (s *Store) LeaveRoom(ctx context.Context, code, userID string, now time.Time) error {
+func (s *Repository) LeaveRoom(ctx context.Context, code, userID string, now time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin leave room: %w", err)
@@ -155,7 +168,7 @@ func (s *Store) LeaveRoom(ctx context.Context, code, userID string, now time.Tim
 			return fmt.Errorf("check room: %w", err)
 		}
 		if exists == 0 {
-			return ErrNotFound
+			return s.notFound
 		}
 	}
 	var members int
@@ -170,7 +183,7 @@ func (s *Store) LeaveRoom(ctx context.Context, code, userID string, now time.Tim
 	return tx.Commit()
 }
 
-func (s *Store) DeleteRoom(ctx context.Context, code, userID string, now time.Time, terminate func() error) error {
+func (s *Repository) DeleteRoom(ctx context.Context, code, userID string, now time.Time, terminate func() error) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin delete room: %w", err)
@@ -180,13 +193,13 @@ func (s *Store) DeleteRoom(ctx context.Context, code, userID string, now time.Ti
 	err = tx.QueryRowContext(ctx, `SELECT owner_id FROM rooms WHERE code = ? AND expires_at > ?`,
 		code, now.Unix()).Scan(&ownerID)
 	if err == sql.ErrNoRows {
-		return ErrNotFound
+		return s.notFound
 	}
 	if err != nil {
 		return fmt.Errorf("find room for delete: %w", err)
 	}
 	if ownerID != userID {
-		return ErrForbidden
+		return s.forbidden
 	}
 	if err := terminate(); err != nil {
 		return err
@@ -200,7 +213,7 @@ func (s *Store) DeleteRoom(ctx context.Context, code, userID string, now time.Ti
 	return nil
 }
 
-func (s *Store) ExpiredRoomCodes(ctx context.Context, now time.Time) ([]string, error) {
+func (s *Repository) ExpiredRoomCodes(ctx context.Context, now time.Time) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT code FROM rooms WHERE expires_at <= ?`, now.Unix())
 	if err != nil {
@@ -218,7 +231,7 @@ func (s *Store) ExpiredRoomCodes(ctx context.Context, now time.Time) ([]string, 
 	return codes, rows.Err()
 }
 
-func (s *Store) EmptyRoomCodes(ctx context.Context, cutoff time.Time) ([]string, error) {
+func (s *Repository) EmptyRoomCodes(ctx context.Context, cutoff time.Time) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT code FROM rooms
 		WHERE empty_since_at IS NOT NULL AND empty_since_at <= ?`, cutoff.Unix())
@@ -237,7 +250,7 @@ func (s *Store) EmptyRoomCodes(ctx context.Context, cutoff time.Time) ([]string,
 	return codes, rows.Err()
 }
 
-func (s *Store) DeleteEmptyRoom(ctx context.Context, code string, cutoff time.Time) error {
+func (s *Repository) DeleteEmptyRoom(ctx context.Context, code string, cutoff time.Time) error {
 	_, err := s.db.ExecContext(ctx, `
 		DELETE FROM rooms WHERE code = ? AND empty_since_at IS NOT NULL AND empty_since_at <= ?`,
 		code, cutoff.Unix())
@@ -247,7 +260,7 @@ func (s *Store) DeleteEmptyRoom(ctx context.Context, code string, cutoff time.Ti
 	return nil
 }
 
-func (s *Store) DeleteExpiredRoom(ctx context.Context, code string, now time.Time) error {
+func (s *Repository) DeleteExpiredRoom(ctx context.Context, code string, now time.Time) error {
 	_, err := s.db.ExecContext(ctx, `
 		DELETE FROM rooms WHERE code = ? AND expires_at <= ?`, code, now.Unix())
 	if err != nil {
@@ -256,4 +269,7 @@ func (s *Store) DeleteExpiredRoom(ctx context.Context, code string, now time.Tim
 	return nil
 }
 
-func Is(err, target error) bool { return errors.Is(err, target) }
+func isConstraint(err error) bool {
+	var sqliteErr *sqlite3.Error
+	return errors.As(err, &sqliteErr) && sqliteErr.Code()&0xff == 19
+}

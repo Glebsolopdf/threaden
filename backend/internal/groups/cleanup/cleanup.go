@@ -1,12 +1,14 @@
-package groups
+package cleanup
 
 import (
 	"context"
 	"log/slog"
 	"time"
+
+	"voice-rooms/internal/store"
 )
 
-type CleanupConfig struct {
+type Config struct {
 	InactiveAfter time.Duration
 	DeleteGrace   time.Duration
 	BatchSize     int
@@ -14,20 +16,20 @@ type CleanupConfig struct {
 	Logger        *slog.Logger
 }
 
-type EmergencyCleanupConfig struct {
+type EmergencyConfig struct {
 	InactiveAfter time.Duration
 	MessageMinAge time.Duration
 	BatchSize     int
 	Logger        *slog.Logger
 }
 
-type EmergencyCleanupStats struct {
+type Stats struct {
 	InactiveGroupsDeleted int
 	OldMessagesDeleted    int
 }
 
-func DefaultCleanupConfig() CleanupConfig {
-	return CleanupConfig{
+func DefaultConfig() Config {
+	return Config{
 		InactiveAfter: 7 * 24 * time.Hour,
 		DeleteGrace:   24 * time.Hour,
 		BatchSize:     20,
@@ -35,8 +37,7 @@ func DefaultCleanupConfig() CleanupConfig {
 	}
 }
 
-func (s *Service) cleanupInactiveGroups(ctx context.Context) {
-	cfg := s.cleanup
+func Run(ctx context.Context, st *store.Store, now time.Time, cfg Config) {
 	if cfg.BatchSize < 1 {
 		cfg.BatchSize = 20
 	}
@@ -46,8 +47,8 @@ func (s *Service) cleanupInactiveGroups(ctx context.Context) {
 	if cfg.DeleteGrace <= 0 {
 		cfg.DeleteGrace = 24 * time.Hour
 	}
-	now := s.now().UTC()
-	candidates, err := s.store.InactiveGroupCandidates(ctx, now.Add(-cfg.InactiveAfter), cfg.BatchSize)
+	now = now.UTC()
+	candidates, err := st.InactiveGroupCandidates(ctx, now.Add(-cfg.InactiveAfter), cfg.BatchSize)
 	if err != nil {
 		logGroupCleanup(cfg, ctx, slog.LevelError, "list inactive groups", "error", err)
 		return
@@ -67,12 +68,12 @@ func (s *Service) cleanupInactiveGroups(ctx context.Context) {
 		logGroupCleanup(cfg, ctx, slog.LevelInfo, "inactive group cleanup dry run", "count", len(candidates))
 		return
 	}
-	count, err := s.store.ScheduleInactiveGroups(ctx, now.Add(-cfg.InactiveAfter), now.Add(cfg.DeleteGrace), cfg.BatchSize)
+	count, err := st.ScheduleInactiveGroups(ctx, now.Add(-cfg.InactiveAfter), now.Add(cfg.DeleteGrace), cfg.BatchSize)
 	if err != nil {
 		logGroupCleanup(cfg, ctx, slog.LevelError, "schedule inactive groups", "error", err)
 		return
 	}
-	deleted, err := s.store.DeleteScheduledGroups(ctx, now, now.Add(-cfg.InactiveAfter), cfg.BatchSize)
+	deleted, err := st.DeleteScheduledGroups(ctx, now, now.Add(-cfg.InactiveAfter), cfg.BatchSize)
 	if err != nil {
 		logGroupCleanup(cfg, ctx, slog.LevelError, "delete scheduled groups", "error", err)
 		return
@@ -81,7 +82,7 @@ func (s *Service) cleanupInactiveGroups(ctx context.Context) {
 		"scheduled", count, "deleted", len(deleted))
 }
 
-func (s *Service) EmergencyCleanup(ctx context.Context, cfg EmergencyCleanupConfig) EmergencyCleanupStats {
+func Emergency(ctx context.Context, st *store.Store, now time.Time, cfg EmergencyConfig) Stats {
 	if cfg.BatchSize < 1 {
 		cfg.BatchSize = 500
 	}
@@ -92,33 +93,33 @@ func (s *Service) EmergencyCleanup(ctx context.Context, cfg EmergencyCleanupConf
 		cfg.MessageMinAge = 24 * time.Hour
 	}
 	if cfg.Logger == nil {
-		cfg.Logger = s.cleanup.Logger
+		cfg.Logger = nil
 	}
-	now := s.now().UTC()
-	_ = s.store.DeleteExpiredMessages(ctx, now.Add(-7*24*time.Hour))
-	groups, err := s.store.DeleteInactiveGroupsNow(ctx, now.Add(-cfg.InactiveAfter), cfg.BatchSize)
+	now = now.UTC()
+	_ = st.DeleteExpiredMessages(ctx, now.Add(-7*24*time.Hour))
+	groups, err := st.DeleteInactiveGroupsNow(ctx, now.Add(-cfg.InactiveAfter), cfg.BatchSize)
 	if err != nil {
 		logEmergencyCleanup(cfg, ctx, slog.LevelError, "emergency delete inactive groups", "error", err)
 	}
-	messages, err := s.store.DeleteOldestMessages(ctx, now.Add(-cfg.MessageMinAge), cfg.BatchSize)
+	messages, err := st.DeleteOldestMessages(ctx, now.Add(-cfg.MessageMinAge), cfg.BatchSize)
 	if err != nil {
 		logEmergencyCleanup(cfg, ctx, slog.LevelError, "emergency delete old messages", "error", err)
 	}
-	stats := EmergencyCleanupStats{InactiveGroupsDeleted: len(groups), OldMessagesDeleted: messages}
+	stats := Stats{InactiveGroupsDeleted: len(groups), OldMessagesDeleted: messages}
 	logEmergencyCleanup(cfg, ctx, slog.LevelWarn, "low disk emergency cleanup completed",
 		"inactive_groups_deleted", stats.InactiveGroupsDeleted,
 		"old_messages_deleted", stats.OldMessagesDeleted)
 	return stats
 }
 
-func logGroupCleanup(cfg CleanupConfig, ctx context.Context, level slog.Level, message string, args ...any) {
+func logGroupCleanup(cfg Config, ctx context.Context, level slog.Level, message string, args ...any) {
 	if cfg.Logger == nil {
 		return
 	}
 	cfg.Logger.Log(ctx, level, message, args...)
 }
 
-func logEmergencyCleanup(cfg EmergencyCleanupConfig, ctx context.Context, level slog.Level, message string, args ...any) {
+func logEmergencyCleanup(cfg EmergencyConfig, ctx context.Context, level slog.Level, message string, args ...any) {
 	if cfg.Logger == nil {
 		return
 	}

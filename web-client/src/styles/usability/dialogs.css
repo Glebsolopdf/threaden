@@ -1,0 +1,122 @@
+.dialog-card {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 0;
+  overflow: hidden;
+}
+.dialog-card form { width: 100%; gap: 0.9rem; padding: 1.15rem; }
+.dialog-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.15rem;
+}
+.dialog-card__header h2 { margin: 0; }
+.dialog-card__header p { margin: 0.3rem 0 0; }
+.dialog-close {
+  display: grid;
+  width: 2.25rem;
+  min-height: 2.25rem !important;
+  flex: 0 0 2.25rem;
+  place-items: center;
+  padding: 0 !important;
+  font-size: 1.3rem;
+}
+.temporary-dialog-card .dialog-close {
+  width: 2.4rem;
+  min-height: 2.4rem !important;
+  border-color: transparent;
+  background: transparent;
+}
+.dialog-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: var(--faint);
+  font-size: 0.72rem;
+}
+.dialog-divider::before,
+.dialog-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+  content: "";
+}
+.group-header {
+  backdrop-filter: blur(16px);
+}
+
+.group-header__title {
+  min-width: 0;
+  overflow: hidden;
+}
+.group-header__title strong,
+.group-header__title small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-list {
+  scroll-padding-block: 1rem;
+}
+
+.composer {
+  align-items: center;
+  padding-bottom: max(0.7rem, env(safe-area-inset-bottom));
+}
+
+.composer input {
+  min-height: 2.85rem;
+  border-color: transparent;
+  background: rgb(255 255 255 / 6%);
+}
+
+.composer input:focus {
+  border-color: rgb(255 255 255 / 24%);
+  background: rgb(255 255 255 / 8%);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 5%);
+}
+
+.settings-panel {
+  gap: 1rem;
+}
+
+.settings-panel section {
+  padding: 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.settings-panel section + section { margin-top: 0; }
+.settings-panel p { margin: 0; color: var(--muted); font-size: 0.86rem; line-height: 1.55; }
+
+.profile-edit-card {
+  border-radius: 1rem;
+}
+
+.discover-search {
+  min-height: 2.75rem;
+  border-color: transparent !important;
+  background: rgb(255 255 255 / 5%) !important;
+}
+
+@media (max-width: 48rem) {
+  .dialog-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .dialog-card {
+    width: 100%;
+    max-height: min(88dvh, 44rem);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 1.1rem 1.1rem 0 0;
+  }
+
+  .dialog-card form { padding: 1rem max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); }
+  .notification-region { inset: max(0.65rem, env(safe-area-inset-top)) 0.65rem auto; width: auto; }
+}

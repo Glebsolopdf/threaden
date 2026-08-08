@@ -1,0 +1,114 @@
+.voice-room {
+  display: grid;
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  background: #090a0d;
+}
+.voice-room__header {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  min-height: 4.25rem;
+  grid-template-columns: auto minmax(10rem, 1fr) auto minmax(10rem, auto) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: rgb(15 16 21 / 98%);
+}
+
+.voice-room__heading,.voice-room__meta { min-width: 0; }
+
+.voice-room__heading h2,.voice-room__heading p,.voice-room__meta span { margin: 0; }
+
+.voice-room__heading h2 {
+  overflow: hidden;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-room__heading p {
+  margin-bottom: 0.15rem;
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.voice-room__summary {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.voice-status[data-state="connected"] { color: #69e58f; }
+
+.voice-status[data-state="error"] { color: var(--danger-text); }
+.voice-status[data-state="reconnecting"] { color: #f0c84b; }
+
+.voice-room__meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.voice-room__code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.voice-room__header button,
+.voice-room__controls button {
+  min-height: 2.45rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--panel-hover);
+  cursor: pointer;
+}
+
+.voice-room__icon-button,
+.voice-room__code button {
+  display: grid;
+  width: 2.55rem;
+  place-items: center;
+  padding: 0;
+}
+
+.voice-room__header button img,.voice-room__controls button img { width: 1.2rem; height: 1.2rem; filter: invert(1); }
+
+.voice-room__leave {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.8rem;
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+  background: var(--danger-soft);
+}
+
+.voice-room__content {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  padding: clamp(0.85rem, 2.6vw, 1.4rem);
+}
+
+.voice-room__content--sharing { grid-template-rows: auto minmax(0, 1fr) auto; }
+
+.voice-room__people {
+  display: grid;
+  min-height: 0;
+  align-items: center;
+}

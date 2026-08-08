@@ -2,13 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
   ConnectionState,
-  type Participant,
-  type RemoteParticipant,
-  type RemoteTrack,
-  type RemoteTrackPublication,
   Room,
-  RoomEvent,
-  Track,
 } from 'livekit-client';
 import { ApiService } from '../api/api.service';
 import type { Member } from '../api/models';
@@ -16,43 +10,21 @@ import { PreferencesService } from '../preferences/preferences.service';
 import { VoiceActivityDetector } from './activity-detector';
 import { ScreenShareController } from './screen-share/screen-share.controller';
 import type { ScreenShareMode } from './screen-share/screen-share.models';
+import { VoiceAudio } from './runtime/audio';
+import { bindVoiceRoomEvents, removeVoiceRoomEvents, type VoiceRoomHandlers } from './runtime/events';
+import { VoicePing } from './runtime/ping';
+import { testMicrophone } from './runtime/browser/microphone';
+import { buildParticipants } from './runtime/participants';
+import { clearRoom, loadRoom, saveRoom } from './runtime/browser/storage';
+import {
+  type ActiveVoiceRoom,
+  type VoiceParticipant,
+  type VoiceStatus,
+  VOICE_DETAIL_LABELS,
+  VOICE_STATUS_LABELS,
+} from './runtime/models';
 
-export type VoiceStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
-export type RoomKind = 'group' | 'temporary';
-
-export interface ActiveVoiceRoom {
-  id: string;
-  kind: RoomKind;
-  title: string;
-  groupId?: string;
-}
-
-export interface VoiceParticipant {
-  identity: string;
-  name: string;
-  avatar: string;
-  isLocal: boolean;
-  isSpeaking: boolean;
-  isMicrophoneMuted: boolean;
-  pingMs?: number;
-}
-
-const ACTIVE_ROOM_KEY = 'voice_rooms_active_room';
-
-const VOICE_STATUS_LABELS: Readonly<Record<VoiceStatus, string>> = {
-  connecting: 'Подключение…',
-  connected: 'Подключено',
-  reconnecting: 'Переподключение…',
-  disconnected: 'Отключено',
-  error: 'Ошибка подключения',
-};
-
-const VOICE_DETAIL_LABELS: Readonly<Record<Exclude<VoiceStatus, 'connected'>, string>> = {
-  connecting: 'Готовим аудиосоединение',
-  reconnecting: 'Пытаемся восстановить соединение',
-  disconnected: 'Соединение с комнатой завершено',
-  error: 'Не удалось подключиться к комнате',
-};
+export type { ActiveVoiceRoom, VoiceParticipant, VoiceStatus } from './runtime/models';
 
 @Injectable({ providedIn: 'root' })
 export class VoiceService {
@@ -64,14 +36,11 @@ export class VoiceService {
     publishDefaults: { videoCodec: 'vp8', simulcast: true },
   });
   private readonly activity = new VoiceActivityDetector();
-  private readonly audioElements = new Map<string, HTMLMediaElement[]>();
-  private readonly screenShareAudioSids = new Set<string>();
-  private readonly screenShareAudioByIdentity = new Map<string, HTMLMediaElement[]>();
   private readonly roster = signal(new Map<string, { name: string; avatar: string }>());
-  private readonly audioContainer = this.createAudioContainer();
-  private pingTimer?: number;
   private connecting = false;
   readonly screenShare = new ScreenShareController(this.room, (identity, fallback) => this.roster().get(identity)?.name || fallback);
+  private readonly audio = new VoiceAudio(this.room, this.screenShare, this.preferences);
+  private readonly ping = new VoicePing(this.room, () => this.emitParticipants());
 
   readonly activeRoom = signal<ActiveVoiceRoom | null>(null);
   readonly status = signal<VoiceStatus>('disconnected');
@@ -112,14 +81,14 @@ export class VoiceService {
   }
 
   async restoreSaved(fullscreen = false): Promise<boolean> {
-    const stored = this.loadStoredRoom();
+    const stored = loadRoom();
     if (!stored) return false;
     try {
       if (stored.kind === 'group') await this.openGroup(stored.id, stored.title, stored.groupId, fullscreen);
       else await this.openTemporary(stored.id, fullscreen);
       return true;
     } catch {
-      this.clearStoredRoom();
+      clearRoom();
       return false;
     }
   }
@@ -134,7 +103,7 @@ export class VoiceService {
       if (active?.kind === 'temporary') await firstValueFrom(this.api.leaveRoom(active.id));
     } finally {
       await this.disconnect();
-      this.clearStoredRoom();
+      clearRoom();
       this.activeRoom.set(null);
       this.minimized.set(false);
       this.participants.set([]);
@@ -143,7 +112,7 @@ export class VoiceService {
 
   async shutdown(): Promise<void> {
     await this.disconnect();
-    this.clearStoredRoom();
+      clearRoom();
     this.activeRoom.set(null);
     this.minimized.set(false);
     this.participants.set([]);
@@ -200,29 +169,25 @@ export class VoiceService {
 
   setOutputVolume(percent: number): void {
     const value = Math.min(100, Math.max(0, percent));
-    for (const elements of this.audioElements.values()) for (const element of elements) element.volume = value / 100;
+    this.audio.setOutputVolume(value);
     this.preferences.updateAudio({ outputVolume: value });
   }
 
   toggleScreenShareAudio(): void {
     const muted = !this.screenShareAudioMuted();
-    for (const sid of this.screenShareAudioSids) for (const element of this.audioElements.get(sid) ?? []) element.muted = muted;
+    this.audio.toggleScreenShareAudio(muted);
     this.screenShareAudioMuted.set(muted);
   }
 
   setScreenShareAudioMuted(identity: string, muted: boolean): void {
-    for (const element of this.screenShareAudioByIdentity.get(identity) ?? []) element.muted = muted;
+    this.audio.setScreenShareAudioMuted(identity, muted);
   }
 
   setScreenShareAudioVolume(identity: string, percent: number): void {
-    const volume = Math.min(100, Math.max(0, percent)) / 100;
-    for (const element of this.screenShareAudioByIdentity.get(identity) ?? []) element.volume = volume;
+    this.audio.setScreenShareAudioVolume(identity, percent);
   }
 
-  async testMicrophone(): Promise<void> {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    window.setTimeout(() => stream.getTracks().forEach((track) => track.stop()), 1500);
-  }
+  async testMicrophone(): Promise<void> { await testMicrophone(); }
 
   private async open(active: ActiveVoiceRoom, url: string, token: string, fullscreen: boolean): Promise<void> {
     if (this.connecting || this.room.state !== ConnectionState.Disconnected) {
@@ -248,8 +213,8 @@ export class VoiceService {
     }
     this.status.set('connected');
     this.audioBlocked.set(!this.room.canPlaybackAudio);
-    this.saveStoredRoom(active);
-    this.startPingUpdates();
+    saveRoom(active);
+    this.ping.start();
     this.emitParticipants();
     void this.loadRoster(active).then(() => this.emitParticipants()).catch(() => undefined);
     void this.applyPreferences().catch(() => undefined);
@@ -258,10 +223,11 @@ export class VoiceService {
   private async disconnect(): Promise<void> {
     await this.screenShare.destroy();
     for (const publication of this.room.localParticipant.trackPublications.values()) publication.track?.stop();
-    this.clearRemoteAudio();
+    this.audio.clearRemote();
+    this.screenShareAudioMuted.set(false);
     try { await this.room.disconnect(); } finally {
       this.activity.reset();
-      this.stopPingUpdates();
+      this.ping.stop();
       this.removeListeners();
       this.status.set('disconnected');
       this.microphoneEnabled.set(false);
@@ -293,163 +259,41 @@ export class VoiceService {
   }
 
   private bindListeners(): void {
-    this.room
-      .on(RoomEvent.Reconnecting, this.handleReconnecting)
-      .on(RoomEvent.Reconnected, this.handleReconnected)
-      .on(RoomEvent.Disconnected, this.handleDisconnected)
-      .on(RoomEvent.ParticipantConnected, this.handleRosterChanged)
-      .on(RoomEvent.ParticipantDisconnected, this.handleRosterChanged)
-      .on(RoomEvent.ActiveSpeakersChanged, this.emitParticipants)
-      .on(RoomEvent.TrackMuted, this.emitParticipants)
-      .on(RoomEvent.TrackUnmuted, this.emitParticipants)
-      .on(RoomEvent.TrackSubscribed, this.handleTrackSubscribed)
-      .on(RoomEvent.TrackUnsubscribed, this.handleTrackUnsubscribed)
-      .on(RoomEvent.AudioPlaybackStatusChanged, this.handleAudioPlayback);
+    bindVoiceRoomEvents(this.room, this.eventHandlers());
   }
 
   private removeListeners(): void {
-    this.room
-      .off(RoomEvent.Reconnecting, this.handleReconnecting)
-      .off(RoomEvent.Reconnected, this.handleReconnected)
-      .off(RoomEvent.Disconnected, this.handleDisconnected)
-      .off(RoomEvent.ParticipantConnected, this.handleRosterChanged)
-      .off(RoomEvent.ParticipantDisconnected, this.handleRosterChanged)
-      .off(RoomEvent.ActiveSpeakersChanged, this.emitParticipants)
-      .off(RoomEvent.TrackMuted, this.emitParticipants)
-      .off(RoomEvent.TrackUnmuted, this.emitParticipants)
-      .off(RoomEvent.TrackSubscribed, this.handleTrackSubscribed)
-      .off(RoomEvent.TrackUnsubscribed, this.handleTrackUnsubscribed)
-      .off(RoomEvent.AudioPlaybackStatusChanged, this.handleAudioPlayback);
+    removeVoiceRoomEvents(this.room, this.eventHandlers());
+  }
+
+  private eventHandlers(): VoiceRoomHandlers {
+    return {
+      reconnecting: this.handleReconnecting,
+      reconnected: this.handleReconnected,
+      disconnected: this.handleDisconnected,
+      rosterChanged: this.handleRosterChanged,
+      participantsChanged: this.emitParticipants,
+      trackSubscribed: this.audio.handleTrackSubscribed,
+      trackUnsubscribed: this.audio.handleTrackUnsubscribed,
+      audioPlayback: this.handleAudioPlayback,
+    };
   }
 
   private readonly handleReconnecting = (): void => this.status.set('reconnecting');
   private readonly handleReconnected = (): void => { this.status.set('connected'); this.emitParticipants(); };
-  private readonly handleDisconnected = (): void => { this.clearRemoteAudio(); this.screenShare.clearRemote(); this.status.set('disconnected'); this.emitParticipants(); };
+  private readonly handleDisconnected = (): void => { this.audio.clearRemote(); this.screenShare.clearRemote(); this.screenShareAudioMuted.set(false); this.status.set('disconnected'); this.emitParticipants(); };
   private readonly handleRosterChanged = (): void => {
     const active = this.activeRoom();
     if (active) void this.loadRoster(active).finally(() => this.emitParticipants());
   };
   private readonly handleAudioPlayback = (): void => this.audioBlocked.set(!this.room.canPlaybackAudio);
 
-  private readonly handleTrackSubscribed = (
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ): void => {
-    if (this.screenShare.handleTrackSubscribed(track, publication, participant)) return;
-    if (track.kind !== Track.Kind.Audio) return;
-    const element = track.attach();
-    element.autoplay = true;
-    element.volume = this.preferences.audio().outputVolume / 100;
-    this.audioContainer.append(element);
-    this.audioElements.set(publication.trackSid, [element]);
-    if (publication.source === Track.Source.ScreenShareAudio) {
-      this.screenShareAudioSids.add(publication.trackSid);
-      const elements = this.screenShareAudioByIdentity.get(participant.identity) ?? [];
-      elements.push(element);
-      this.screenShareAudioByIdentity.set(participant.identity, elements);
-      element.muted = this.screenShareAudioMuted();
-    }
-  };
-
-  private readonly handleTrackUnsubscribed = (
-    track: RemoteTrack,
-    publication: RemoteTrackPublication,
-    participant: RemoteParticipant,
-  ): void => {
-    if (this.screenShare.handleTrackUnsubscribed(track, publication)) return;
-    const detached = track.detach();
-    for (const element of detached) element.remove();
-    this.audioElements.delete(publication.trackSid);
-    this.screenShareAudioSids.delete(publication.trackSid);
-    if (publication.source === Track.Source.ScreenShareAudio) {
-      const elements = (this.screenShareAudioByIdentity.get(participant.identity) ?? []).filter((element) => !detached.includes(element));
-      if (elements.length) this.screenShareAudioByIdentity.set(participant.identity, elements);
-      else this.screenShareAudioByIdentity.delete(participant.identity);
-    }
-  };
-
   private readonly emitParticipants = (): void => {
-    const active = new Set(this.room.activeSpeakers.map((participant) => participant.identity));
-    const pingMs = this.signalPingMs();
+    const pingMs = this.ping.value();
     const now = performance.now();
-    const participants: Participant[] = [];
-    if (this.room.state !== ConnectionState.Disconnected && this.room.localParticipant.identity) participants.push(this.room.localParticipant);
-    participants.push(...this.room.remoteParticipants.values());
-    const identities = new Set(participants.map((participant) => participant.identity));
-    this.activity.prune(identities);
     const roster = this.roster();
-    this.participants.set(participants.map((participant) => {
-      const muted = this.isMicrophoneMuted(participant);
-      const profile = roster.get(participant.identity);
-      return {
-        identity: participant.identity,
-        name: profile?.name || participant.name || participant.identity,
-        avatar: profile?.avatar || '',
-        isLocal: participant === this.room.localParticipant,
-        isSpeaking: this.activity.update(participant.identity, Number((participant as Participant & { audioLevel?: number }).audioLevel ?? 0), active.has(participant.identity), muted, now),
-        isMicrophoneMuted: muted,
-        pingMs,
-      };
-    }));
+    this.participants.set(buildParticipants(this.room, roster, this.activity, pingMs, now));
   };
 
-  private isMicrophoneMuted(participant: Participant): boolean {
-    const publication = participant.getTrackPublication(Track.Source.Microphone);
-    return !publication || publication.isMuted;
-  }
-
-  private signalPingMs(): number | undefined {
-    const rtt = this.room.engine.client.rtt;
-    if (rtt <= 0) return undefined;
-    return Math.round(rtt < 1 ? rtt * 1000 : rtt);
-  }
-
-  private startPingUpdates(): void {
-    this.stopPingUpdates();
-    this.pingTimer = window.setInterval(this.emitParticipants, 180);
-  }
-
-  private stopPingUpdates(): void {
-    if (this.pingTimer === undefined) return;
-    window.clearInterval(this.pingTimer);
-    this.pingTimer = undefined;
-  }
-
-  private clearRemoteAudio(): void {
-    for (const participant of this.room.remoteParticipants.values()) {
-      for (const publication of participant.trackPublications.values()) publication.track?.detach().forEach((element) => element.remove());
-    }
-    for (const elements of this.audioElements.values()) for (const element of elements) element.remove();
-    this.audioElements.clear();
-    this.screenShareAudioSids.clear();
-    this.screenShareAudioByIdentity.clear();
-    this.screenShareAudioMuted.set(false);
-  }
-
-  private createAudioContainer(): HTMLElement {
-    const container = document.createElement('div');
-    container.hidden = true;
-    container.id = 'audio-container';
-    document.body.append(container);
-    return container;
-  }
-
-  private saveStoredRoom(room: ActiveVoiceRoom): void {
-    try { localStorage.setItem(ACTIVE_ROOM_KEY, JSON.stringify(room)); } catch { /* optional */ }
-  }
-
-  private loadStoredRoom(): ActiveVoiceRoom | null {
-    try {
-      const raw = localStorage.getItem(ACTIVE_ROOM_KEY);
-      if (!raw) return null;
-      const value = JSON.parse(raw) as Partial<ActiveVoiceRoom>;
-      if (!value.id || !value.title) return null;
-      return { id: value.id, title: value.title, kind: value.kind === 'group' ? 'group' : 'temporary', groupId: value.groupId };
-    } catch { return null; }
-  }
-
-  clearStoredRoom(): void {
-    try { localStorage.removeItem(ACTIVE_ROOM_KEY); } catch { /* optional */ }
-  }
+  clearStoredRoom(): void { clearRoom(); }
 }

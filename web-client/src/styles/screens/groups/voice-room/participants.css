@@ -1,0 +1,154 @@
+.voice-participants {
+  --card-size: clamp(10rem, 15vw, 15.5rem);
+  display: grid;
+  width: min(100%, 82rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), var(--card-size)));
+  justify-content: center;
+  gap: clamp(0.65rem, 1.4vw, 1rem);
+  place-self: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voice-participant-card {
+  position: relative;
+  display: grid;
+  aspect-ratio: 1.08;
+  place-items: center;
+  overflow: hidden;
+  padding: 1rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--participant-bg) 88%, #fff 6%), color-mix(in srgb, var(--participant-bg) 46%, #090a0d)),
+    var(--participant-image, none);
+  background-position: center;
+  background-size: cover;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.voice-participant-card.voice-participant-enter {
+  animation: voice-participant-enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.voice-participant-card.voice-participant-leave {
+  pointer-events: none;
+  animation: voice-participant-leave 210ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+@keyframes voice-participant-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes voice-participant-leave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(0.45rem) scale(0.96);
+  }
+}
+
+.voice-participant-card::before {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(0 0 0 / 0%) 42%, rgb(0 0 0 / 48%) 100%),
+    var(--participant-image, transparent);
+  background-position: center;
+  background-size: cover;
+  content: "";
+  filter: blur(18px) saturate(1.15);
+  opacity: 0.36;
+  transform: scale(1.08);
+}
+
+.voice-participant-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.voice-participant-card.is-speaking {
+  border-color: rgb(105 229 143 / 82%);
+  box-shadow: 0 0 0 3px rgb(105 229 143 / 16%), 0 18px 42px rgb(0 0 0 / 30%);
+}
+
+.voice-participant-card__avatar {
+  display: grid;
+  width: clamp(4.8rem, 8vw, 7rem);
+  height: clamp(4.8rem, 8vw, 7rem);
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid rgb(255 255 255 / 28%);
+  border-radius: 50%;
+  color: #fff;
+  background: var(--participant-bg);
+  font-size: clamp(1.55rem, 3vw, 2.4rem);
+  font-weight: 850;
+  box-shadow: 0 16px 34px rgb(0 0 0 / 26%);
+}
+
+.voice-participant-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.voice-participant-card footer {
+  position: absolute;
+  right: 3.1rem;
+  bottom: 0.75rem;
+  left: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.65rem;
+}
+
+.voice-participant-card strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 70%);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.voice-participant-card__mic {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.65rem;
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  background: transparent;
+}
+
+.voice-participant-card__mic::before {
+  width: 1.18rem;
+  height: 1.18rem;
+  background: #fff;
+  content: "";
+  filter:
+    drop-shadow(1px 0 #000)
+    drop-shadow(-1px 0 #000)
+    drop-shadow(0 1px #000)
+    drop-shadow(0 -1px #000);
+  mask: url("/microphone-off.svg") center / contain no-repeat;
+}
