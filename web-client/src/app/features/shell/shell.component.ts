@@ -93,7 +93,7 @@ type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'tempo
             <label>Название<input type="text" formControlName="name" maxlength="80" autocomplete="off" placeholder="Например, Команда проекта"></label>
             <label>Видимость<select formControlName="visibility"><option value="public">Публичная</option><option value="private">Частная</option></select></label>
             <app-invite-link-form (openInvite)="openInvite($event)" />
-            <menu><button type="button" (click)="createDialogOpen.set(false)">Отмена</button><button class="themed-button" type="submit" [disabled]="createGroupForm.invalid || createPending()">{{ createPending() ? 'Создаём…' : 'Создать' }}</button></menu>
+            <menu class="create-group-actions"><button class="themed-button" type="submit" [disabled]="createGroupForm.invalid || createPending()">{{ createPending() ? 'Создаём…' : 'Создать' }}</button></menu>
           </form>
         </section>
       </div>

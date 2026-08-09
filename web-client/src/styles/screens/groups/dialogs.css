@@ -43,6 +43,8 @@ dialog:not(.delete-group-dialog):not(.account-dialog):not(.confirm-dialog),
 .invite-link-section { display: grid; gap: 0.5rem; padding-top: 0.8rem; border-top: 1px solid var(--line); }
 .invite-link-section h3 { margin: 0; color: var(--text); font-size: 0.86rem; line-height: 1.35; }
 .invite-link-section button { width: 100%; text-align: center; }
+.create-group-actions { width: min(100%, 20rem); justify-self: center; }
+.create-group-actions button { width: 100%; text-align: center; }
 #create-temporary {
   justify-content: center;
   color: var(--action-text);
