@@ -63,6 +63,25 @@ body:has(.auth-page) .app-shell {
   font-size: 1.05rem;
 }
 
+.auth-theme-toggle {
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-self: center;
+  gap: 0.42rem;
+  margin-top: 0.85rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 999px;
+  color: var(--auth-muted);
+  background: var(--auth-surface);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+}
+.auth-theme-toggle:hover { color: var(--auth-text); background: var(--auth-surface-hover); }
+.auth-theme-toggle:focus-visible { outline: 2px solid var(--auth-focus); outline-offset: 3px; }
+
 .auth-page .home-hero,
 .auth-page .auth-card,
 .auth-page .message {

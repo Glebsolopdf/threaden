@@ -1,37 +1,3 @@
-:root {
-  color-scheme: dark;
-  --bg: #0b0c10;
-  --panel: #15161b;
-  --panel-soft: #101116;
-  --panel-hover: #1b1d23;
-  --text: #f4f4f5;
-  --muted: #92939a;
-  --faint: #5e6068;
-  --line: #24262e;
-  --line-soft: #1a1c22;
-  --accent: #aeb2bd;
-  --accent-hover: #ffffff;
-  --accent-deep: #555a66;
-  --accent-soft: rgb(255 255 255 / 10%);
-  --accent-border: rgb(255 255 255 / 10%);
-  --action-bg: #f4f4f5;
-  --action-bg-hover: #ffffff;
-  --action-text: #15161b;
-  --action-border: rgb(255 255 255 / 42%);
-  --sent-bg: #386794;
-  --sent-text: #eef7ff;
-  --positive: #f4f4f5;
-  --positive-soft: rgb(255 255 255 / 10%);
-  --danger: #ef4444;
-  --danger-soft: rgb(239 68 68 / 15%);
-  --danger-border: rgb(248 113 113 / 48%);
-  --danger-text: #fecaca;
-  --shadow: 0 24px 70px rgb(0 0 0 / 42%);
-  --radius: 8px;
-  --font: "Stack Sans Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  --logo-font: "Stack Sans Notch", var(--font);
-}
-
 @font-face {
   font-display: swap;
   font-family: "Stack Sans Text";

@@ -3,6 +3,7 @@ import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, Validatio
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth.store';
 import { NotificationStore } from '../../core/notifications/notification.store';
+import { AuthThemeToggleComponent } from './auth-theme-toggle.component';
 
 function passwordsMatch(control: AbstractControl): ValidationErrors | null {
   return control.get('password')?.value === control.get('confirm')?.value ? null : { passwordsMismatch: true };
@@ -11,11 +12,12 @@ function passwordsMatch(control: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'app-register',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthThemeToggleComponent],
   template: `
     <main class="app-shell">
       <section class="screen home-page auth-page" aria-labelledby="register-title">
         <a class="brand page-logo" routerLink="/" aria-label="threaden, на главную"><img src="/threaden-logo.svg" width="24" height="24" alt=""><span>threaden</span></a>
+        <app-auth-theme-toggle />
         <header class="home-hero page-title"><h1 id="register-title">Регистрация</h1><p>Создайте аккаунт, чтобы начать общение.</p></header>
         <div class="join-card auth-card">
           <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="pending()">

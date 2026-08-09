@@ -3,15 +3,17 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthStore } from '../../core/auth/auth.store';
 import { NotificationStore } from '../../core/notifications/notification.store';
+import { AuthThemeToggleComponent } from './auth-theme-toggle.component';
 
 @Component({
   selector: 'app-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, AuthThemeToggleComponent],
   template: `
     <main class="app-shell">
       <section class="screen home-page auth-page" aria-labelledby="login-title">
         <a class="brand page-logo" routerLink="/" aria-label="threaden, на главную"><img src="/threaden-logo.svg" width="24" height="24" alt=""><span>threaden</span></a>
+        <app-auth-theme-toggle />
         <header class="home-hero page-title"><h1 id="login-title">Вход</h1><p>Вокруг нас крутятся токены</p></header>
         <div class="join-card auth-card">
           <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" [attr.aria-busy]="pending()">
