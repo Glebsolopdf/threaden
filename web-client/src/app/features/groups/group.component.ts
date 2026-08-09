@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -11,6 +11,7 @@ import { TypingStore } from '../../core/events/typing.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
 import { GroupMessageListComponent } from './group-message-list.component';
+import { HistoryNoticeState } from './history/history-notice';
 @Component({
   selector: 'app-group',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -43,9 +44,7 @@ import { GroupMessageListComponent } from './group-message-list.component';
           </div>
         </header>
 
-        @if (group.visibility === 'public' && !groups.currentIsMember()) {
-          <aside class="group-info-banner group-info-banner--preview" role="status"><span class="group-info-banner__mark">◌</span><span><strong>Предпросмотр группы</strong><small>Последние сообщения видны до вступления. Профиль группы доступен вам.</small></span></aside>
-        } @else if (group.history_visible_from) {
+        @if (group.history_visible_from && historyBannerVisible()) {
           <aside class="group-info-banner group-info-banner--private" role="status"><span class="group-info-banner__mark">⌁</span><span><strong>История до вступления скрыта</strong><small>Вы видите сообщения, появившиеся после вашего входа в эту приватную группу.</small></span></aside>
         }
         <app-group-message-list [messages]="groups.messages()" [loading]="groups.messagesLoading()" [currentUserId]="auth.user()?.id" [groupOwnerId]="group.owner.id" (reply)="beginReply($event)" (remove)="deleteMessage($event)" />
@@ -142,13 +141,15 @@ import { GroupMessageListComponent } from './group-message-list.component';
 })
 export class GroupComponent {
   readonly groupId = input('');
-  readonly inviteToken = input('');
   protected readonly groups = inject(GroupsStore);
   protected readonly auth = inject(AuthStore);
   private readonly api = inject(ApiService);
   private readonly notifications = inject(NotificationStore);
   protected readonly typingState = inject(TypingStore);
   private readonly router = inject(Router);
+  private readonly historyNotice = inject(HistoryNoticeState);
+  private readonly destroyRef = inject(DestroyRef);
+  private historyTimer?: number;
   private loadedKey = '';
   protected readonly sending = signal(false);
   protected readonly joining = signal(false);
@@ -159,6 +160,7 @@ export class GroupComponent {
   protected readonly voiceJoining = signal(false);
   protected readonly profileOpen = signal(false);
   protected readonly deleteConfirmOpen = signal(false);
+  protected readonly historyBannerVisible = signal(false);
   protected readonly typingLabel = computed(() => this.typingState.labelFor(this.groupId(), this.auth.user()?.id));
   protected readonly replyingTo = signal<GroupMessage | null>(null);
   protected readonly profile = signal<GroupProfile | null>(null);
@@ -166,8 +168,9 @@ export class GroupComponent {
   protected readonly messageForm = new FormGroup({ body: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(2000)] }) });
   protected readonly voiceForm = new FormGroup({ name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(80)] }) });
   constructor() {
+    this.destroyRef.onDestroy(() => { if (this.historyTimer !== undefined) window.clearTimeout(this.historyTimer); });
     effect(() => {
-      const key = this.groupId() ? `group:${this.groupId()}` : this.inviteToken() ? `invite:${this.inviteToken()}` : '';
+      const key = this.groupId() ? `group:${this.groupId()}` : '';
       if (!key || key === this.loadedKey) return;
       this.loadedKey = key;
       void this.load();
@@ -177,8 +180,13 @@ export class GroupComponent {
   private async load(): Promise<void> {
     try {
       if (this.groupId()) await this.groups.openGroup(this.groupId());
-      else if (this.inviteToken()) await this.groups.openInvite(this.inviteToken());
+      if (this.groupId() && this.groups.current()?.history_visible_from && this.historyNotice.consume(this.groupId())) this.showHistoryNotice();
     } catch (error) { this.notifications.error(error, 'Не удалось загрузить данные группы'); }
+  }
+  private showHistoryNotice(): void {
+    this.historyBannerVisible.set(true);
+    if (this.historyTimer !== undefined) window.clearTimeout(this.historyTimer);
+    this.historyTimer = window.setTimeout(() => this.historyBannerVisible.set(false), 10_000);
   }
   protected voiceParticipants(rooms: GroupVoiceRoom[]): number { return rooms.reduce((sum, room) => sum + room.participant_count, 0); }
   protected async sendMessage(): Promise<void> {
@@ -210,7 +218,12 @@ export class GroupComponent {
     const group = this.groups.current();
     if (!group || (group.join_blocked && (!group.join_blocked_until || new Date(group.join_blocked_until).getTime() > Date.now()))) return;
     this.joining.set(true);
-    try { await this.groups.joinCurrent(this.inviteToken()); await this.router.navigate(['/groups', this.groups.current()?.id]); }
+    try {
+      await this.groups.joinCurrent();
+      const joined = this.groups.current();
+      if (joined?.visibility === 'private') this.historyNotice.markAfterJoin(joined.id);
+      await this.router.navigate(['/groups', joined?.id]);
+    }
     catch (error) { this.notifications.error(error, 'Не удалось присоединиться к группе'); }
     finally { this.joining.set(false); }
   }

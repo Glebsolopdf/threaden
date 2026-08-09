@@ -71,6 +71,7 @@ export class GroupsStore {
   async openGroup(id: string): Promise<GroupInfo> {
     this.groupLoading.set(true);
     this.messagesLoading.set(true);
+    this.current.set(null);
     this.messages.set([]);
     try {
       const [group, messages] = await Promise.all([
@@ -90,10 +91,11 @@ export class GroupsStore {
 
   async openInvite(token: string): Promise<GroupInfo> {
     this.groupLoading.set(true);
+    this.current.set(null);
+    this.messages.set([]);
     try {
       const group = await firstValueFrom(this.api.invite(token));
       this.current.set(group);
-      this.messages.set([]);
       return group;
     } finally {
       this.groupLoading.set(false);

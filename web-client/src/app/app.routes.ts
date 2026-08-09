@@ -28,7 +28,7 @@ export const routes: Routes = [
       { path: 'discover', loadComponent: () => import('./features/discover/discover.component').then((m) => m.DiscoverComponent), title: 'Поиск групп · threaden' },
       { path: 'groups/:groupId', loadComponent: () => import('./features/groups/group.component').then((m) => m.GroupComponent), title: 'Группа · threaden' },
       { path: 'groups/:groupId/voice', redirectTo: 'groups/:groupId' },
-      { path: 'invite/:inviteToken', loadComponent: () => import('./features/groups/group.component').then((m) => m.GroupComponent), title: 'Приглашение · threaden' },
+      { path: 'invite/:inviteToken', loadComponent: () => import('./features/groups/invite/group-invite-route.component').then((m) => m.GroupInviteRouteComponent), title: 'Приглашение · threaden' },
       { path: 'temporary', loadComponent: () => import('./features/voice/voice.component').then((m) => m.VoiceComponent), title: 'Временная комната · threaden' },
       { path: 'temporary/:temporaryCode', loadComponent: () => import('./features/voice/voice.component').then((m) => m.VoiceComponent), title: 'Временная комната · threaden' },
       { path: 'group-voice-rooms/:voiceRoomId', loadComponent: () => import('./features/voice/voice.component').then((m) => m.VoiceComponent), title: 'Голосовая комната · threaden' },

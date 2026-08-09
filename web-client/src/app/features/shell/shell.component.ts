@@ -10,13 +10,14 @@ import { VoiceService } from '../../core/voice/voice.service';
 import { NotificationStore } from '../../core/notifications/notification.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { AccountDialogComponent } from '../account/account-dialog.component';
+import { InviteLinkComponent } from './invite-link.component';
 
 type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'temporary' | 'voice';
 
 @Component({
   selector: 'app-shell',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ReactiveFormsModule, AvatarComponent, AccountDialogComponent],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ReactiveFormsModule, AvatarComponent, AccountDialogComponent, InviteLinkComponent],
   template: `
     <main class="messenger" [attr.data-sidebar-open]="sidebarOpen()" [attr.data-page]="page()">
       <button
@@ -91,6 +92,7 @@ type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'tempo
             <header class="dialog-card__header"><div><h2 id="create-title">Новая группа</h2><p>Создайте пространство для переписки и голосовых комнат.</p></div><button class="dialog-close" type="button" aria-label="Закрыть" (click)="createDialogOpen.set(false)">×</button></header>
             <label>Название<input type="text" formControlName="name" maxlength="80" autocomplete="off" placeholder="Например, Команда проекта"></label>
             <label>Видимость<select formControlName="visibility"><option value="public">Публичная</option><option value="private">Частная</option></select></label>
+            <app-invite-link-form (openInvite)="openInvite($event)" />
             <menu><button type="button" (click)="createDialogOpen.set(false)">Отмена</button><button class="themed-button" type="submit" [disabled]="createGroupForm.invalid || createPending()">{{ createPending() ? 'Создаём…' : 'Создать' }}</button></menu>
           </form>
         </section>
@@ -196,6 +198,15 @@ export class ShellComponent {
     } catch (error) {
       this.notifications.error(error, 'Не удалось создать группу');
     } finally { this.createPending.set(false); }
+  }
+
+  protected async openInvite(token: string): Promise<void> {
+    try {
+      this.createDialogOpen.set(false);
+      await this.router.navigate(['/invite', token]);
+    } catch (error) {
+      this.notifications.error(error, 'Не удалось открыть приглашение');
+    }
   }
 
   protected async createTemporary(): Promise<void> {
