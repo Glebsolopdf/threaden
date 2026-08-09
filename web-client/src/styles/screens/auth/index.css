@@ -29,6 +29,7 @@ body:has(.auth-page) .app-shell {
 }
 
 .auth-page {
+  position: relative;
   display: grid;
   height: 100dvh;
   min-height: 0;
@@ -64,10 +65,12 @@ body:has(.auth-page) .app-shell {
 }
 
 .auth-theme-toggle {
+  position: absolute;
+  top: clamp(1rem, 4vw, 2rem);
+  right: clamp(1rem, 4vw, 2rem);
   display: inline-flex;
   min-height: 2.25rem;
   align-items: center;
-  justify-self: center;
   gap: 0.42rem;
   margin-top: 0.85rem;
   padding: 0 0.7rem;
@@ -204,7 +207,7 @@ body:has(.auth-page) .app-shell {
   background: var(--auth-danger-surface);
 }
 
-.auth-page .page-logo + .home-hero {
+.auth-page .page-logo ~ .home-hero {
   margin-top: 1.75rem;
 }
 
@@ -217,7 +220,7 @@ body:has(.auth-page) .app-shell {
     padding: 1.25rem;
   }
 
-  .auth-page .page-logo + .home-hero {
+  .auth-page .page-logo ~ .home-hero {
     margin-top: clamp(1.5rem, 8vh, 3rem);
   }
 }
@@ -227,7 +230,7 @@ body:has(.auth-page) .app-shell {
     padding-block: 0.8rem;
   }
 
-  .auth-page .page-logo + .home-hero {
+  .auth-page .page-logo ~ .home-hero {
     margin-top: 1rem;
   }
 
