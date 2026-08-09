@@ -92,8 +92,8 @@ type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'tempo
             <header class="dialog-card__header"><div><h2 id="create-title">Новая группа</h2><p>Создайте пространство для переписки и голосовых комнат.</p></div><button class="dialog-close" type="button" aria-label="Закрыть" (click)="createDialogOpen.set(false)">×</button></header>
             <label>Название<input type="text" formControlName="name" maxlength="80" autocomplete="off" placeholder="Например, Команда проекта"></label>
             <label>Видимость<select formControlName="visibility"><option value="public">Публичная</option><option value="private">Частная</option></select></label>
-            <app-invite-link-form (openInvite)="openInvite($event)" />
             <menu class="create-group-actions"><button class="themed-button" type="submit" [disabled]="createGroupForm.invalid || createPending()">{{ createPending() ? 'Создаём…' : 'Создать' }}</button></menu>
+            <app-invite-link-form (openInvite)="openInvite($event)" />
           </form>
         </section>
       </div>
