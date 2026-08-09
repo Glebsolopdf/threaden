@@ -9,6 +9,7 @@ events { worker_connections 1024; }
 http {
   include /etc/nginx/mime.types;
   default_type application/octet-stream;
+  types { application/manifest+json webmanifest; }
   access_log off;
   sendfile on;
   keepalive_timeout 65;
@@ -54,6 +55,26 @@ http {
     }
     location = /healthz { proxy_pass http://$BACKEND_BIND; }
     location = /readyz { proxy_pass http://$BACKEND_BIND; }
+    location = /index.html {
+      add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+      add_header Pragma "no-cache" always;
+      add_header Expires "0" always;
+      try_files \$uri =404;
+    }
+    location = /runtime-config.js {
+      add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+      add_header Pragma "no-cache" always;
+      add_header Expires "0" always;
+      try_files \$uri =404;
+    }
+    location = /manifest.webmanifest {
+      add_header Cache-Control "no-cache, must-revalidate" always;
+      try_files \$uri =404;
+    }
+    location ~* "-[A-Za-z0-9]{8,}\.(?:js|css)$" {
+      add_header Cache-Control "public, max-age=31536000, immutable" always;
+      try_files \$uri =404;
+    }
     location / { try_files \$uri \$uri/ /index.html; }
   }
 }
