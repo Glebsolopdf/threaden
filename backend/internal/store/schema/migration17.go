@@ -70,3 +70,23 @@ const migration20 = `
 ALTER TABLE group_messages ADD COLUMN event TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS group_messages_event_idx ON group_messages(group_id, event, created_at);
 `
+
+const migration21 = `
+CREATE TABLE IF NOT EXISTS attachments (
+    id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL REFERENCES group_messages(id) ON DELETE CASCADE,
+    group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL CHECK(kind IN ('image','video','file','archive')),
+    mime TEXT NOT NULL,
+    name TEXT NOT NULL,
+    size INTEGER NOT NULL CHECK(size > 0),
+    path TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS attachments_message_idx ON attachments(message_id, created_at, id);
+CREATE INDEX IF NOT EXISTS attachments_owner_created_idx ON attachments(owner_id, created_at);
+CREATE INDEX IF NOT EXISTS attachments_expires_idx ON attachments(expires_at, id);
+CREATE INDEX IF NOT EXISTS attachments_group_idx ON attachments(group_id);
+`

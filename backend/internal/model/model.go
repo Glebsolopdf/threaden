@@ -70,15 +70,30 @@ type GroupMember struct {
 }
 
 type GroupMessage struct {
-	ID        string            `json:"id"`
-	GroupID   string            `json:"group_id"`
-	Kind      string            `json:"kind,omitempty"`
-	Event     string            `json:"event,omitempty"`
-	Author    User              `json:"author"`
-	Body      string            `json:"body"`
-	CreatedAt time.Time         `json:"created_at"`
-	ReplyTo   *MessageReference `json:"reply_to,omitempty"`
-	Read      bool              `json:"read,omitempty"`
+	ID          string            `json:"id"`
+	GroupID     string            `json:"group_id"`
+	Kind        string            `json:"kind,omitempty"`
+	Event       string            `json:"event,omitempty"`
+	Author      User              `json:"author"`
+	Body        string            `json:"body"`
+	CreatedAt   time.Time         `json:"created_at"`
+	ReplyTo     *MessageReference `json:"reply_to,omitempty"`
+	Read        bool              `json:"read,omitempty"`
+	Attachments []Attachment      `json:"attachments,omitempty"`
+}
+
+type Attachment struct {
+	ID        string    `json:"id"`
+	MessageID string    `json:"message_id"`
+	GroupID   string    `json:"group_id"`
+	OwnerID   string    `json:"owner_id"`
+	Kind      string    `json:"kind"`
+	Mime      string    `json:"mime"`
+	Name      string    `json:"name"`
+	Size      int64     `json:"size"`
+	Path      string    `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 type MessageReference struct {

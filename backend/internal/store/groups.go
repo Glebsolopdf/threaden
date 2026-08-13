@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"voice-rooms/internal/model"
+	attachmentstore "voice-rooms/internal/store/attachments"
 	"voice-rooms/internal/store/groupmessages"
 )
 
@@ -220,6 +221,10 @@ func (s *Store) Message(ctx context.Context, id string) (model.GroupMessage, err
 	return m, err
 }
 func (s *Store) AddMessage(ctx context.Context, m model.GroupMessage) error {
+	return s.AddMessageWithAttachments(ctx, m, nil)
+}
+
+func (s *Store) AddMessageWithAttachments(ctx context.Context, m model.GroupMessage, items []model.Attachment) error {
 	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
 		return e
@@ -227,6 +232,11 @@ func (s *Store) AddMessage(ctx context.Context, m model.GroupMessage) error {
 	defer tx.Rollback()
 	if e = groupmessages.Add(ctx, tx, m); e != nil {
 		return fmt.Errorf("message: %w", e)
+	}
+	for _, item := range items {
+		if e = attachmentstore.Add(ctx, tx, item); e != nil {
+			return e
+		}
 	}
 	if _, e = tx.ExecContext(ctx, `UPDATE groups SET last_activity_at=?, scheduled_for_deletion_at=NULL WHERE id=?`, m.CreatedAt.Unix(), m.GroupID); e != nil {
 		return e
