@@ -88,6 +88,15 @@ func SumAll(ctx context.Context, db DB) (int64, error) {
 	return total, err
 }
 
+func HasPath(ctx context.Context, db DB, path string) (bool, error) {
+	var value int
+	err := db.QueryRowContext(ctx, `SELECT 1 FROM attachments WHERE path=? LIMIT 1`, path).Scan(&value)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	return err == nil, err
+}
+
 func scan(row interface{ Scan(...any) error }) (model.Attachment, error) {
 	var item model.Attachment
 	var created, expires int64
