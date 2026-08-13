@@ -86,9 +86,12 @@ func validateGzip(file *os.File, maxExpanded int64) error {
 		return fmt.Errorf("read gzip: %w", err)
 	}
 	defer reader.Close()
-	_, err = io.Copy(io.Discard, io.LimitReader(reader, maxExpanded+1))
+	count, err := io.Copy(io.Discard, io.LimitReader(reader, maxExpanded+1))
 	if err != nil {
 		return fmt.Errorf("read gzip payload: %w", err)
+	}
+	if count > maxExpanded {
+		return fmt.Errorf("archive expands beyond limit")
 	}
 	return nil
 }

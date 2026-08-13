@@ -39,6 +39,7 @@ type Batch struct {
 	service  *Service
 	ownerID  string
 	files    []attachments.ProcessedFile
+	moved    []string
 	reserved int64
 	closed   bool
 }
@@ -84,7 +85,6 @@ func (b *Batch) Commit(_ context.Context, messageID, groupID string, now time.Ti
 		return nil, err
 	}
 	items := make([]model.Attachment, 0, len(b.files))
-	moved := make([]string, 0, len(b.files))
 	for _, file := range b.files {
 		id, err := randomID()
 		if err != nil {
@@ -98,13 +98,10 @@ func (b *Batch) Commit(_ context.Context, messageID, groupID string, now time.Ti
 		}
 		destination := filepath.Join(dir, id)
 		if err := os.Rename(file.Path, destination); err != nil {
-			for _, path := range moved {
-				_ = os.Remove(path)
-			}
 			b.Rollback()
 			return nil, fmt.Errorf("store attachment: %w", err)
 		}
-		moved = append(moved, destination)
+		b.moved = append(b.moved, destination)
 		items = append(items, model.Attachment{ID: id, MessageID: messageID, GroupID: groupID, OwnerID: b.ownerID, Kind: string(file.Kind), Mime: file.Mime, Name: file.DisplayName, Size: file.Size, Path: destination, CreatedAt: now, ExpiresAt: now.Add(b.service.Limits.Retention)})
 	}
 	b.release()
@@ -113,14 +110,16 @@ func (b *Batch) Commit(_ context.Context, messageID, groupID string, now time.Ti
 }
 
 func (b *Batch) Rollback() {
-	if b.closed {
-		return
-	}
 	for _, file := range b.files {
 		_ = os.Remove(file.Path)
 	}
-	b.release()
-	b.closed = true
+	for _, file := range b.moved {
+		_ = os.Remove(file)
+	}
+	if !b.closed {
+		b.release()
+		b.closed = true
+	}
 }
 
 func (b *Batch) release() {
@@ -156,7 +155,7 @@ func (s *Service) reserve(ctx context.Context, ownerID string, bytes int64) erro
 		if err != nil {
 			return err
 		}
-		if free < uint64(bytes) {
+		if free < s.Limits.MinFreeBytes || free-s.Limits.MinFreeBytes < uint64(bytes) {
 			return attachments.ErrLowDisk
 		}
 	}

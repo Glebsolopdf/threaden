@@ -19,6 +19,7 @@ type Limits struct {
 	MaxUserStoredBytes  uint64
 	MaxUserDailyBytes   uint64
 	MaxTotalBytes       uint64
+	MinFreeBytes        uint64
 	Retention           time.Duration
 	StorageDir          string
 }

@@ -146,6 +146,7 @@ func (s *Service) SendWithAttachments(ctx context.Context, id string, u model.Us
 	}
 	m := model.GroupMessage{ID: mid, GroupID: id, Author: u, Body: body, CreatedAt: s.now().UTC(), ReplyTo: reply, Attachments: items}
 	if err := s.store.AddMessageWithAttachments(ctx, m, items); err != nil {
+		batch.Rollback()
 		return model.GroupMessage{}, err
 	}
 	s.publishGroup(ctx, id, "message_created", publicview.MessageView(m))
