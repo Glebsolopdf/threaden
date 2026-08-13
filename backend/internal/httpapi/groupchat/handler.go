@@ -3,9 +3,11 @@ package groupchat
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
+	"voice-rooms/internal/attachments/storage"
 	appgroups "voice-rooms/internal/groups"
 	"voice-rooms/internal/model"
 	"voice-rooms/internal/publicview"
@@ -18,6 +20,7 @@ type Hooks struct {
 	CurrentUser     func(*http.Request) model.User
 	OptionalUser    func(*http.Request) *model.User
 	WriteGroupError func(http.ResponseWriter, *http.Request, error)
+	Attachments     *storage.Service
 }
 
 type Handler struct {
@@ -66,6 +69,10 @@ func (h *Handler) Messages(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Send(w http.ResponseWriter, r *http.Request) {
+	if r.MultipartForm != nil || strings.HasPrefix(strings.ToLower(r.Header.Get("Content-Type")), "multipart/form-data") {
+		h.sendMultipart(w, r)
+		return
+	}
 	var v messageRequest
 	if !h.decode(w, r, &v) {
 		return

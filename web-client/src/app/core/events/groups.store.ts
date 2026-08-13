@@ -145,6 +145,16 @@ export class GroupsStore {
     }
   }
 
+  async sendMessageWithFiles(body: string, files: File[], replyToID = ''): Promise<void> {
+    const current = this.current();
+    if (!current || files.length === 0) return;
+    const result = await firstValueFrom(this.api.sendMessageWithFiles(current.id, body.trim(), files, replyToID));
+    if (result.message) {
+      this.messages.update((items) => [...items, messageView(result.message!)]);
+      this.scheduleRefresh();
+    }
+  }
+
   mergeMessage(message: GroupMessage): void {
     if (this.current()?.id === message.group_id) {
       this.messages.update((items) => mergeIncomingMessage(items, message, this.auth.user()?.id));

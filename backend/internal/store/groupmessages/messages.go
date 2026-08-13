@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"voice-rooms/internal/model"
+	attachmentstore "voice-rooms/internal/store/attachments"
 )
 
 type DB interface {
@@ -54,6 +55,10 @@ func scan(row interface{ Scan(...any) error }) (model.GroupMessage, error) {
 	return m, nil
 }
 
+func loadAttachments(ctx context.Context, db DB, messageID string) ([]model.Attachment, error) {
+	return attachmentstore.ListForMessage(ctx, db, messageID)
+}
+
 func List(ctx context.Context, db DB, groupID string, cutoff time.Time, limit int, reader string) ([]model.GroupMessage, error) {
 	rows, err := db.QueryContext(ctx, selectMessage+` WHERE m.group_id=? AND COALESCE(m.created_at_nanos,m.created_at*1000000000)>=? ORDER BY m.created_at_nanos DESC, m.created_at DESC LIMIT ?`, groupID, cutoff.UnixNano(), limit)
 	if err != nil {
@@ -71,6 +76,15 @@ func List(ctx context.Context, db DB, groupID string, cutoff time.Time, limit in
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Attachments, err = loadAttachments(ctx, db, out[i].ID)
+		if err != nil {
+			return nil, err
+		}
+	}
 	for left, right := 0, len(out)-1; left < right; left, right = left+1, right-1 {
 		out[left], out[right] = out[right], out[left]
 	}
@@ -78,7 +92,12 @@ func List(ctx context.Context, db DB, groupID string, cutoff time.Time, limit in
 }
 
 func Get(ctx context.Context, db DB, id string) (model.GroupMessage, error) {
-	return scan(db.QueryRowContext(ctx, selectMessage+` WHERE m.id=?`, id))
+	m, err := scan(db.QueryRowContext(ctx, selectMessage+` WHERE m.id=?`, id))
+	if err != nil {
+		return m, err
+	}
+	m.Attachments, err = loadAttachments(ctx, db, m.ID)
+	return m, err
 }
 
 func Add(ctx context.Context, db DB, m model.GroupMessage) error {

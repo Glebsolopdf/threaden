@@ -13,6 +13,9 @@ import (
 	"voice-rooms/internal/abuse"
 	"voice-rooms/internal/antispam"
 	"voice-rooms/internal/app"
+	"voice-rooms/internal/attachments"
+	attachmentcleanup "voice-rooms/internal/attachments/cleanup"
+	attachmentstorage "voice-rooms/internal/attachments/storage"
 	"voice-rooms/internal/config"
 	"voice-rooms/internal/disk"
 	appgroups "voice-rooms/internal/groups"
@@ -66,10 +69,27 @@ func main() {
 			DryRun:        cfg.GroupCleanupDryRun,
 			Logger:        logger,
 		})
+	attachmentService := &attachmentstorage.Service{
+		Root: cfg.AttachmentStorageDir,
+		Limits: attachments.Limits{
+			MaxInputMediaBytes: cfg.AttachmentMaxInputMediaBytes, MaxArchiveBytes: cfg.AttachmentMaxArchiveBytes,
+			MaxOutputMediaBytes: cfg.AttachmentMaxOutputMediaBytes, MaxFilesPerMessage: cfg.AttachmentMaxFilesPerMessage,
+			MaxUserStoredBytes: cfg.AttachmentMaxUserStoredBytes, MaxUserDailyBytes: cfg.AttachmentMaxUserDailyBytes,
+			MaxTotalBytes: cfg.AttachmentMaxTotalBytes, Retention: cfg.AttachmentRetention, StorageDir: cfg.AttachmentStorageDir,
+			MinFreeBytes: cfg.LowDiskMinFreeBytes,
+		},
+		Processor: attachments.Processor{
+			MaxInputMedia: int64(cfg.AttachmentMaxInputMediaBytes), MaxArchive: int64(cfg.AttachmentMaxArchiveBytes),
+			MaxOutputMedia: int64(cfg.AttachmentMaxOutputMediaBytes),
+		},
+		DB: st, Disk: disk.NewChecker(cfg.DatabasePath),
+	}
+	attachmentCleanup := attachmentcleanup.Service{DB: st, Root: cfg.AttachmentStorageDir, BatchSize: cfg.LowDiskCleanupBatch}
+	service.WithAttachmentCleanup(attachmentCleanup)
 	server := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewWithOptions(service, groupService, st, logger, httpapi.Options{
-			Origins: cfg.CORSAllowedOrigins, Security: security, SessionCookieSecure: cfg.SessionCookieSecure,
+			Origins: cfg.CORSAllowedOrigins, Security: security, SessionCookieSecure: cfg.SessionCookieSecure, Attachments: attachmentService,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

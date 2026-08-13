@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"voice-rooms/internal/model"
+	attachmentstore "voice-rooms/internal/store/attachments"
 	"voice-rooms/internal/store/rate"
 	"voice-rooms/internal/store/readreceipts"
 	roomstore "voice-rooms/internal/store/rooms"
@@ -55,6 +56,26 @@ func Open(path string) (*Store, error) {
 
 func (s *Store) Close() error                   { return s.db.Close() }
 func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
+
+func (s *Store) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return s.db.ExecContext(ctx, query, args...)
+}
+
+func (s *Store) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	return s.db.QueryContext(ctx, query, args...)
+}
+
+func (s *Store) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	return s.db.QueryRowContext(ctx, query, args...)
+}
+
+func (s *Store) Attachment(ctx context.Context, id string) (model.Attachment, error) {
+	item, err := attachmentstore.Get(ctx, s.db, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return item, ErrNotFound
+	}
+	return item, err
+}
 
 func Is(err, target error) bool { return errors.Is(err, target) }
 

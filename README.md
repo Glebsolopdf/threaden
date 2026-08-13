@@ -17,6 +17,10 @@ IPv6-origin страницы с IPv4 WebRTC/LiveKit endpoint. Подробнос
 [`backend/README.md`](backend/README.md), [`web-client/README.md`](web-client/README.md)
 и [`deploy/README.md`](deploy/README.md).
 
+Групповые сообщения поддерживают до трёх вложений с необязательной подписью.
+Обработанные фото и видео ограничены 1 МБ, архивы — 5 МБ, активная квота
+пользователя — 50 МБ. Вложения автоматически удаляются через 72 часа.
+
 Демонстрация экрана (три capture-профиля, диагностика и production-порты)
 описана в [`docs/screen-sharing.md`](docs/screen-sharing.md).
 

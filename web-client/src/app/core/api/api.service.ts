@@ -19,6 +19,11 @@ export interface UploadResult {
   progress: number;
 }
 
+export interface MessageUploadResult {
+  message?: GroupMessage;
+  progress: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
@@ -101,6 +106,23 @@ export class ApiService {
   }
   sendReply(id: string, body: string, replyToID: string): Observable<GroupMessage> {
     return this.http.post<GroupMessage>(`/v1/groups/${encodeURIComponent(id)}/messages`, { body, reply_to_id: replyToID });
+  }
+  sendMessageWithFiles(id: string, body: string, files: File[], replyToID = ''): Observable<MessageUploadResult> {
+    const form = new FormData();
+    form.set('body', body);
+    if (replyToID) form.set('reply_to_id', replyToID);
+    for (const file of files) form.append('files[]', file, file.name);
+    return this.http.post<GroupMessage>(`/v1/groups/${encodeURIComponent(id)}/messages`, form, { observe: 'events', reportProgress: true }).pipe(
+      map((event: HttpEvent<GroupMessage>): MessageUploadResult => {
+        if (event.type === HttpEventType.UploadProgress) {
+          const total = event.total ?? event.loaded;
+          return { progress: total ? Math.round((event.loaded / total) * 100) : 0 };
+        }
+        if (event.type === HttpEventType.Response) return { progress: 100, message: event.body ?? undefined };
+        return { progress: 0 };
+      }),
+      filter((result) => result.progress > 0 || Boolean(result.message)),
+    );
   }
   deleteMessage(groupID: string, messageID: string): Observable<void> {
     return this.http.delete<void>(`/v1/groups/${encodeURIComponent(groupID)}/messages/${encodeURIComponent(messageID)}`);

@@ -58,6 +58,18 @@ export interface GroupMessage {
   reply_to?: MessageReference;
   edited_at?: string;
   read?: boolean;
+  attachments?: MessageAttachment[];
+}
+
+export interface MessageAttachment {
+  id: string;
+  kind: 'image' | 'video' | 'file' | 'archive';
+  mime: string;
+  name: string;
+  size: number;
+  url: string;
+  created_at: string;
+  expires_at: string;
 }
 
 export type GroupSystemEvent = 'member_joined' | 'member_left' | 'member_removed';

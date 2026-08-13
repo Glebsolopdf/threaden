@@ -10,41 +10,50 @@ import (
 )
 
 type Config struct {
-	HTTPAddr                string
-	DatabasePath            string
-	LiveKitURL              string
-	LiveKitPublicURL        string
-	LiveKitAPIKey           string
-	LiveKitAPISecret        string
-	RoomTTL                 time.Duration
-	LiveKitTokenTTL         time.Duration
-	SessionTTL              time.Duration
-	SessionIdleTTL          time.Duration
-	SessionCookieSecure     bool
-	MaxRoomParticipants     int
-	CORSAllowedOrigins      []string
-	TrustedProxies          []string
-	RateLimitBucketTTL      time.Duration
-	MaxMessageRunes         int
-	MaxMessageLinks         int
-	MaxMessageMentions      int
-	InactiveGroupTTL        time.Duration
-	GroupDeleteGrace        time.Duration
-	GroupCleanupInterval    time.Duration
-	GroupCleanupBatch       int
-	GroupCleanupDryRun      bool
-	LowDiskMinFreeBytes     uint64
-	LowDiskCheckInterval    time.Duration
-	LowDiskCleanupBatch     int
-	LowDiskMessageMinAge    time.Duration
-	MaxUserGroups           int
-	DiscoverMinMembers      int
-	IPBanThreshold          int
-	IPBanWindow             time.Duration
-	IPBanSteps              []time.Duration
-	IPBanEscalationForget   time.Duration
-	AccountBanWindow        time.Duration
-	AccountBanDeletionCount int
+	HTTPAddr                      string
+	DatabasePath                  string
+	LiveKitURL                    string
+	LiveKitPublicURL              string
+	LiveKitAPIKey                 string
+	LiveKitAPISecret              string
+	RoomTTL                       time.Duration
+	LiveKitTokenTTL               time.Duration
+	SessionTTL                    time.Duration
+	SessionIdleTTL                time.Duration
+	SessionCookieSecure           bool
+	MaxRoomParticipants           int
+	CORSAllowedOrigins            []string
+	TrustedProxies                []string
+	RateLimitBucketTTL            time.Duration
+	MaxMessageRunes               int
+	MaxMessageLinks               int
+	MaxMessageMentions            int
+	InactiveGroupTTL              time.Duration
+	GroupDeleteGrace              time.Duration
+	GroupCleanupInterval          time.Duration
+	GroupCleanupBatch             int
+	GroupCleanupDryRun            bool
+	LowDiskMinFreeBytes           uint64
+	LowDiskCheckInterval          time.Duration
+	LowDiskCleanupBatch           int
+	LowDiskMessageMinAge          time.Duration
+	MaxUserGroups                 int
+	DiscoverMinMembers            int
+	IPBanThreshold                int
+	IPBanWindow                   time.Duration
+	IPBanSteps                    []time.Duration
+	IPBanEscalationForget         time.Duration
+	AccountBanWindow              time.Duration
+	AccountBanDeletionCount       int
+	AttachmentMaxInputMediaBytes  uint64
+	AttachmentMaxArchiveBytes     uint64
+	AttachmentMaxOutputMediaBytes uint64
+	AttachmentMaxFilesPerMessage  int
+	AttachmentMaxUserStoredBytes  uint64
+	AttachmentMaxUserDailyBytes   uint64
+	AttachmentMaxTotalBytes       uint64
+	AttachmentRetention           time.Duration
+	AttachmentStorageDir          string
 }
 
 func Load() (Config, error) {
@@ -95,6 +104,27 @@ func Load() (Config, error) {
 	if cfg.LowDiskMessageMinAge, err = duration("LOW_DISK_MESSAGE_MIN_AGE", "24h"); err != nil {
 		return Config{}, err
 	}
+	if cfg.AttachmentMaxInputMediaBytes, err = bytesValue("ATTACHMENT_MAX_INPUT_MEDIA_BYTES", 10*1024*1024); err != nil {
+		return Config{}, err
+	}
+	if cfg.AttachmentMaxArchiveBytes, err = bytesValue("ATTACHMENT_MAX_ARCHIVE_BYTES", 5*1024*1024); err != nil {
+		return Config{}, err
+	}
+	if cfg.AttachmentMaxOutputMediaBytes, err = bytesValue("ATTACHMENT_MAX_OUTPUT_MEDIA_BYTES", 1*1024*1024); err != nil {
+		return Config{}, err
+	}
+	if cfg.AttachmentMaxUserStoredBytes, err = bytesValue("ATTACHMENT_MAX_USER_STORED_BYTES", 50*1024*1024); err != nil {
+		return Config{}, err
+	}
+	if cfg.AttachmentMaxUserDailyBytes, err = bytesValue("ATTACHMENT_MAX_USER_DAILY_BYTES", 20*1024*1024); err != nil {
+		return Config{}, err
+	}
+	if cfg.AttachmentMaxTotalBytes, err = bytesValue("ATTACHMENT_MAX_TOTAL_BYTES", 5*1024*1024*1024); err != nil {
+		return Config{}, err
+	}
+	if cfg.AttachmentRetention, err = duration("ATTACHMENT_RETENTION", "72h"); err != nil {
+		return Config{}, err
+	}
 	if cfg.MaxMessageRunes, err = positiveInt("MAX_MESSAGE_RUNES", 2000); err != nil {
 		return Config{}, err
 	}
@@ -136,6 +166,13 @@ func Load() (Config, error) {
 	}
 	if cfg.AccountBanDeletionCount, err = positiveInt("ACCOUNT_BAN_DELETION_COUNT", 5); err != nil {
 		return Config{}, err
+	}
+	if cfg.AttachmentMaxFilesPerMessage, err = positiveInt("ATTACHMENT_MAX_FILES_PER_MESSAGE", 3); err != nil {
+		return Config{}, err
+	}
+	cfg.AttachmentStorageDir = getenv("ATTACHMENT_STORAGE_DIR", "./data/attachments")
+	if cfg.AttachmentStorageDir == "" {
+		return Config{}, fmt.Errorf("ATTACHMENT_STORAGE_DIR must not be empty")
 	}
 	cfg.GroupCleanupDryRun = boolValue("GROUP_CLEANUP_DRY_RUN", false)
 	cfg.SessionCookieSecure = boolValue("SESSION_COOKIE_SECURE", false)

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, effect, inject, input, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -11,11 +11,12 @@ import { TypingStore } from '../../core/events/typing.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
 import { GroupMessageListComponent } from './group-message-list.component';
+import { MessageComposerComponent } from './attachments/message-composer.component';
 import { HistoryNoticeState } from './history/history-notice';
 @Component({
   selector: 'app-group',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, RouterLink, AvatarComponent, GroupSpamWarningsComponent, GroupMessageListComponent],
+  imports: [ReactiveFormsModule, RouterLink, AvatarComponent, GroupSpamWarningsComponent, GroupMessageListComponent, MessageComposerComponent],
   template: `
     <section class="route-page" id="group-view">
       @if (groups.groupLoading()) {
@@ -50,15 +51,7 @@ import { HistoryNoticeState } from './history/history-notice';
         <app-group-message-list [messages]="groups.messages()" [loading]="groups.messagesLoading()" [currentUserId]="auth.user()?.id" [groupOwnerId]="group.owner.id" (reply)="beginReply($event)" (remove)="deleteMessage($event)" />
 
         @if (groups.currentIsMember()) {
-          <div class="composer-stack">
-            @if (replyingTo(); as reply) {
-              <div class="reply-banner"><span><strong>В ответ {{ reply.author.display_name }}</strong><small>{{ reply.body }}</small></span><button type="button" aria-label="Отменить ответ" (click)="cancelReply()">×</button></div>
-            }
-            <form class="composer" [formGroup]="messageForm" (ngSubmit)="sendMessage()" autocomplete="off">
-              <input #messageInput formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true" (pointerdown)="focusComposer($event)" (input)="typingState.notify(groupId(), messageForm.controls.body.value.trim().length > 0)">
-              <button type="submit" [disabled]="messageForm.invalid || sending()">{{ sending() ? 'Отправка…' : 'Отправить' }}</button>
-            </form>
-          </div>
+          <app-message-composer [groupId]="groupId()" [replyingTo]="replyingTo()" (cancelReply)="cancelReply()" />
         } @else if (group.join_blocked) {
           <div class="join-group-dock group-isolated" role="status">Эта группа временно изолирована</div>
         } @else {
@@ -151,7 +144,6 @@ export class GroupComponent {
   private readonly destroyRef = inject(DestroyRef);
   private historyTimer?: number;
   private loadedKey = '';
-  protected readonly sending = signal(false);
   protected readonly joining = signal(false);
   protected readonly menuOpen = signal(false);
   protected readonly voiceListOpen = signal(false);
@@ -164,8 +156,6 @@ export class GroupComponent {
   protected readonly typingLabel = computed(() => this.typingState.labelFor(this.groupId(), this.auth.user()?.id));
   protected readonly replyingTo = signal<GroupMessage | null>(null);
   protected readonly profile = signal<GroupProfile | null>(null);
-  private readonly messageInput = viewChild<ElementRef<HTMLInputElement>>('messageInput');
-  protected readonly messageForm = new FormGroup({ body: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(2000)] }) });
   protected readonly voiceForm = new FormGroup({ name: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(80)] }) });
   constructor() {
     this.destroyRef.onDestroy(() => { if (this.historyTimer !== undefined) window.clearTimeout(this.historyTimer); });
@@ -189,24 +179,8 @@ export class GroupComponent {
     this.historyTimer = window.setTimeout(() => this.historyBannerVisible.set(false), 10_000);
   }
   protected voiceParticipants(rooms: GroupVoiceRoom[]): number { return rooms.reduce((sum, room) => sum + room.participant_count, 0); }
-  protected async sendMessage(): Promise<void> {
-    if (this.messageForm.invalid || this.sending()) return;
-    const body = this.messageForm.controls.body.value;
-    this.messageForm.reset({ body: '' }); this.typingState.notify(this.groupId(), false);
-    this.sending.set(true);
-    try { await this.groups.sendMessage(body, this.replyingTo()?.id ?? ''); this.replyingTo.set(null); }
-    catch (error) { this.messageForm.setValue({ body }); this.typingState.notify(this.groupId(), body.trim().length > 0); this.notifications.error(error, 'Не удалось отправить сообщение'); }
-    finally { this.sending.set(false); }
-  }
-
   protected beginReply(message: GroupMessage): void {
     this.replyingTo.set(message);
-    queueMicrotask(() => this.messageInput()?.nativeElement.focus({ preventScroll: true }));
-  }
-  protected focusComposer(event: PointerEvent): void {
-    if (event.pointerType === 'mouse' && !window.matchMedia('(pointer: coarse) and (hover: none)').matches) return;
-    const input = this.messageInput()?.nativeElement;
-    if (input && document.activeElement !== input) input.focus({ preventScroll: true });
   }
   protected cancelReply(): void { this.replyingTo.set(null); }
   protected async deleteMessage(message: GroupMessage): Promise<void> {

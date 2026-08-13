@@ -12,6 +12,11 @@ import (
 	"voice-rooms/internal/publicview"
 )
 
+type AttachmentBatch interface {
+	Commit(context.Context, string, string, time.Time) ([]model.Attachment, error)
+	Rollback()
+}
+
 func (s *Service) addMembershipMessage(ctx context.Context, groupID string, actor model.User, action string) (model.GroupMessage, error) {
 	id, err := s.ID("msg_")
 	if err != nil {
@@ -78,6 +83,74 @@ func (s *Service) SendReply(ctx context.Context, id string, u model.User, body, 
 		reply = &model.MessageReference{ID: original.ID, Kind: original.Kind, Event: original.Event, Author: original.Author, Body: original.Body}
 	}
 	return s.send(ctx, id, u, body, reply, idempotencyKey)
+}
+
+func (s *Service) SendWithAttachments(ctx context.Context, id string, u model.User, body, replyToID string, batch AttachmentBatch, idempotencyKey string) (model.GroupMessage, error) {
+	if batch == nil {
+		return model.GroupMessage{}, ErrInvalid
+	}
+	if !s.member(ctx, id, u.ID) {
+		batch.Rollback()
+		return model.GroupMessage{}, ErrForbidden
+	}
+	body = strings.TrimSpace(body)
+	if len([]rune(body)) > 4000 {
+		batch.Rollback()
+		return model.GroupMessage{}, ErrInvalid
+	}
+	var reply *model.MessageReference
+	if replyToID != "" {
+		original, err := s.store.Message(ctx, replyToID)
+		if err != nil || original.GroupID != id {
+			batch.Rollback()
+			return model.GroupMessage{}, ErrInvalid
+		}
+		reply = &model.MessageReference{ID: original.ID, Kind: original.Kind, Event: original.Event, Author: original.Author, Body: original.Body}
+	}
+	mid, err := s.ID("msg_")
+	if err != nil {
+		batch.Rollback()
+		return model.GroupMessage{}, err
+	}
+	if s.guard != nil {
+		var fresh bool
+		mid, fresh, err = s.guard.Reserve(ctx, id, u.ID, idempotencyKey, mid)
+		if err != nil {
+			batch.Rollback()
+			return model.GroupMessage{}, err
+		}
+		if !fresh {
+			batch.Rollback()
+			return s.store.Message(ctx, mid)
+		}
+		if body != "" {
+			if result, checkErr := s.guard.Check(ctx, id, u, body); checkErr != nil {
+				batch.Rollback()
+				if result.IsolateGroup {
+					s.isolateMessageAttack(ctx, id, u)
+				}
+				if errors.Is(checkErr, antispam.ErrMessageWarning) {
+					return model.GroupMessage{}, ErrWarned
+				}
+				if errors.Is(checkErr, antispam.ErrMessageRateLimited) {
+					return model.GroupMessage{}, ErrLimited
+				}
+				return model.GroupMessage{}, ErrInvalid
+			}
+		}
+	}
+	items, err := batch.Commit(ctx, mid, id, s.now().UTC())
+	if err != nil {
+		batch.Rollback()
+		return model.GroupMessage{}, err
+	}
+	m := model.GroupMessage{ID: mid, GroupID: id, Author: u, Body: body, CreatedAt: s.now().UTC(), ReplyTo: reply, Attachments: items}
+	if err := s.store.AddMessageWithAttachments(ctx, m, items); err != nil {
+		batch.Rollback()
+		return model.GroupMessage{}, err
+	}
+	s.publishGroup(ctx, id, "message_created", publicview.MessageView(m))
+	return m, nil
 }
 
 func (s *Service) send(ctx context.Context, id string, u model.User, body string, reply *model.MessageReference, idempotencyKey string) (model.GroupMessage, error) {

@@ -33,15 +33,26 @@ type MessageReference struct {
 	Body   string `json:"body"`
 }
 type Message struct {
-	ID        string            `json:"id"`
-	GroupID   string            `json:"group_id"`
-	Kind      string            `json:"kind,omitempty"`
-	Event     string            `json:"event,omitempty"`
-	Author    User              `json:"author"`
-	Body      string            `json:"body"`
-	CreatedAt time.Time         `json:"created_at"`
-	ReplyTo   *MessageReference `json:"reply_to,omitempty"`
-	Read      bool              `json:"read,omitempty"`
+	ID          string            `json:"id"`
+	GroupID     string            `json:"group_id"`
+	Kind        string            `json:"kind,omitempty"`
+	Event       string            `json:"event,omitempty"`
+	Author      User              `json:"author"`
+	Body        string            `json:"body"`
+	CreatedAt   time.Time         `json:"created_at"`
+	ReplyTo     *MessageReference `json:"reply_to,omitempty"`
+	Read        bool              `json:"read,omitempty"`
+	Attachments []Attachment      `json:"attachments,omitempty"`
+}
+type Attachment struct {
+	ID        string    `json:"id"`
+	Kind      string    `json:"kind"`
+	Mime      string    `json:"mime"`
+	Name      string    `json:"name"`
+	Size      int64     `json:"size"`
+	URL       string    `json:"url"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 type VoiceRoom struct {
 	ID               string    `json:"id"`
@@ -97,7 +108,11 @@ func MessageView(m model.GroupMessage) Message {
 	if m.ReplyTo != nil {
 		reply = &MessageReference{ID: m.ReplyTo.ID, Kind: m.ReplyTo.Kind, Event: m.ReplyTo.Event, Author: PublicUser(m.ReplyTo.Author), Body: m.ReplyTo.Body}
 	}
-	return Message{ID: m.ID, GroupID: m.GroupID, Kind: m.Kind, Event: m.Event, Author: PublicUser(m.Author), Body: m.Body, CreatedAt: m.CreatedAt, ReplyTo: reply, Read: m.Read}
+	attachments := make([]Attachment, len(m.Attachments))
+	for i, item := range m.Attachments {
+		attachments[i] = Attachment{ID: item.ID, Kind: item.Kind, Mime: item.Mime, Name: item.Name, Size: item.Size, URL: "/v1/attachments/" + item.ID, CreatedAt: item.CreatedAt, ExpiresAt: item.ExpiresAt}
+	}
+	return Message{ID: m.ID, GroupID: m.GroupID, Kind: m.Kind, Event: m.Event, Author: PublicUser(m.Author), Body: m.Body, CreatedAt: m.CreatedAt, ReplyTo: reply, Read: m.Read, Attachments: attachments}
 }
 func Messages(items []model.GroupMessage) []Message {
 	out := make([]Message, len(items))

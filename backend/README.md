@@ -84,6 +84,15 @@ JSON и не доступен JavaScript. Для CLI остаётся совме
 | `IP_BAN_ESCALATION_FORGET` | Период без нарушений, после которого уровень эскалации сбрасывается |
 | `ACCOUNT_BAN_WINDOW` | Окно учёта банов максимального уровня для авто-удаления аккаунта |
 | `ACCOUNT_BAN_DELETION_COUNT` | Число банов максимального уровня за окно до авто-удаления аккаунта |
+| `ATTACHMENT_STORAGE_DIR` | Каталог бинарных вложений |
+| `ATTACHMENT_MAX_INPUT_MEDIA_BYTES` | Максимальный входной размер медиа |
+| `ATTACHMENT_MAX_ARCHIVE_BYTES` | Максимальный размер архива |
+| `ATTACHMENT_MAX_OUTPUT_MEDIA_BYTES` | Максимальный размер обработанного медиа |
+| `ATTACHMENT_MAX_FILES_PER_MESSAGE` | Максимум файлов в сообщении |
+| `ATTACHMENT_MAX_USER_STORED_BYTES` | Активная квота пользователя |
+| `ATTACHMENT_MAX_USER_DAILY_BYTES` | Суточный лимит новых вложений |
+| `ATTACHMENT_MAX_TOTAL_BYTES` | Общая квота вложений |
+| `ATTACHMENT_RETENTION` | Срок хранения вложения |
 
 Остальные cleanup- и anti-spam-переменные перечислены в `.env.example`.
 
@@ -130,6 +139,7 @@ JSON и не доступен JavaScript. Для CLI остаётся совме
 | `DELETE` | `/v1/rooms/{code}` | владелец |
 | `GET` | `/v1/groups/{id}/messages` | preview public-группы; private — только участнику, с момента вступления |
 | `POST` | `/v1/groups/{id}/messages` | сессия; поддерживает `reply_to_id` |
+| `GET` | `/v1/attachments/{id}` | участник группы |
 | `DELETE` | `/v1/groups/{id}/messages/{messageID}` | автор сообщения или владелец группы |
 | `GET` | `/v1/groups/{id}/profile` | сессия; public — без членства, private — только участнику |
 | `GET` | `/v1/discover/groups?q=&limit=&offset=` | нет |
@@ -148,6 +158,15 @@ Discover принимает `limit=1..50`, `offset=0..1000`, а непустой
 `image.DecodeConfig`, ограничивается 4096×4096 и 4 млн пикселей, затем
 декодируется и сохраняется как ограниченный JPEG. Аватар группы — только короткий
 символ/emoji, не data URL.
+
+Для обработки видео production-окружение должно иметь установленный `ffmpeg`.
+Вложения проходят проверку содержимого, а не расширения; неизвестные форматы
+отклоняются.
+
+Сообщение можно отправить JSON-ом как раньше или `multipart/form-data` с полем
+`body` и одним-тремя полями `files[]`. Подпись необязательна. Фото и видео после
+проверки перекодируются до 1 МБ, архивы принимаются по сигнатуре до 5 МБ и не
+распаковываются. Активная квота пользователя — 50 МБ, срок хранения — 72 часа.
 
 ## Curl-сценарий
 
