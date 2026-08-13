@@ -101,6 +101,23 @@ func (p Processor) Process(ctx context.Context, src io.Reader, originalName stri
 		}
 		return ProcessedFile{Kind: KindVideo, Mime: mimeType, DisplayName: name, Size: size, Path: output}, nil
 	}
+	if kind == string(KindFile) {
+		output, err := os.CreateTemp("", "threaden-file-*")
+		if err != nil {
+			return ProcessedFile{}, err
+		}
+		outputPath := output.Name()
+		if err := copyFile(inputPath, output); err != nil {
+			_ = output.Close()
+			_ = os.Remove(outputPath)
+			return ProcessedFile{}, err
+		}
+		if err := output.Close(); err != nil {
+			_ = os.Remove(outputPath)
+			return ProcessedFile{}, err
+		}
+		return ProcessedFile{Kind: KindFile, Mime: mimeType, DisplayName: name, Size: actualSize, Path: outputPath}, nil
+	}
 	return ProcessedFile{}, ErrUnsupportedFormat
 }
 

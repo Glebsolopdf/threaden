@@ -18,3 +18,10 @@ func TestSanitizeNameCannotCreatePath(t *testing.T) {
 		t.Fatalf("unexpected sanitized name: %q", name)
 	}
 }
+
+func TestDetectsPdfAsSafeFileRegardlessOfExtension(t *testing.T) {
+	kind, mime, err := Detect(bytes.NewReader([]byte("%PDF-1.7\ncontent")), "document.bin")
+	if err != nil || kind != string(KindFile) || mime != "application/pdf" {
+		t.Fatalf("unexpected file detection: kind=%q mime=%q err=%v", kind, mime, err)
+	}
+}

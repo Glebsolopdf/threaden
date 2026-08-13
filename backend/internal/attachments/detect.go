@@ -2,12 +2,14 @@ package attachments
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"mime"
 	"net/http"
 	"path/filepath"
 	"strings"
+	"unicode/utf8"
 
 	"voice-rooms/internal/attachments/archive"
 )
@@ -28,8 +30,25 @@ func Detect(input io.Reader, originalName string) (string, string, error) {
 	if isVideo(header, mimeType) {
 		return string(KindVideo), normalizeVideoMime(header, mimeType), nil
 	}
+	if isSafeFile(header, originalName) {
+		if len(header) >= 5 && string(header[:5]) == "%PDF-" {
+			return string(KindFile), "application/pdf", nil
+		}
+		return string(KindFile), "text/plain; charset=utf-8", nil
+	}
 	_ = originalName
 	return "", "", ErrUnsupportedFormat
+}
+
+func isSafeFile(header []byte, originalName string) bool {
+	if len(header) == 0 || bytes.Contains(header, []byte{0}) || !utf8.Valid(header) {
+		return false
+	}
+	ext := strings.ToLower(filepath.Ext(originalName))
+	if strings.Contains(".jpg.jpeg.png.gif.webp.bmp.svg.mp4.webm.mov.zip.7z.rar.tar.gz.tgz", ext) {
+		return false
+	}
+	return len(header) >= 5 && string(header[:5]) == "%PDF-" || utf8.Valid(header)
 }
 
 func archiveMime(header []byte) string {
