@@ -28,6 +28,7 @@ web-client/.playwright-cli/
 web-client/.angular/
 
 # Tool output
+.worktrees/
 output/
 coverage/
 *.log
