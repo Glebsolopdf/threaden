@@ -44,6 +44,14 @@ func (p Processor) Process(ctx context.Context, src io.Reader, originalName stri
 	if err := input.Close(); err != nil {
 		return ProcessedFile{}, err
 	}
+	info, err := os.Stat(inputPath)
+	if err != nil {
+		return ProcessedFile{}, err
+	}
+	actualSize := info.Size()
+	if actualSize <= 0 || actualSize > p.MaxInputMedia && actualSize > p.MaxArchive {
+		return ProcessedFile{}, ErrTooLarge
+	}
 	file, err := os.Open(inputPath)
 	if err != nil {
 		return ProcessedFile{}, err
@@ -55,7 +63,7 @@ func (p Processor) Process(ctx context.Context, src io.Reader, originalName stri
 	}
 	name := SanitizeName(originalName)
 	if kind == string(KindArchive) {
-		if inputSize > p.MaxArchive || archive.Validate(inputPath, p.MaxArchive, archive.MaxExpandedBytes) != nil {
+		if actualSize > p.MaxArchive || archive.Validate(inputPath, p.MaxArchive, archive.MaxExpandedBytes) != nil {
 			return ProcessedFile{}, ErrInvalidFormat
 		}
 		output, err := os.CreateTemp("", "threaden-archive-*")
@@ -72,7 +80,7 @@ func (p Processor) Process(ctx context.Context, src io.Reader, originalName stri
 			_ = os.Remove(outputPath)
 			return ProcessedFile{}, err
 		}
-		return ProcessedFile{Kind: KindArchive, Mime: mimeType, DisplayName: name, Size: inputSize, Path: outputPath}, nil
+		return ProcessedFile{Kind: KindArchive, Mime: mimeType, DisplayName: name, Size: actualSize, Path: outputPath}, nil
 	}
 	if kind == string(KindImage) {
 		result, err := imageprocessor.ProcessFile(inputPath, uint64(p.MaxOutputMedia))
