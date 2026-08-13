@@ -11,7 +11,7 @@ import { TypingStore } from '../../core/events/typing.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { GroupSpamWarningsComponent } from './group-spam-warnings.component';
 import { GroupMessageListComponent } from './group-message-list.component';
-import { MessageComposerComponent } from './message-composer.component';
+import { MessageComposerComponent } from './attachments/message-composer.component';
 import { HistoryNoticeState } from './history/history-notice';
 @Component({
   selector: 'app-group',

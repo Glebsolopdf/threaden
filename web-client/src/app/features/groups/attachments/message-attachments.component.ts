@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import type { MessageAttachment } from '../../core/api/models';
+import type { MessageAttachment } from '../../../core/api/models';
 import { formatBytes } from './attachment-upload';
 
 @Component({

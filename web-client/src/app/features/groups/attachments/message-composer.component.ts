@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { GroupsStore } from '../../core/events/groups.store';
-import type { GroupMessage } from '../../core/api/models';
-import { NotificationStore } from '../../core/notifications/notification.store';
-import { TypingStore } from '../../core/events/typing.store';
+import { GroupsStore } from '../../../core/events/groups.store';
+import type { GroupMessage } from '../../../core/api/models';
+import { NotificationStore } from '../../../core/notifications/notification.store';
+import { TypingStore } from '../../../core/events/typing.store';
 import { formatBytes, validateSelection } from './attachment-upload';
 
 @Component({

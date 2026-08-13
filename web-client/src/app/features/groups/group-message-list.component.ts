@@ -3,7 +3,7 @@ import type { GroupMessage } from '../../core/api/models';
 import { chatMessage, isSystemMessage, systemMessageText, type MessageView } from '../../core/events/groups.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { GroupMessageActionsComponent } from './group-message-actions.component';
-import { MessageAttachmentsComponent } from './message-attachments.component';
+import { MessageAttachmentsComponent } from './attachments/message-attachments.component';
 
 @Component({
   selector: 'app-group-message-list',
