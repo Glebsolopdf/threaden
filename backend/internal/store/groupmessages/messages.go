@@ -71,14 +71,19 @@ func List(ctx context.Context, db DB, groupID string, cutoff time.Time, limit in
 		if scanErr != nil {
 			return nil, scanErr
 		}
-		m.Attachments, scanErr = loadAttachments(ctx, db, m.ID)
-		if scanErr != nil {
-			return nil, scanErr
-		}
 		out = append(out, m)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Attachments, err = loadAttachments(ctx, db, out[i].ID)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for left, right := 0, len(out)-1; left < right; left, right = left+1, right-1 {
 		out[left], out[right] = out[right], out[left]

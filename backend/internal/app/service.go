@@ -34,6 +34,10 @@ type VoiceGateway interface {
 	RemoveParticipant(ctx context.Context, roomCode, identity string) error
 }
 
+type AttachmentCleanup interface {
+	RunOnce(context.Context, time.Time) error
+}
+
 type Service struct {
 	store          *store.Store
 	voice          VoiceGateway
@@ -45,6 +49,7 @@ type Service struct {
 	random         io.Reader
 	now            func() time.Time
 	logger         *slog.Logger
+	attachmentCleanup AttachmentCleanup
 }
 
 func New(
@@ -68,6 +73,11 @@ func (s *Service) WithSessionPolicy(absoluteTTL, idleTTL time.Duration) *Service
 }
 
 func (s *Service) SessionTTL() time.Duration { return s.sessionTTL }
+
+func (s *Service) WithAttachmentCleanup(cleanup AttachmentCleanup) *Service {
+	s.attachmentCleanup = cleanup
+	return s
+}
 
 func translateStoreError(err error) error {
 	switch {

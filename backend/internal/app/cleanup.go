@@ -39,6 +39,11 @@ func (s *Service) EmergencyCleanup(ctx context.Context, batchSize int) CleanupSt
 
 func (s *Service) cleanup(ctx context.Context) {
 	now := s.now()
+	if s.attachmentCleanup != nil {
+		if err := s.attachmentCleanup.RunOnce(ctx, now); err != nil {
+			s.logger.ErrorContext(ctx, "cleanup attachments", "error", err)
+		}
+	}
 	s.deleteEmptyRooms(ctx, now, 2*time.Minute)
 	s.cleanupExpiredRooms(ctx, now)
 	if err := s.store.DeleteExpiredSessions(ctx, now); err != nil {

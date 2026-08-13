@@ -14,7 +14,9 @@ import (
 
 	"voice-rooms/internal/abuse"
 	"voice-rooms/internal/app"
+	attachmentstorage "voice-rooms/internal/attachments/storage"
 	appgroups "voice-rooms/internal/groups"
+	attachmenthttp "voice-rooms/internal/httpapi/attachment"
 	"voice-rooms/internal/httpapi/ban"
 	"voice-rooms/internal/httpapi/groupchat"
 	"voice-rooms/internal/store"
@@ -24,6 +26,7 @@ type Options struct {
 	Origins             []string
 	Security            abuse.Config
 	SessionCookieSecure bool
+	Attachments         *attachmentstorage.Service
 }
 
 func New(service *app.Service, groupService *appgroups.Service, st *store.Store, logger *slog.Logger, origins []string) http.Handler {
@@ -88,6 +91,7 @@ func NewWithOptions(
 		CurrentUser:     currentUser,
 		OptionalUser:    optionalUser,
 		WriteGroupError: writeGroupError,
+		Attachments:     options.Attachments,
 	})
 	router.Post("/v1/auth/register", users.register)
 	router.Post("/v1/auth/login", users.login)
@@ -116,6 +120,7 @@ func NewWithOptions(
 		protected.Delete("/v1/rooms/{code}/members/me", rooms.leave)
 		protected.Delete("/v1/rooms/{code}", rooms.delete)
 		protected.Get("/v1/events", groups.events)
+		protected.Get("/v1/attachments/{id}", attachmenthttp.Download(st, currentUser, writeError))
 		protected.Post("/v1/groups", groups.create)
 		protected.Get("/v1/groups", groups.list)
 		protected.Get("/v1/groups/{id}/profile", groups.profile)
