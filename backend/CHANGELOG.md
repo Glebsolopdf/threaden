@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Added message replies and author/owner deletion with real-time updates.
+- Added group message attachments with server-side image/video processing,
+  archive safety checks, 50 MiB per-user storage quota, and 72-hour cleanup.
 
 ## 0.3.3 - 2026-08-01
 
