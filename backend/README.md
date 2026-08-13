@@ -84,6 +84,15 @@ JSON и не доступен JavaScript. Для CLI остаётся совме
 | `IP_BAN_ESCALATION_FORGET` | Период без нарушений, после которого уровень эскалации сбрасывается |
 | `ACCOUNT_BAN_WINDOW` | Окно учёта банов максимального уровня для авто-удаления аккаунта |
 | `ACCOUNT_BAN_DELETION_COUNT` | Число банов максимального уровня за окно до авто-удаления аккаунта |
+| `ATTACHMENT_STORAGE_DIR` | Каталог бинарных вложений |
+| `ATTACHMENT_MAX_INPUT_MEDIA_BYTES` | Максимальный входной размер медиа |
+| `ATTACHMENT_MAX_ARCHIVE_BYTES` | Максимальный размер архива |
+| `ATTACHMENT_MAX_OUTPUT_MEDIA_BYTES` | Максимальный размер обработанного медиа |
+| `ATTACHMENT_MAX_FILES_PER_MESSAGE` | Максимум файлов в сообщении |
+| `ATTACHMENT_MAX_USER_STORED_BYTES` | Активная квота пользователя |
+| `ATTACHMENT_MAX_USER_DAILY_BYTES` | Суточный лимит новых вложений |
+| `ATTACHMENT_MAX_TOTAL_BYTES` | Общая квота вложений |
+| `ATTACHMENT_RETENTION` | Срок хранения вложения |
 
 Остальные cleanup- и anti-spam-переменные перечислены в `.env.example`.
 
@@ -148,6 +157,10 @@ Discover принимает `limit=1..50`, `offset=0..1000`, а непустой
 `image.DecodeConfig`, ограничивается 4096×4096 и 4 млн пикселей, затем
 декодируется и сохраняется как ограниченный JPEG. Аватар группы — только короткий
 символ/emoji, не data URL.
+
+Для обработки видео production-окружение должно иметь установленный `ffmpeg`.
+Вложения проходят проверку содержимого, а не расширения; неизвестные форматы
+отклоняются.
 
 ## Curl-сценарий
 
