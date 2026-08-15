@@ -21,7 +21,7 @@ func TestMetadataRoundTripAndQuotas(t *testing.T) {
 	if err := sqlite.Migrate(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}
-	if schema.LatestVersion != 24 {
+	if schema.LatestVersion != 25 {
 		t.Fatalf("attachment migration is not latest: %d", schema.LatestVersion)
 	}
 	_, err = db.Exec(`INSERT INTO users(id,email,display_name,avatar,password_hash,token_hash,created_at,last_seen_at) VALUES('u','u@example.com','U','',X'',zeroblob(32),1,1)`)
@@ -41,12 +41,12 @@ func TestMetadataRoundTripAndQuotas(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Unix(100, 0).UTC()
-	item := model.Attachment{ID: "a", MessageID: "m", GroupID: "g", OwnerID: "u", Kind: "audio", Mime: "audio/wav", Name: "voice.wav", Size: 7, Path: "a/1", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
+	item := model.Attachment{ID: "a", MessageID: "m", GroupID: "g", OwnerID: "u", Kind: "audio", Mime: "audio/wav", Name: "voice.wav", Size: 7, Duration: 1.25, Path: "a/1", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
 	if err := attachmentstore.Add(context.Background(), db, item); err != nil {
 		t.Fatal(err)
 	}
 	got, err := attachmentstore.ListForMessage(context.Background(), db, "m")
-	if err != nil || len(got) != 1 || got[0].Path != item.Path {
+	if err != nil || len(got) != 1 || got[0].Path != item.Path || got[0].Duration != item.Duration {
 		t.Fatalf("metadata round trip: %+v, %v", got, err)
 	}
 	if total, err := attachmentstore.SumForOwner(context.Background(), db, "u"); err != nil || total != item.Size {

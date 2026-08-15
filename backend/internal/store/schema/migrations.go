@@ -2,7 +2,7 @@ package schema
 
 import "fmt"
 
-const LatestVersion = 24
+const LatestVersion = 25
 
 func Migration(version int) (string, error) {
 	switch version {
@@ -54,6 +54,7 @@ func Migration(version int) (string, error) {
 		return migration23, nil
 	case 24:
 		return migration24, nil
+	case 25: return migration25, nil
 	default:
 		return "", fmt.Errorf("unknown migration version %d", version)
 	}

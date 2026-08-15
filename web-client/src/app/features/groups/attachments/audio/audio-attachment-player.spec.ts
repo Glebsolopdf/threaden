@@ -11,6 +11,15 @@ describe('formatAudioTime', () => {
 });
 
 describe('AudioAttachmentPlayerComponent', () => {
+  it('shows the duration stored with the attachment before metadata loads', () => {
+    TestBed.configureTestingModule({ imports: [AudioAttachmentPlayerComponent] });
+    const fixture = TestBed.createComponent(AudioAttachmentPlayerComponent);
+    fixture.componentRef.setInput('attachment', { id: 'a1', kind: 'audio', mime: 'audio/webm', name: 'voice.webm', size: 1, url: '/voice.webm', created_at: '', expires_at: '', duration: 74 } as MessageAttachment & { duration: number });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.message-audio__duration').textContent.trim()).toBe('1:14');
+  });
+
   it('starts the native audio element from the play button', async () => {
     TestBed.configureTestingModule({ imports: [AudioAttachmentPlayerComponent] });
     const fixture = TestBed.createComponent(AudioAttachmentPlayerComponent);

@@ -140,3 +140,7 @@ CREATE INDEX attachments_owner_created_idx ON attachments(owner_id, created_at);
 CREATE INDEX attachments_expires_idx ON attachments(expires_at, id);
 CREATE INDEX attachments_group_idx ON attachments(group_id);
 `
+
+const migration25 = `
+ALTER TABLE attachments ADD COLUMN duration REAL NOT NULL DEFAULT 0;
+`

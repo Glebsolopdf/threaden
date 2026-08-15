@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"voice-rooms/internal/attachments/archive"
+	audiometadata "voice-rooms/internal/attachments/audio"
 	imageprocessor "voice-rooms/internal/attachments/image"
 	videoProcessor "voice-rooms/internal/attachments/video"
 )
@@ -17,6 +18,7 @@ type ProcessedFile struct {
 	Mime        string
 	DisplayName string
 	Size        int64
+	Duration    float64
 	Path        string
 }
 
@@ -104,7 +106,7 @@ func (p Processor) Process(ctx context.Context, src io.Reader, originalName stri
 			_ = os.Remove(outputPath)
 			return ProcessedFile{}, err
 		}
-		return ProcessedFile{Kind: KindAudio, Mime: mimeType, DisplayName: name, Size: actualSize, Path: outputPath}, nil
+		return ProcessedFile{Kind: KindAudio, Mime: mimeType, DisplayName: name, Size: actualSize, Duration: audiometadata.Duration(ctx, inputPath, ""), Path: outputPath}, nil
 	}
 	if kind == string(KindVideo) {
 		output, err := videoProcessor.NewTempOutput(filepath.Dir(inputPath))

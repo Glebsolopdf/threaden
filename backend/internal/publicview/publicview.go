@@ -50,6 +50,7 @@ type Attachment struct {
 	Mime      string    `json:"mime"`
 	Name      string    `json:"name"`
 	Size      int64     `json:"size"`
+	Duration  float64   `json:"duration,omitempty"`
 	URL       string    `json:"url"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
@@ -110,7 +111,7 @@ func MessageView(m model.GroupMessage) Message {
 	}
 	attachments := make([]Attachment, len(m.Attachments))
 	for i, item := range m.Attachments {
-		attachments[i] = Attachment{ID: item.ID, Kind: item.Kind, Mime: item.Mime, Name: item.Name, Size: item.Size, URL: "/v1/attachments/" + item.ID, CreatedAt: item.CreatedAt, ExpiresAt: item.ExpiresAt}
+		attachments[i] = Attachment{ID: item.ID, Kind: item.Kind, Mime: item.Mime, Name: item.Name, Size: item.Size, Duration: item.Duration, URL: "/v1/attachments/" + item.ID, CreatedAt: item.CreatedAt, ExpiresAt: item.ExpiresAt}
 	}
 	return Message{ID: m.ID, GroupID: m.GroupID, Kind: m.Kind, Event: m.Event, Author: PublicUser(m.Author), Body: m.Body, CreatedAt: m.CreatedAt, ReplyTo: reply, Read: m.Read, Attachments: attachments}
 }

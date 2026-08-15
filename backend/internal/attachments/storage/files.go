@@ -105,7 +105,7 @@ func (b *Batch) Commit(_ context.Context, messageID, groupID string, now time.Ti
 			return nil, fmt.Errorf("store attachment: %w", err)
 		}
 		b.moved = append(b.moved, destination)
-		items = append(items, model.Attachment{ID: id, MessageID: messageID, GroupID: groupID, OwnerID: b.ownerID, Kind: string(file.Kind), Mime: file.Mime, Name: file.DisplayName, Size: file.Size, Path: destination, CreatedAt: now, ExpiresAt: now.Add(b.service.Limits.Retention)})
+		items = append(items, model.Attachment{ID: id, MessageID: messageID, GroupID: groupID, OwnerID: b.ownerID, Kind: string(file.Kind), Mime: file.Mime, Name: file.DisplayName, Size: file.Size, Duration: file.Duration, Path: destination, CreatedAt: now, ExpiresAt: now.Add(b.service.Limits.Retention)})
 	}
 	b.release()
 	b.closed = true

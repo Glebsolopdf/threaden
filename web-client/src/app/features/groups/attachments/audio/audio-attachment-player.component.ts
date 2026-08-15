@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, ElementRef, input, signal, viewChild } from '@angular/core';
 import type { MessageAttachment } from '../../../../core/api/models';
 
 @Component({
@@ -35,6 +35,13 @@ export class AudioAttachmentPlayerComponent {
   protected readonly playing = signal(false);
   protected readonly progress = computed(() => this.duration() ? this.currentTime() / this.duration() * 100 : 0);
   protected readonly formatAudioTime = formatAudioTime;
+
+  constructor() {
+    effect(() => {
+      const value = this.attachment().duration;
+      if (value && Number.isFinite(value)) this.duration.set(value);
+    });
+  }
 
   protected async toggle(): Promise<void> {
     const element = this.audio()?.nativeElement;

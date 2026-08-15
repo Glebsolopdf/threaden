@@ -89,6 +89,7 @@ export interface MessageAttachment {
   mime: string;
   name: string;
   size: number;
+  duration?: number;
   url: string;
   created_at: string;
   expires_at: string;

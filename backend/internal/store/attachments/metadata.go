@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	audiometadata "voice-rooms/internal/attachments/audio"
 	"voice-rooms/internal/model"
 )
 
@@ -16,8 +17,8 @@ type DB interface {
 }
 
 func Add(ctx context.Context, db DB, item model.Attachment) error {
-	_, err := db.ExecContext(ctx, `INSERT INTO attachments(id,message_id,group_id,owner_id,kind,mime,name,size,path,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
-		item.ID, item.MessageID, item.GroupID, item.OwnerID, item.Kind, item.Mime, item.Name, item.Size, item.Path, item.CreatedAt.Unix(), item.ExpiresAt.Unix())
+	_, err := db.ExecContext(ctx, `INSERT INTO attachments(id,message_id,group_id,owner_id,kind,mime,name,size,duration,path,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,
+		item.ID, item.MessageID, item.GroupID, item.OwnerID, item.Kind, item.Mime, item.Name, item.Size, item.Duration, item.Path, item.CreatedAt.Unix(), item.ExpiresAt.Unix())
 	if err != nil {
 		return fmt.Errorf("insert attachment: %w", err)
 	}
@@ -25,7 +26,7 @@ func Add(ctx context.Context, db DB, item model.Attachment) error {
 }
 
 func ListForMessage(ctx context.Context, db DB, messageID string) ([]model.Attachment, error) {
-	rows, err := db.QueryContext(ctx, `SELECT id,message_id,group_id,owner_id,kind,mime,name,size,path,created_at,expires_at FROM attachments WHERE message_id=? ORDER BY created_at,id`, messageID)
+	rows, err := db.QueryContext(ctx, `SELECT id,message_id,group_id,owner_id,kind,mime,name,size,duration,path,created_at,expires_at FROM attachments WHERE message_id=? ORDER BY created_at,id`, messageID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,20 +37,43 @@ func ListForMessage(ctx context.Context, db DB, messageID string) ([]model.Attac
 		if err != nil {
 			return nil, err
 		}
+		if err := hydrateDuration(ctx, db, &item); err != nil {
+			return nil, err
+		}
 		items = append(items, item)
 	}
 	return items, rows.Err()
 }
 
 func Get(ctx context.Context, db DB, id string) (model.Attachment, error) {
-	return scan(db.QueryRowContext(ctx, `SELECT id,message_id,group_id,owner_id,kind,mime,name,size,path,created_at,expires_at FROM attachments WHERE id=?`, id))
+	item, err := scan(db.QueryRowContext(ctx, `SELECT id,message_id,group_id,owner_id,kind,mime,name,size,duration,path,created_at,expires_at FROM attachments WHERE id=?`, id))
+	if err != nil {
+		return item, err
+	}
+	err = hydrateDuration(ctx, db, &item)
+	return item, err
+}
+
+func hydrateDuration(ctx context.Context, db DB, item *model.Attachment) error {
+	if item.Kind != "audio" || item.Duration > 0 || item.Path == "" {
+		return nil
+	}
+	duration := audiometadata.Duration(ctx, item.Path, "")
+	if duration <= 0 {
+		return nil
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE attachments SET duration=? WHERE id=? AND duration<=0`, duration, item.ID); err != nil {
+		return err
+	}
+	item.Duration = duration
+	return nil
 }
 
 func DeleteExpired(ctx context.Context, db DB, now time.Time, limit int) ([]model.Attachment, error) {
 	if limit < 1 {
 		limit = 500
 	}
-	rows, err := db.QueryContext(ctx, `SELECT id,message_id,group_id,owner_id,kind,mime,name,size,path,created_at,expires_at FROM attachments WHERE expires_at<=? ORDER BY expires_at,id LIMIT ?`, now.Unix(), limit)
+	rows, err := db.QueryContext(ctx, `SELECT id,message_id,group_id,owner_id,kind,mime,name,size,duration,path,created_at,expires_at FROM attachments WHERE expires_at<=? ORDER BY expires_at,id LIMIT ?`, now.Unix(), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +132,7 @@ func HasPath(ctx context.Context, db DB, path string) (bool, error) {
 func scan(row interface{ Scan(...any) error }) (model.Attachment, error) {
 	var item model.Attachment
 	var created, expires int64
-	if err := row.Scan(&item.ID, &item.MessageID, &item.GroupID, &item.OwnerID, &item.Kind, &item.Mime, &item.Name, &item.Size, &item.Path, &created, &expires); err != nil {
+	if err := row.Scan(&item.ID, &item.MessageID, &item.GroupID, &item.OwnerID, &item.Kind, &item.Mime, &item.Name, &item.Size, &item.Duration, &item.Path, &created, &expires); err != nil {
 		return item, err
 	}
 	item.CreatedAt = time.Unix(created, 0).UTC()

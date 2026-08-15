@@ -91,6 +91,7 @@ type Attachment struct {
 	Mime      string    `json:"mime"`
 	Name      string    `json:"name"`
 	Size      int64     `json:"size"`
+	Duration  float64   `json:"duration,omitempty"`
 	Path      string    `json:"-"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`

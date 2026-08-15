@@ -43,7 +43,11 @@ func Download(st *store.Store, currentUser func(*http.Request) model.User, write
 		}
 		w.Header().Set("Content-Type", item.Mime)
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Content-Disposition", "attachment; filename*=UTF-8''"+urlEscapeName(filepath.Base(item.Name)))
+		contentDisposition := "attachment"
+		if item.Kind == "audio" {
+			contentDisposition = "inline"
+		}
+		w.Header().Set("Content-Disposition", contentDisposition+"; filename*=UTF-8''"+urlEscapeName(filepath.Base(item.Name)))
 		http.ServeContent(w, r, filepath.Base(item.Name), item.CreatedAt, file)
 	}
 }
