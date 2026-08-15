@@ -88,7 +88,7 @@ describe('GroupMessageListComponent', () => {
 
   it('renders audio attachments with a player', async () => {
     const el = await mount([chat('', { attachments: [{ id: 'a2', kind: 'audio', mime: 'audio/webm', name: 'voice.webm', size: 24, url: '/v1/attachments/a2', created_at: '', expires_at: '' }] })]);
-    expect(el.querySelector('audio[controls]')).not.toBeNull();
-    expect(el.querySelector('audio source')?.getAttribute('src')).toBe('/v1/attachments/a2');
+    expect(el.querySelector('.message-audio__play')).not.toBeNull();
+    expect(el.querySelector('.message-audio__track')).not.toBeNull();
   });
 });
