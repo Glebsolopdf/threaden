@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { describe, expect, it } from 'vitest';
+import { By } from '@angular/platform-browser';
+import { describe, expect, it, vi } from 'vitest';
 import type { GroupMessage } from '../../../core/api/models';
 import { GroupMessageActionsComponent } from './group-message-actions.component';
 
@@ -28,7 +29,7 @@ describe('GroupMessageActionsComponent', () => {
     fixture.detectChanges();
     const bubble = fixture.nativeElement.querySelector('.bubble') as HTMLElement;
     Object.defineProperty(bubble, 'getBoundingClientRect', { value: () => ({ top: 200, bottom: 260, left: 120, right: 420, width: 300, height: 60 }) });
-    const actions = fixture.nativeElement.querySelector('app-group-message-actions') as HTMLElement;
+    const actions = fixture.nativeElement.querySelector('.message-actions') as HTMLElement;
     actions.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 3, clientY: 580 }));
     fixture.detectChanges();
     const menu = fixture.nativeElement.querySelector('.message-actions__menu') as HTMLElement;
@@ -37,5 +38,22 @@ describe('GroupMessageActionsComponent', () => {
     fixture.detectChanges();
     expect(menu.style.top).toBe('112px');
     expect(menu.style.left).toBe('200px');
+  });
+
+  it('does not turn a desktop mouse drag into a reply swipe', async () => {
+    TestBed.configureTestingModule({ imports: [HostComponent] });
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const bubble = fixture.nativeElement.querySelector('.bubble') as HTMLElement;
+    const instance = fixture.debugElement.query(By.directive(GroupMessageActionsComponent)).componentInstance as unknown as {
+      startLongPress: (event: PointerEvent) => void;
+      trackSwipe: (event: PointerEvent) => void;
+      replyOnSwipe: (event: PointerEvent) => void;
+    };
+    const event = (type: string): PointerEvent => ({ pointerType: 'mouse', clientX: type === 'down' ? 300 : 220, clientY: 200, preventDefault: vi.fn() } as unknown as PointerEvent);
+    instance.startLongPress(event('down'));
+    instance.trackSwipe(event('move'));
+    await fixture.whenStable();
+    expect(bubble.style.getPropertyValue('--message-swipe-transform')).toBe('');
   });
 });

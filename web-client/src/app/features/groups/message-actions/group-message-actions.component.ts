@@ -6,7 +6,7 @@ import { placeMessageMenu } from './message-actions-position';
   selector: 'app-group-message-actions',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="message-actions" (contextmenu)="$event.preventDefault()">
+    <div class="message-actions" (contextmenu)="showMenu($event)">
       <span class="message-swipe-indicator" [style.opacity]="swipeOpacity()" [style.transform]="swipeTransform()" aria-hidden="true">
         <img src="/reply.svg" alt="">
       </span>
@@ -44,7 +44,6 @@ export class GroupMessageActionsComponent implements OnDestroy {
   private readonly menu = viewChild<ElementRef<HTMLElement>>('menu');
   private static active?: GroupMessageActionsComponent;
 
-  @HostListener('contextmenu', ['$event'])
   protected showMenu(event: MouseEvent): void { event.preventDefault(); this.openMenu(); }
 
   @HostListener('pointerdown', ['$event'])
@@ -57,6 +56,7 @@ export class GroupMessageActionsComponent implements OnDestroy {
 
   @HostListener('pointermove', ['$event'])
   protected trackSwipe(event: PointerEvent): void {
+    if (event.pointerType === 'mouse') return;
     const dx = this.startX - event.clientX;
     const dy = Math.abs(event.clientY - this.startY);
     if (dy > Math.abs(dx) && dy > 12) { this.cancelLongPress(); this.resetSwipe(); return; }
@@ -70,6 +70,7 @@ export class GroupMessageActionsComponent implements OnDestroy {
 
   @HostListener('pointerup', ['$event'])
   protected replyOnSwipe(event: PointerEvent): void {
+    if (event.pointerType === 'mouse') { this.cancelLongPress(); this.resetSwipe(); return; }
     if (this.swipeX() >= 56) { this.closeMenu(); this.reply.emit(this.message()); }
     this.cancelLongPress();
     this.resetSwipe();
