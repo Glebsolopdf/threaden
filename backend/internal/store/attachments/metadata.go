@@ -26,7 +26,7 @@ func Add(ctx context.Context, db DB, item model.Attachment) error {
 }
 
 func ListForMessage(ctx context.Context, db DB, messageID string) ([]model.Attachment, error) {
-	rows, err := db.QueryContext(ctx, `SELECT id,message_id,group_id,owner_id,kind,mime,name,size,duration,path,created_at,expires_at FROM attachments WHERE message_id=? ORDER BY created_at,id`, messageID)
+	rows, err := db.QueryContext(ctx, `SELECT id,message_id,group_id,owner_id,kind,mime,name,size,duration,path,created_at,expires_at FROM attachments WHERE message_id=? AND expires_at>? ORDER BY created_at,id`, messageID, time.Now().Unix())
 	if err != nil {
 		return nil, err
 	}

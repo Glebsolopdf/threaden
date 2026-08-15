@@ -40,7 +40,7 @@ func TestMetadataRoundTripAndQuotas(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	now := time.Unix(100, 0).UTC()
+	now := time.Now().UTC()
 	item := model.Attachment{ID: "a", MessageID: "m", GroupID: "g", OwnerID: "u", Kind: "audio", Mime: "audio/wav", Name: "voice.wav", Size: 7, Duration: 1.25, Path: "a/1", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
 	if err := attachmentstore.Add(context.Background(), db, item); err != nil {
 		t.Fatal(err)
@@ -54,5 +54,37 @@ func TestMetadataRoundTripAndQuotas(t *testing.T) {
 	}
 	if total, err := attachmentstore.SumAll(context.Background(), db); err != nil || total != item.Size {
 		t.Fatalf("global quota sum=%d err=%v", total, err)
+	}
+}
+
+func TestExpiredAttachmentsAreNotListedForMessages(t *testing.T) {
+	db, err := sqlite.Open(filepath.Join(t.TempDir(), "expired.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := sqlite.Migrate(context.Background(), db); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO users(id,email,display_name,avatar,password_hash,token_hash,created_at,last_seen_at) VALUES('u','expired@example.com','U','',X'',zeroblob(32),1,1)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO groups(id,visibility,owner_id,name,avatar,invite_token,created_at,last_activity_at) VALUES('g','public','u','G','','expired-invite',1,1)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO group_messages(id,group_id,author_id,body,created_at,kind,created_at_nanos,event) VALUES('m','g','u','',1,'chat',1000000000,'')`); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	item := model.Attachment{ID: "expired", MessageID: "m", GroupID: "g", OwnerID: "u", Kind: "audio", Mime: "audio/webm", Name: "voice.webm", Size: 1, Path: "expired", CreatedAt: now.Add(-time.Hour), ExpiresAt: now.Add(-time.Minute)}
+	if err := attachmentstore.Add(context.Background(), db, item); err != nil {
+		t.Fatal(err)
+	}
+	items, err := attachmentstore.ListForMessage(context.Background(), db, item.MessageID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("expired attachment leaked into message history: %+v", items)
 	}
 }
