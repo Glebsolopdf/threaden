@@ -7,14 +7,14 @@
   cursor: pointer;
 }
 
-.composer__recording { position: relative; display: flex; min-width: 0; min-height: 2.35rem; flex: 1 1 auto; align-items: center; justify-content: flex-end; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
-.composer__waves { display: flex; width: min(100%, 15rem); height: 1.6rem; align-items: center; justify-content: flex-end; gap: .16rem; padding-right: .15rem; }
-.composer__waves span { width: .18rem; min-height: .22rem; border-radius: 999px; background: var(--accent); transition: height 80ms ease; }
+.composer__recording { position: relative; display: flex; min-width: 0; min-height: 2.35rem; flex: 1 1 auto; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
+.composer__recording-status { color: var(--text-muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
 .composer__cancel { position: absolute; left: 50%; z-index: 1; min-height: 1.9rem !important; padding: 0 .35rem !important; border: 0 !important; color: var(--text) !important; background: transparent !important; font-size: .72rem; transform: translateX(-50%); }
 .composer__cancel:hover, .composer__cancel:focus-visible { color: var(--accent) !important; background: transparent !important; outline: none; }
 .composer__action { min-width: 2.35rem; }
 .composer__action img { display: block; width: 1.1rem; height: 1.1rem; margin: auto; object-fit: contain; }
 .composer__action--recording { color: var(--accent) !important; }
+.composer__action--recording img { animation: composer-record-pulse 1.2s ease-in-out infinite; }
 
 .composer-files {
   display: flex;
@@ -50,8 +50,9 @@
 .attachment-icon__line { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .attachment-icon__accent { fill: var(--accent); }
 @keyframes composer-upload-spin { to { transform: rotate(360deg); } }
+@keyframes composer-record-pulse { 0%, 100% { transform: scale(1); opacity: .72; } 50% { transform: scale(1.18); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .composer-file__loading span { animation-duration: 1.4s; } }
-@media (prefers-reduced-motion: reduce) { .composer__waves span { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .composer__action--recording img { animation: none; } }
 
 .message-attachments { display: grid; gap: .45rem; margin-top: .45rem; }
 .message-attachment { display: grid; gap: .25rem; max-width: min(22rem, 100%); color: inherit; text-decoration: none; }

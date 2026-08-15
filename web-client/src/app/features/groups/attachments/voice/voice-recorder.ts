@@ -9,12 +9,8 @@ const mimeTypes = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4
 export class VoiceRecorder {
   readonly state = signal<VoiceRecorderState>('idle');
   readonly elapsedMs = signal(0);
-  readonly audioLevel = signal(0);
   private recorder: MediaRecorder | null = null;
   private stream: MediaStream | null = null;
-  private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private audioFrame: number | null = null;
   private chunks: Blob[] = [];
   private pendingResult: Promise<Blob> | null = null;
   private resolveResult: ((value: Blob) => void) | null = null;
@@ -46,7 +42,6 @@ export class VoiceRecorder {
       this.recorder.onstop = () => this.complete();
       this.recorder.start();
       this.state.set('recording');
-      this.startAudioLevel(this.stream!);
       this.ticker = setInterval(() => this.elapsedMs.set(Math.min(Date.now() - this.startedAt, MAX_RECORDING_MS)), 250);
       this.timeout = setTimeout(() => this.stop(), MAX_RECORDING_MS);
     } catch (error) {
@@ -88,9 +83,7 @@ export class VoiceRecorder {
     }
     const result = new Blob(this.chunks, { type: this.recorder?.mimeType || 'audio/webm' });
     this.clearTimeout();
-    this.releaseAudioLevel();
     this.releaseStream();
-    this.audioLevel.set(0);
     this.state.set('ready');
     this.resolveResult?.(result);
     this.clearPromise();
@@ -98,7 +91,6 @@ export class VoiceRecorder {
 
   private fail(error: unknown): Promise<never> {
     this.clearTimeout();
-    this.releaseAudioLevel();
     this.releaseStream();
     this.state.set('error');
     this.rejectResult?.(error);
@@ -107,48 +99,12 @@ export class VoiceRecorder {
   }
 
   private reset(state: VoiceRecorderState): void {
-    this.releaseAudioLevel();
     this.releaseStream();
     this.recorder = null;
     this.chunks = [];
     this.clearPromise();
     this.state.set(state);
     this.elapsedMs.set(0);
-    this.audioLevel.set(0);
-  }
-
-  private startAudioLevel(stream: MediaStream): void {
-    const browserWindow = window as Window & { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
-    const AudioContextConstructor = browserWindow.AudioContext ?? browserWindow.webkitAudioContext;
-    if (!AudioContextConstructor) return;
-    try {
-      const context = new AudioContextConstructor();
-      this.audioContext = context;
-      if (context.state === 'suspended') void context.resume();
-      this.analyser = context.createAnalyser();
-      this.analyser.fftSize = 64;
-      context.createMediaStreamSource(stream).connect(this.analyser);
-      const sample = (): void => {
-        if (!this.analyser || this.state() !== 'recording') return;
-        const data = new Uint8Array(this.analyser.fftSize);
-        this.analyser.getByteTimeDomainData(data);
-        const energy = data.reduce((sum, value) => sum + ((value - 128) / 128) ** 2, 0) / data.length;
-        this.audioLevel.set(Math.min(1, Math.sqrt(energy) * 2.4));
-        this.audioFrame = window.requestAnimationFrame(sample);
-      };
-      this.audioFrame = window.requestAnimationFrame(sample);
-    } catch {
-      this.releaseAudioLevel();
-    }
-  }
-
-  private releaseAudioLevel(): void {
-    if (this.audioFrame !== null) window.cancelAnimationFrame(this.audioFrame);
-    this.audioFrame = null;
-    this.analyser?.disconnect();
-    this.analyser = null;
-    void this.audioContext?.close();
-    this.audioContext = null;
   }
 
   private releaseStream(): void {

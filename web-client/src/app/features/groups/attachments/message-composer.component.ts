@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { GroupsStore } from '../../../core/events/groups.store';
 import type { GroupMessage } from '../../../core/api/models';
@@ -7,7 +7,6 @@ import { TypingStore } from '../../../core/events/typing.store';
 import { attachmentKind, canSendMessage, formatBytes, validateSelection } from './attachment-upload';
 import { AttachmentIconComponent } from './icons/attachment-icon.component';
 import { VoiceRecorder } from './voice/voice-recorder';
-import { getVoiceWaveform } from './voice/voice-waveform';
 
 @Component({
   selector: 'app-message-composer',
@@ -42,9 +41,7 @@ import { getVoiceWaveform } from './voice/voice-waveform';
         <button class="composer__attach" type="button" aria-label="Прикрепить файл" (click)="fileInput.click()">＋</button>
         @if (recording()) {
           <div class="composer__recording" role="status" aria-label="Идёт запись голосового сообщения">
-            <div class="composer__waves" aria-hidden="true">
-              @for (bar of waveformBars(); track $index) { <span [style.height.%]="bar * 100"></span> }
-            </div>
+            <span class="composer__recording-status">Запись {{ recordingSeconds() }} с</span>
             <button class="composer__cancel" type="button" (click)="cancelRecording()">Отмена</button>
           </div>
         } @else {
@@ -55,7 +52,8 @@ import { getVoiceWaveform } from './voice/voice-waveform';
           [class.composer__action--recording]="recording()"
           [type]="canSend() && !recording() ? 'submit' : 'button'"
           [disabled]="sending()"
-          [attr.aria-label]="recording() ? 'Остановить запись' : canSend() ? 'Отправить' : 'Записать голосовое сообщение'"
+          [attr.aria-label]="recording() ? 'Нажмите, чтобы отправить голосовое сообщение' : canSend() ? 'Отправить' : 'Записать голосовое сообщение'"
+          [attr.title]="recording() ? 'Нажмите, чтобы отправить голосовое сообщение' : null"
           (click)="actionClick()"
         >
           @if (canSend() && !recording()) { {{ sending() ? 'Отправка…' : 'Отправить' }} } @else { <img src="/microphone-on.svg" alt=""> }
@@ -78,12 +76,13 @@ export class MessageComposerComponent implements OnDestroy {
   protected readonly formatBytes = formatBytes;
   protected readonly attachmentKind = attachmentKind;
   protected readonly voiceRecorder = new VoiceRecorder();
-  protected readonly waveformBars = computed(() => getVoiceWaveform(this.voiceRecorder.audioLevel(), 28));
   private readonly previewUrls = new Map<File, string>();
 
   protected canSend(): boolean { return canSendMessage(this.messageForm.controls.body.value, this.files().length); }
 
   protected recording(): boolean { return this.voiceRecorder.state() === 'recording'; }
+
+  protected recordingSeconds(): number { return Math.ceil(this.voiceRecorder.elapsedMs() / 1000); }
 
   protected async actionClick(): Promise<void> {
     if (this.recording()) {
@@ -134,6 +133,7 @@ export class MessageComposerComponent implements OnDestroy {
         return;
       }
       this.files.set(selection);
+      await this.send();
     } catch (error) {
       this.notifications.error(error, 'Не удалось сохранить запись');
     }
