@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_FILES, validateSelection } from './attachment-upload';
+import { attachmentKind, canSendMessage, MAX_FILES, validateSelection } from './attachment-upload';
 
-const file = (name: string, size: number) => new File([new Uint8Array(size)], name);
+const file = (name: string, size: number, type = '') => new File([new Uint8Array(size)], name, { type });
 
 describe('validateSelection', () => {
   it('rejects more than three files', () => {
@@ -14,5 +14,26 @@ describe('validateSelection', () => {
 
   it('accepts a caption-free selection', () => {
     expect(validateSelection([file('photo.jpg', 1024)])).toBeNull();
+  });
+});
+
+describe('attachmentKind', () => {
+  it('classifies previews without trusting only the filename', () => {
+    expect(attachmentKind(file('photo.unknown', 1, 'image/jpeg'))).toBe('image');
+    expect(attachmentKind(file('clip.bin', 1, 'video/mp4'))).toBe('video');
+    expect(attachmentKind(file('backup.data', 1, 'application/zip'))).toBe('archive');
+    expect(attachmentKind(file('notes.txt', 1, 'text/plain'))).toBe('file');
+  });
+});
+
+describe('canSendMessage', () => {
+  it.each([
+    ['text only', 'hello', 0, true],
+    ['text and attachment', 'hello', 1, true],
+    ['attachment only', '', 1, true],
+    ['whitespace and attachment', '  ', 1, true],
+    ['empty', '', 0, false],
+  ])('%s', (_name, body, attachments, expected) => {
+    expect(canSendMessage(body, attachments)).toBe(expected);
   });
 });

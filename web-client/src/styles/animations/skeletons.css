@@ -3,20 +3,20 @@
   display: block;
   overflow: hidden;
   border-radius: 999px;
-  background: linear-gradient(135deg, #20242d, #171a22);
+  background: linear-gradient(135deg, var(--panel-hover), var(--panel-soft));
 }
 
 .skeleton::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 11%), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
   animation: skeleton-shimmer 1.45s ease-in-out infinite;
   animation-delay: var(--skeleton-delay, 0ms);
   content: "";
   transform: translateX(-100%);
 }
 
-.group-loading { display: grid; min-height: 100%; align-content: space-between; gap: 1rem; padding: 1.15rem clamp(0.75rem, 4vw, 3.5rem); background: radial-gradient(circle at 50% 0%, rgb(255 255 255 / 4%), transparent 42%); }
+.group-loading { display: grid; min-height: 100%; align-content: space-between; gap: 1rem; padding: 1.15rem clamp(0.75rem, 4vw, 3.5rem); background: radial-gradient(circle at 50% 0%, var(--accent-soft), transparent 42%); }
 .group-loading__identity { display: flex; gap: 0.65rem; align-items: center; }
 .group-loading__avatar { width: 2.55rem; height: 2.55rem; flex: 0 0 2.55rem; animation: loader-breathe 1.8s ease-in-out infinite; }
 .group-loading__copy { display: grid; gap: 0.45rem; width: min(14rem, 60%); }
@@ -99,8 +99,8 @@
   padding: 0.7rem;
   border-radius: 12px;
   background:
-    radial-gradient(circle at 16% 18%, rgb(255 255 255 / 8%), transparent 34%),
-    linear-gradient(135deg, #171b24, #11141b);
+    radial-gradient(circle at 16% 18%, var(--accent-soft), transparent 34%),
+    linear-gradient(135deg, var(--panel-hover), var(--panel-soft));
   box-shadow: 0 0.75rem 2rem rgb(0 0 0 / 16%);
 }
 
@@ -111,23 +111,23 @@
   width: 0.55rem;
   height: 0.55rem;
   clip-path: polygon(100% 0, 100% 100%, 0 100%);
-  background: #11141b;
+  background: var(--panel-soft);
   content: "";
 }
 
 .skeleton-message--own .skeleton-message__bubble {
   justify-self: end;
   background:
-    radial-gradient(circle at 82% 18%, rgb(255 255 255 / 12%), transparent 34%),
-    linear-gradient(135deg, #24415f, #1b2c43);
-  box-shadow: 0 0.8rem 2.2rem rgb(22 74 120 / 22%);
+    radial-gradient(circle at 82% 18%, var(--accent-soft), transparent 34%),
+    linear-gradient(135deg, var(--sent-bg), var(--accent-deep));
+  box-shadow: 0 0.8rem 2.2rem var(--accent-border);
 }
 
 .skeleton-message--own .skeleton-message__bubble::before {
   right: -0.34rem;
   left: auto;
   clip-path: polygon(0 0, 100% 100%, 0 100%);
-  background: #1b2c43;
+  background: var(--accent-deep);
 }
 
 .skeleton-message:nth-child(2n) .skeleton-line--1 { width: 64%; }

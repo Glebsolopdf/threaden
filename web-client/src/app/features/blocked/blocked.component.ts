@@ -18,7 +18,7 @@ import { toApiError } from '../../core/api/api-error';
           } @else {
             <div class="blocked-state blocked-state--blocked" animate.enter="blocked-copy-enter" animate.leave="blocked-copy-leave">
               <h1 id="blocked-title">Вы временно заблокированы</h1>
-              <p>С этого адреса было отправлено слишком много запросов. Доступ восстановится автоматически — возвращайтесь позже.</p>
+              <p>С этого аккаунта или адреса было отправлено слишком много запросов. Доступ восстановится автоматически — возвращайтесь позже.</p>
               <span class="blocked-state__status">{{ checking() ? 'Проверяем статус ограничений…' : 'Следующая проверка будет выполнена через минуту.' }}</span>
             </div>
           }

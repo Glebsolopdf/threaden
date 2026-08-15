@@ -109,6 +109,7 @@ import { HistoryNoticeState } from './history/history-notice';
             @if (details.group.invite_token) {
               <div class="group-invite-row"><span>Приглашение</span><code>{{ inviteUrl(details.group.invite_token) }}</code><button type="button" aria-label="Скопировать приглашение" (click)="copyInvite(details.group.invite_token)"><img src="/copy.svg" alt=""></button></div>
             }
+            <app-group-spam-warnings [warnings]="details.spam_warnings ?? []" />
             <section class="group-info-dialog__section" aria-labelledby="group-members-title">
               <h3 id="group-members-title">Участники</h3>
               <ul class="group-members">
@@ -119,7 +120,6 @@ import { HistoryNoticeState } from './history/history-notice';
                 }
               </ul>
             </section>
-            <app-group-spam-warnings [warnings]="details.spam_warnings ?? []" />
           </div>
         </section>
       </div>

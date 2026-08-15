@@ -17,6 +17,10 @@ type AttachmentBatch interface {
 	Rollback()
 }
 
+func MessageHasContent(body string, attachmentCount int) bool {
+	return strings.TrimSpace(body) != "" || attachmentCount > 0
+}
+
 func (s *Service) addMembershipMessage(ctx context.Context, groupID string, actor model.User, action string) (model.GroupMessage, error) {
 	id, err := s.ID("msg_")
 	if err != nil {
@@ -144,6 +148,10 @@ func (s *Service) SendWithAttachments(ctx context.Context, id string, u model.Us
 		batch.Rollback()
 		return model.GroupMessage{}, err
 	}
+	if !MessageHasContent(body, len(items)) {
+		batch.Rollback()
+		return model.GroupMessage{}, ErrInvalid
+	}
 	m := model.GroupMessage{ID: mid, GroupID: id, Author: u, Body: body, CreatedAt: s.now().UTC(), ReplyTo: reply, Attachments: items}
 	if err := s.store.AddMessageWithAttachments(ctx, m, items); err != nil {
 		batch.Rollback()
@@ -158,7 +166,7 @@ func (s *Service) send(ctx context.Context, id string, u model.User, body string
 		return model.GroupMessage{}, ErrForbidden
 	}
 	body = strings.TrimSpace(body)
-	if body == "" || len([]rune(body)) > 4000 {
+	if !MessageHasContent(body, 0) || len([]rune(body)) > 4000 {
 		return model.GroupMessage{}, ErrInvalid
 	}
 	mid, e := s.ID("msg_")

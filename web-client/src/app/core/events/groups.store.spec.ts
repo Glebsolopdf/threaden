@@ -36,6 +36,29 @@ describe('GroupsStore', () => {
     expect(store.messages()).toMatchObject([{ message, status: 'sent', animate: 'outgoing' }]);
   });
 
+  it('does not duplicate an attachment message when SSE follows the upload response', async () => {
+    const user: User = { id: 'user-1', email: 'user@example.com', display_name: 'User', created_at: '' };
+    const message: GroupMessage = {
+      id: 'attachment-message-1', group_id: 'group-1', author: user, body: '', created_at: '2026-01-01T00:00:00Z',
+      attachments: [{ id: 'file-1', kind: 'file', mime: 'text/plain', name: 'notes.txt', size: 10, url: '/file-1', created_at: '', expires_at: '' }],
+    };
+    TestBed.configureTestingModule({
+      providers: [
+        GroupsStore,
+        { provide: ApiService, useValue: { sendMessageWithFiles: () => of({ message }), groups: () => of([]) } },
+        { provide: AuthStore, useValue: { user: signal(user) } },
+      ],
+    });
+    const store = TestBed.inject(GroupsStore);
+    store.current.set({ id: 'group-1' } as never);
+
+    await store.sendMessageWithFiles('', [new File(['notes'], 'notes.txt', { type: 'text/plain' })]);
+    store.mergeMessage(message);
+
+    expect(store.messages()).toHaveLength(1);
+    expect(chatMessage(store.messages()[0])?.message.attachments).toHaveLength(1);
+  });
+
   it('renders a structured persisted system message with client-owned copy', () => {
     TestBed.configureTestingModule({
       providers: [

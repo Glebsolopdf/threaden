@@ -11,6 +11,7 @@ import (
 
 	"voice-rooms/internal/abuse"
 	"voice-rooms/internal/app"
+	"voice-rooms/internal/model"
 	"voice-rooms/internal/store"
 )
 
@@ -37,24 +38,38 @@ func (e *Enforcer) Banned(ctx context.Context, ip string) (bool, time.Time, erro
 	return e.limiter.Banned(ctx, ip)
 }
 
+func (e *Enforcer) AccountBlocked(ctx context.Context, userID string) (bool, time.Time, error) {
+	return e.st.AccountBlockActive(ctx, userID, e.now().UTC())
+}
+
 // NoteViolation records a rate-limit violation for the IP and, when a ban at
 // the highest escalation level was created, attributes it to the account that
 // caused it. Accounts that reach AccountBanDeletionCount such bans within
 // AccountBanWindow are automatically deleted.
 func (e *Enforcer) NoteViolation(ctx context.Context, token, ip string) error {
-	result, err := e.limiter.NoteViolation(ctx, ip)
-	if err != nil {
+	if token == "" {
+		_, err := e.limiter.NoteViolation(ctx, ip)
 		return err
-	}
-	return e.record(ctx, token, result)
-}
-
-func (e *Enforcer) record(ctx context.Context, token string, result abuse.BanResult) error {
-	if result.Level == 0 || token == "" {
-		return nil
 	}
 	user, err := e.service.Authenticate(ctx, token)
 	if err != nil {
+		return nil
+	}
+	result, err := e.limiter.NoteAccountViolation(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+	if result.Level == 0 {
+		return nil
+	}
+	if err := e.st.SetAccountBlock(ctx, user.ID, result.Until); err != nil {
+		return err
+	}
+	return e.record(ctx, user, result)
+}
+
+func (e *Enforcer) record(ctx context.Context, user model.User, result abuse.BanResult) error {
+	if result.Level == 0 {
 		return nil
 	}
 	if err := e.service.CleanupBannedUser(ctx, user); err != nil {

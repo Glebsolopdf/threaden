@@ -179,6 +179,23 @@
   font-size: 0.92rem;
 }
 
+.group-spam-warnings {
+  margin-bottom: 1.15rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.group-spam-warnings__summary {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.group-spam-warnings .group-members {
+  gap: 0.4rem;
+}
+
 .group-info-dialog__section[hidden] {
   display: none;
 }

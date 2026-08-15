@@ -5,7 +5,7 @@ import { GroupMessageListComponent } from './group-message-list.component';
 const authorA = { id: 'user-1', email: 'a@example.com', display_name: 'Аня', created_at: '' };
 const authorB = { id: 'user-2', email: 'b@example.com', display_name: 'Боря', created_at: '' };
 
-function chat(body: string, extra: Partial<{ author: typeof authorA; read: boolean; edited_at: string; status: 'sending' | 'sent' | 'error' }> = {}): MessageView {
+function chat(body: string, extra: Partial<{ author: typeof authorA; read: boolean; edited_at: string; status: 'sending' | 'sent' | 'error'; attachments: NonNullable<MessageView['message']['attachments']> }> = {}): MessageView {
   return {
     message: {
       id: 'msg_' + body.length,
@@ -15,6 +15,7 @@ function chat(body: string, extra: Partial<{ author: typeof authorA; read: boole
       created_at: '2026-01-01T10:00:00Z',
       read: extra.read,
       edited_at: extra.edited_at,
+      attachments: extra.attachments,
     },
     status: extra.status ?? 'sent',
   };
@@ -76,5 +77,12 @@ describe('GroupMessageListComponent', () => {
     expect(system.length).toBe(1);
     expect(system[0].textContent).toContain('Глеб');
     expect(system[0].querySelector('app-group-message-actions')).not.toBeNull();
+  });
+
+  it('renders an attachment-only message without requiring a body', async () => {
+    const el = await mount([chat('', { attachments: [{ id: 'a1', kind: 'file', mime: 'text/plain', name: 'notes.txt', size: 12, url: '/v1/attachments/a1', created_at: '', expires_at: '' }] })]);
+    expect(el.querySelector('.message-attachments')).not.toBeNull();
+    expect(el.querySelector('.chat-message p')).toBeNull();
+    expect(el.textContent).toContain('notes.txt');
   });
 });

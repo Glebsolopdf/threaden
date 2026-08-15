@@ -150,7 +150,7 @@ export class GroupsStore {
     if (!current || files.length === 0) return;
     const result = await firstValueFrom(this.api.sendMessageWithFiles(current.id, body.trim(), files, replyToID));
     if (result.message) {
-      this.messages.update((items) => [...items, messageView(result.message!)]);
+      this.messages.update((items) => mergeIncomingMessage(items, result.message!, this.auth.user()?.id));
       this.scheduleRefresh();
     }
   }

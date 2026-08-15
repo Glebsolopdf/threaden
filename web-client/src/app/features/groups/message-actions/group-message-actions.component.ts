@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, input, output, signal, viewChild } from '@angular/core';
-import type { GroupMessage } from '../../core/api/models';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
+import type { GroupMessage } from '../../../core/api/models';
+import { placeMessageMenu } from './message-actions-position';
 
 @Component({
   selector: 'app-group-message-actions',
@@ -19,7 +20,7 @@ import type { GroupMessage } from '../../core/api/models';
     </div>
   `,
 })
-export class GroupMessageActionsComponent {
+export class GroupMessageActionsComponent implements OnDestroy {
   readonly message = input.required<GroupMessage>();
   readonly own = input(false);
   readonly canDelete = input(false);
@@ -35,19 +36,23 @@ export class GroupMessageActionsComponent {
   private closeTimer?: number;
   private startX = 0;
   private startY = 0;
+  private positionFrame?: number;
+  private resizeObserver?: ResizeObserver;
+  private readonly repositionOnResize = (): void => this.schedulePosition();
+  private readonly repositionOnScroll = (): void => this.schedulePosition();
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly menu = viewChild<ElementRef<HTMLElement>>('menu');
   private static active?: GroupMessageActionsComponent;
 
   @HostListener('contextmenu', ['$event'])
-  protected showMenu(event: MouseEvent): void { event.preventDefault(); this.openMenu(event.clientX, event.clientY); }
+  protected showMenu(event: MouseEvent): void { event.preventDefault(); this.openMenu(); }
 
   @HostListener('pointerdown', ['$event'])
   protected startLongPress(event: PointerEvent): void {
     this.startX = event.clientX;
     this.startY = event.clientY;
     this.swipeX.set(0);
-    if (event.pointerType !== 'mouse') this.longPress = window.setTimeout(() => this.openMenu(this.startX, this.startY), 500);
+    if (event.pointerType !== 'mouse') this.longPress = window.setTimeout(() => this.openMenu(), 500);
   }
 
   @HostListener('pointermove', ['$event'])
@@ -75,7 +80,7 @@ export class GroupMessageActionsComponent {
 
   @HostListener('document:pointerdown', ['$event'])
   protected closeOutside(event: PointerEvent): void {
-    if (!(event.target instanceof Node) || !(event.target as Node).parentElement?.closest('app-group-message-actions')) this.closeMenu();
+    if (!(event.target instanceof Node) || !this.host.nativeElement.contains(event.target)) this.closeMenu();
   }
 
   @HostListener('document:keydown.escape')
@@ -91,29 +96,18 @@ export class GroupMessageActionsComponent {
   protected swipeOpacity(): number { return Math.min(1, this.swipeX() / 48); }
   protected swipeTransform(): string { return `translateY(-50%) scale(${0.72 + this.swipeOpacity() * 0.28})`; }
 
-  private openMenu(clientX: number, clientY: number): void {
+  private openMenu(): void {
     GroupMessageActionsComponent.active?.closeMenu(true);
     GroupMessageActionsComponent.active = this;
     if (this.closeTimer !== undefined) window.clearTimeout(this.closeTimer);
     this.menuMounted.set(true);
-    requestAnimationFrame(() => {
-      const bubble = this.host.nativeElement.parentElement?.getBoundingClientRect();
-      const menu = this.menu()?.nativeElement.getBoundingClientRect();
-      const width = menu?.width ?? 140;
-      const height = menu?.height ?? 78;
-      const above = clientY > window.innerHeight - height - 16;
-      const anchor = bubble ?? { left: clientX, right: clientX };
-      const preferredLeft = this.own() ? anchor.left - width - 8 : anchor.right + 8;
-      this.menuAbove.set(above);
-      this.menuLeft.set(Math.max(8, Math.min(preferredLeft, window.innerWidth - width - 8)));
-      this.menuTop.set(Math.max(8, above ? clientY - height - 8 : clientY + 8));
-      this.open.set(true);
-    });
+    requestAnimationFrame(() => { this.startPositionTracking(); this.schedulePosition(); });
   }
 
   private closeMenu(immediate = false): void {
     if (!this.menuMounted()) return;
     if (GroupMessageActionsComponent.active === this) GroupMessageActionsComponent.active = undefined;
+    this.stopPositionTracking();
     if (immediate) {
       this.open.set(false);
       this.menuMounted.set(false);
@@ -124,6 +118,50 @@ export class GroupMessageActionsComponent {
     this.closeTimer = window.setTimeout(() => {
       if (!this.open()) this.menuMounted.set(false);
     }, 200);
+  }
+
+  ngOnDestroy(): void {
+    this.cancelLongPress();
+    this.stopPositionTracking();
+    if (this.closeTimer !== undefined) window.clearTimeout(this.closeTimer);
+    this.setBubbleSwipe(0);
+  }
+
+  private startPositionTracking(): void {
+    this.stopPositionTracking();
+    window.addEventListener('resize', this.repositionOnResize);
+    document.addEventListener('scroll', this.repositionOnScroll, true);
+    const anchor = this.host.nativeElement.parentElement;
+    const menu = this.menu()?.nativeElement;
+    if (typeof ResizeObserver !== 'undefined' && anchor && menu) {
+      this.resizeObserver = new ResizeObserver(() => this.schedulePosition());
+      this.resizeObserver.observe(anchor);
+      this.resizeObserver.observe(menu);
+    }
+  }
+
+  private stopPositionTracking(): void {
+    window.removeEventListener('resize', this.repositionOnResize);
+    document.removeEventListener('scroll', this.repositionOnScroll, true);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    if (this.positionFrame !== undefined) cancelAnimationFrame(this.positionFrame);
+    this.positionFrame = undefined;
+  }
+
+  private schedulePosition(): void {
+    if (!this.menuMounted() || this.positionFrame !== undefined) return;
+    this.positionFrame = requestAnimationFrame(() => {
+      this.positionFrame = undefined;
+      const anchor = this.host.nativeElement.parentElement?.getBoundingClientRect();
+      const menu = this.menu()?.nativeElement.getBoundingClientRect();
+      if (!anchor || !menu) return;
+      const placement = placeMessageMenu(anchor, menu, { width: window.innerWidth, height: window.innerHeight }, 8);
+      this.menuAbove.set(placement.above);
+      this.menuLeft.set(placement.left);
+      this.menuTop.set(placement.top);
+      this.open.set(true);
+    });
   }
 
   private cancelLongPress(): void {

@@ -148,23 +148,9 @@ func TestBanCleanupRemovesRecentMessagesAndDisconnectsVoice(t *testing.T) {
 	if status != http.StatusTooManyRequests {
 		t.Fatalf("expected 429, got %d %s", status, body)
 	}
-	req, err := http.NewRequest(http.MethodGet, api.server.URL+"/v1/groups/"+groupID+"/messages?limit=100", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	req.Header.Set("X-Forwarded-For", "198.51.100.10")
-	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	body, err = io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("messages after ban: %d %s", resp.StatusCode, body)
+	status, body, _ = api.request(t, http.MethodGet, "/v1/groups/"+groupID+"/messages?limit=100", "", nil)
+	if status != http.StatusOK {
+		t.Fatalf("messages after ban: %d %s", status, body)
 	}
 	var messages []map[string]any
 	if err := json.Unmarshal(body, &messages); err != nil {

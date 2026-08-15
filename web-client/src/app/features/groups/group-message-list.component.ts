@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, effect, input, output, 
 import type { GroupMessage } from '../../core/api/models';
 import { chatMessage, isSystemMessage, systemMessageText, type MessageView } from '../../core/events/groups.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
-import { GroupMessageActionsComponent } from './group-message-actions.component';
+import { GroupMessageActionsComponent } from './message-actions/group-message-actions.component';
 import { MessageAttachmentsComponent } from './attachments/message-attachments.component';
 
 @Component({
@@ -35,7 +35,7 @@ import { MessageAttachmentsComponent } from './attachments/message-attachments.c
               }
               <div class="chat-message__bubble">
                 @if (!isOwn(chat) && !isCompact(index)) { <strong class="chat-message__author">{{ chat.message.author.display_name }}</strong> }
-                @if (chat.message.reply_to; as reply) { <div class="message-reply-preview">@if (reply.kind === 'system') { <strong>Системное уведомление</strong> } @else { <strong>В ответ {{ reply.author.display_name }}</strong> }<span>{{ reply.body }}</span></div> }
+                @if (chat.message.reply_to; as reply) { <div class="message-reply-preview">@if (reply.kind === 'system') { <strong>Системное уведомление</strong> } @else { <strong>В ответ {{ reply.author.display_name }}</strong> }<span>{{ reply.body || 'Вложение' }}</span></div> }
                 @if (chat.message.body) { <p>{{ chat.message.body }}</p> }
                 @if (chat.message.attachments?.length) { <app-message-attachments [attachments]="chat.message.attachments ?? []" /> }
                 <footer><time [attr.datetime]="chat.message.created_at">{{ formatTime(chat.message.created_at) }}</time>@if (isOwn(chat) && chat.status === 'sent') { <span class="message-status" [attr.aria-label]="chat.message.read ? 'Прочитано' : 'Отправлено'">{{ chat.message.read ? '✓✓' : '✓' }}</span> }{{ statusSuffix(chat) }}</footer>

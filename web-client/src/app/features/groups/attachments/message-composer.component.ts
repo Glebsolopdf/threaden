@@ -1,24 +1,35 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { GroupsStore } from '../../../core/events/groups.store';
 import type { GroupMessage } from '../../../core/api/models';
 import { NotificationStore } from '../../../core/notifications/notification.store';
 import { TypingStore } from '../../../core/events/typing.store';
-import { formatBytes, validateSelection } from './attachment-upload';
+import { attachmentKind, canSendMessage, formatBytes, validateSelection } from './attachment-upload';
+import { AttachmentIconComponent } from './icons/attachment-icon.component';
 
 @Component({
   selector: 'app-message-composer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AttachmentIconComponent],
   template: `
     <div class="composer-stack">
       @if (replyingTo(); as reply) {
-        <div class="reply-banner"><span><strong>В ответ {{ reply.author.display_name }}</strong><small>{{ reply.body }}</small></span><button type="button" aria-label="Отменить ответ" (click)="cancelReply.emit()">×</button></div>
+        <div class="reply-banner"><span><strong>В ответ {{ reply.author.display_name }}</strong><small>{{ reply.body || 'Вложение' }}</small></span><button type="button" aria-label="Отменить ответ" (click)="cancelReply.emit()">×</button></div>
       }
       @if (files().length) {
         <div class="composer-files" aria-label="Выбранные файлы">
           @for (file of files(); track file.name + file.lastModified) {
-            <span class="composer-file"><span>{{ file.name }}</span><small>{{ formatBytes(file.size) }}</small><button type="button" (click)="removeFile(file)" [attr.aria-label]="'Удалить ' + file.name">×</button></span>
+            <article class="composer-file" [attr.title]="file.name">
+              @if (attachmentKind(file) === 'image') {
+                <img class="composer-file__preview" [src]="previewUrl(file)" [alt]="file.name">
+              } @else {
+                <span class="composer-file__preview"><app-attachment-icon [kind]="attachmentKind(file)" /></span>
+              }
+              <span class="composer-file__name">{{ file.name }}</span>
+              <small>{{ formatBytes(file.size) }}</small>
+              @if (sending()) { <span class="composer-file__loading" role="status" aria-label="Загрузка вложения"><span aria-hidden="true"></span></span> }
+              <button type="button" (click)="removeFile(file)" [attr.aria-label]="'Удалить ' + file.name">×</button>
+            </article>
           }
         </div>
       }
@@ -28,11 +39,10 @@ import { formatBytes, validateSelection } from './attachment-upload';
         <input formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true" (input)="typing.notify(groupId(), messageForm.controls.body.value.trim().length > 0)">
         <button type="submit" [disabled]="!canSend() || sending()">{{ sending() ? 'Отправка…' : 'Отправить' }}</button>
       </form>
-      @if (progress() > 0 && progress() < 100) { <progress [value]="progress()" max="100">{{ progress() }}%</progress> }
     </div>
   `,
 })
-export class MessageComposerComponent {
+export class MessageComposerComponent implements OnDestroy {
   readonly groupId = input('');
   readonly replyingTo = input<GroupMessage | null>(null);
   readonly cancelReply = output<void>();
@@ -41,12 +51,13 @@ export class MessageComposerComponent {
   protected readonly typing = inject(TypingStore);
   protected readonly files = signal<File[]>([]);
   protected readonly sending = signal(false);
-  protected readonly progress = signal(0);
   protected readonly messageForm = new FormGroup({ body: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(2000)] }) });
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
   protected readonly formatBytes = formatBytes;
+  protected readonly attachmentKind = attachmentKind;
+  private readonly previewUrls = new Map<File, string>();
 
-  protected canSend(): boolean { return this.files().length > 0 || this.messageForm.controls.body.value.trim().length > 0; }
+  protected canSend(): boolean { return canSendMessage(this.messageForm.controls.body.value, this.files().length); }
 
   protected selectFiles(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -57,10 +68,30 @@ export class MessageComposerComponent {
       input.value = '';
       return;
     }
+    this.releasePreviewUrls();
     this.files.set(selected);
   }
 
-  protected removeFile(file: File): void { this.files.update((items) => items.filter((item) => item !== file)); }
+  protected removeFile(file: File): void {
+    const url = this.previewUrls.get(file);
+    if (url) {
+      URL.revokeObjectURL(url);
+      this.previewUrls.delete(file);
+    }
+    this.files.update((items) => items.filter((item) => item !== file));
+  }
+
+  protected previewUrl(file: File): string {
+    const existing = this.previewUrls.get(file);
+    if (existing) return existing;
+    const url = URL.createObjectURL(file);
+    this.previewUrls.set(file, url);
+    return url;
+  }
+
+  ngOnDestroy(): void {
+    this.releasePreviewUrls();
+  }
 
   protected async send(): Promise<void> {
     if (!this.canSend() || this.sending()) return;
@@ -72,7 +103,6 @@ export class MessageComposerComponent {
       return;
     }
     this.sending.set(true);
-    this.progress.set(1);
     try {
       await this.groups.sendMessageWithFiles(body, files, this.replyingTo()?.id ?? '');
       this.reset();
@@ -81,15 +111,20 @@ export class MessageComposerComponent {
       this.notifications.error(error, 'Не удалось отправить вложение');
     } finally {
       this.sending.set(false);
-      this.progress.set(0);
     }
   }
 
   private reset(): void {
     this.messageForm.reset({ body: '' });
+    this.releasePreviewUrls();
     this.files.set([]);
     const input = this.fileInput()?.nativeElement;
     if (input) input.value = '';
     this.typing.notify(this.groupId(), false);
+  }
+
+  private releasePreviewUrls(): void {
+    for (const url of this.previewUrls.values()) URL.revokeObjectURL(url);
+    this.previewUrls.clear();
   }
 }

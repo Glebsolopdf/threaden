@@ -106,3 +106,60 @@ func TestRecordAccountBanWindowedCount(t *testing.T) {
 		}
 	}
 }
+
+func TestAccountBlockIsScopedAndExpires(t *testing.T) {
+	ctx := context.Background()
+	st, err := store.Open(filepath.Join(t.TempDir(), "account-blocks.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	now := time.Unix(1_700_000_000, 0).UTC()
+	for _, id := range []string{"user-a", "user-b"} {
+		user := model.User{ID: id, Email: id + "@example.com", DisplayName: id, CreatedAt: now}
+		if err := st.CreateUser(ctx, user, []byte("hashed-password"), sha256.Sum256([]byte(id))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	until := now.Add(time.Minute)
+	if err := st.SetAccountBlock(ctx, "user-a", until); err != nil {
+		t.Fatal(err)
+	}
+	if active, gotUntil, err := st.AccountBlockActive(ctx, "user-a", now); err != nil || !active || !gotUntil.Equal(until) {
+		t.Fatalf("user-a block: active=%v until=%v err=%v", active, gotUntil, err)
+	}
+	if active, _, err := st.AccountBlockActive(ctx, "user-b", now); err != nil || active {
+		t.Fatalf("user-b must not inherit user-a block: active=%v err=%v", active, err)
+	}
+	if active, _, err := st.AccountBlockActive(ctx, "user-a", until); err != nil || active {
+		t.Fatalf("expired block must be inactive: active=%v err=%v", active, err)
+	}
+}
+
+func TestAccountBlockReplacementDoesNotTouchOtherAccounts(t *testing.T) {
+	ctx := context.Background()
+	st, err := store.Open(filepath.Join(t.TempDir(), "account-block-replace.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	now := time.Unix(1_700_000_000, 0).UTC()
+	for _, id := range []string{"user-a", "user-b"} {
+		user := model.User{ID: id, Email: id + "@example.com", DisplayName: id, CreatedAt: now}
+		if err := st.CreateUser(ctx, user, []byte("hashed-password"), sha256.Sum256([]byte(id))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := st.SetAccountBlock(ctx, "user-a", now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetAccountBlock(ctx, "user-a", now.Add(2*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if active, until, err := st.AccountBlockActive(ctx, "user-a", now.Add(time.Minute+time.Second)); err != nil || !active || !until.Equal(now.Add(2*time.Minute)) {
+		t.Fatalf("replacement must extend only user-a: active=%v until=%v err=%v", active, until, err)
+	}
+	if active, _, err := st.AccountBlockActive(ctx, "user-b", now); err != nil || active {
+		t.Fatalf("user-b must remain unblocked: active=%v err=%v", active, err)
+	}
+}

@@ -6,9 +6,9 @@ import type { GroupSpamWarning } from '../../core/api/models';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (warnings().length) {
-      <section class="group-info-dialog__section" aria-labelledby="group-spam-title">
+      <section class="group-info-dialog__section group-spam-warnings" aria-labelledby="group-spam-title">
         <h3 id="group-spam-title">Предупреждения</h3>
-        <p class="empty-copy">За 30 дней: {{ warnings().length }}/3. После третьего предупреждения группа удаляется автоматически.</p>
+        <p class="group-spam-warnings__summary">За 30 дней: {{ warnings().length }}/3. После третьего предупреждения группа временно изолируется.</p>
         <ul class="group-members">
           @for (warning of warnings(); track warning.created_at) {
             <li class="group-member"><span><strong>{{ label(warning.reason) }}</strong><small>{{ warning.user_count }} участников, {{ warning.message_count }} похожих сообщений</small></span><small>{{ date(warning.created_at) }}</small></li>

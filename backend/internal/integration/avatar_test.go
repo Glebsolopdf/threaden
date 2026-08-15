@@ -2,6 +2,8 @@ package integration
 
 import (
 	"bytes"
+	"context"
+	"crypto/sha256"
 	"encoding/binary"
 	"hash/crc32"
 	"image"
@@ -10,7 +12,28 @@ import (
 	"math/rand"
 	"net/http"
 	"testing"
+	"time"
 )
+
+func TestTemporaryBlockIsScopedToAuthenticatedAccount(t *testing.T) {
+	api := banAPI(t)
+	accountA := api.user(t, "blocked-account")
+	accountB := api.user(t, "unblocked-account")
+	now := time.Now().UTC()
+	userA, err := api.store.UserBySessionHash(context.Background(), sha256.Sum256([]byte(accountA)), now, now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := api.store.SetAccountBlock(context.Background(), userA.ID, now.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	if status, body, _ := api.request(t, http.MethodGet, "/v1/me", accountA, nil); status != http.StatusTooManyRequests || !bytes.Contains(body, []byte(`"account_blocked"`)) {
+		t.Fatalf("blocked account must be rejected: %d %s", status, body)
+	}
+	if status, body, _ := api.request(t, http.MethodGet, "/v1/me", accountB, nil); status != http.StatusOK {
+		t.Fatalf("unblocked account must remain usable: %d %s", status, body)
+	}
+}
 
 func bigPNG(t *testing.T) []byte {
 	t.Helper()

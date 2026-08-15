@@ -11,6 +11,7 @@ import { NotificationStore } from '../../core/notifications/notification.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
 import { AccountDialogComponent } from '../account/account-dialog.component';
 import { InviteLinkComponent } from './invite-link.component';
+import { getViewportHeight } from './viewport/viewport-height';
 
 type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'temporary' | 'voice';
 
@@ -63,7 +64,7 @@ type ShellPage = 'home' | 'group' | 'discover' | 'settings' | 'profile' | 'tempo
             @for (group of filteredGroups(); track group.id) {
               <a class="group-row" animate.leave="list-item-leave" [routerLink]="['/groups', group.id]" routerLinkActive="is-active" (click)="sidebarOpen.set(false)">
                 <app-avatar [src]="group.avatar" [label]="group.name" [identity]="group.id" [kind]="'group'" />
-                <span class="group-row__copy"><strong>{{ group.name }}</strong><small>{{ group.last_message?.body || 'Нет сообщений' }}</small></span>
+                <span class="group-row__copy"><strong>{{ group.name }}</strong><small>{{ group.last_message?.body || group.last_message?.attachments?.[0]?.name || (group.last_message?.attachments?.length ? 'Вложение' : 'Нет сообщений') }}</small></span>
               </a>
             }
           } @else if (groups.groups().length) {
@@ -275,7 +276,7 @@ export class ShellComponent {
 
   private updateViewportHeight(): void {
     if (typeof window === 'undefined') return;
-    const height = Math.round(window.visualViewport?.height || window.innerHeight);
+    const height = getViewportHeight({ innerHeight: window.innerHeight, visualHeight: window.visualViewport?.height });
     document.documentElement.style.setProperty('--app-height', `${height}px`);
   }
 }

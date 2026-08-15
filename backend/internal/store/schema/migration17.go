@@ -90,3 +90,25 @@ CREATE INDEX IF NOT EXISTS attachments_owner_created_idx ON attachments(owner_id
 CREATE INDEX IF NOT EXISTS attachments_expires_idx ON attachments(expires_at, id);
 CREATE INDEX IF NOT EXISTS attachments_group_idx ON attachments(group_id);
 `
+
+const migration22 = `
+CREATE TABLE IF NOT EXISTS attachment_delete_requests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL,
+    execute_at INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS attachment_delete_requests_user_idx
+    ON attachment_delete_requests(user_id);
+CREATE INDEX IF NOT EXISTS attachment_delete_requests_execute_idx
+    ON attachment_delete_requests(execute_at, id);
+`
+
+const migration23 = `
+CREATE TABLE IF NOT EXISTS account_blocks (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    until INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS account_blocks_until_idx ON account_blocks(until);
+DELETE FROM ip_bans;
+`

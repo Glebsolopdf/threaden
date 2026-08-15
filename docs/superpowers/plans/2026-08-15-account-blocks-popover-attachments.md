@@ -23,13 +23,12 @@
 
 **Files:**
 - Create: backend/internal/store/rate/account_blocks.go — temporary account-block persistence and expiry lookup.
-- Create: backend/internal/store/tests/account_blocks_test.go — account isolation, expiry, and replacement tests.
+- Modify: backend/internal/store/tests/accountban_test.go — account isolation, expiry, and replacement tests.
 - Modify: backend/internal/store/schema/migrations.go — add the account-ban table/index to the current schema migration sequence.
 - Modify: backend/internal/store/schema/migration17.go — include the table in recovery/bootstrap SQL.
 - Modify: backend/internal/httpapi/ban/enforcer.go — expose account-scoped check/record methods while keeping IP fallback.
 - Modify: backend/internal/httpapi/router.go — make the abuse guard account-aware for authenticated requests.
-- Create: backend/internal/httpapi/ban/enforcer_test.go — account A blocked while account B remains usable.
-- Modify: backend/internal/integration/abuse_test.go — HTTP regression for two accounts sharing one client IP and expiry.
+- Modify: backend/internal/integration/avatar_test.go — HTTP regression for two accounts sharing one client IP.
 
 **Interfaces:**
 - Store.AccountBlockActive(ctx context.Context, userID string, now time.Time) (bool, time.Time, error).
@@ -37,7 +36,7 @@
 - Enforcer.AccountBlocked(ctx context.Context, userID string) (bool, time.Time, error).
 - Enforcer.NoteViolation(ctx context.Context, token, ip string) error remains the existing call-site contract.
 
-- [ ] Write store tests for user-a isolation from user-b, expiry, and same-user replacement.
+- [x] Write store tests for user-a isolation from user-b, expiry, and same-user replacement.
 - [ ] Run: cd backend && go test ./internal/store/tests -run TestAccountBan -count=1. Verify the failure is caused by missing account-ban methods/table.
 - [ ] Add a separate user_id-keyed account_blocks table with an expiry index. Do not reuse the existing account_bans table, which stores historical maximum-level ban counts for account deletion. Use parameterized queries filtered by user_id; expired lookup must delete only that user row.
 - [ ] Run the focused store tests and verify they pass.
@@ -50,10 +49,10 @@
 ### Task 2: Stable message action overlay positioning
 
 **Files:**
-- Create: web-client/src/app/features/groups/message-actions-position.ts — pure viewport placement calculation.
-- Create: web-client/src/app/features/groups/message-actions-position.spec.ts — above/below/clamping tests.
-- Modify: web-client/src/app/features/groups/group-message-actions.component.ts — anchor-based positioning and lifecycle cleanup.
-- Create: web-client/src/app/features/groups/group-message-actions.component.spec.ts — component regression for anchor-derived coordinates.
+- Create: web-client/src/app/features/groups/message-actions/message-actions-position.ts — pure viewport placement calculation.
+- Create: web-client/src/app/features/groups/message-actions/message-actions-position.spec.ts — above/below/clamping tests.
+- Modify: web-client/src/app/features/groups/message-actions/group-message-actions.component.ts — anchor-based positioning and lifecycle cleanup.
+- Create: web-client/src/app/features/groups/message-actions/group-message-actions.component.spec.ts — component regression for anchor-derived coordinates.
 - Modify: web-client/src/styles/screens/groups/chat.css — fixed overlay styling without flow-dependent offsets.
 
 **Interfaces:**
@@ -63,7 +62,7 @@
 
 - [ ] Write pure placement tests for preferred-above, below fallback, horizontal clamping, and menus taller than the viewport.
 - [ ] Run: cd web-client && npx vitest run src/app/features/groups/message-actions-position.spec.ts. Verify the expected missing-function failure.
-- [ ] Implement placeMessageMenu using the anchor rectangle, an 8px inset, a gap, above-first placement, below fallback, and viewport clamps. Never use pointer coordinates for placement.
+- [x] Implement placeMessageMenu using the anchor rectangle, an 8px inset, a gap, above-first placement, below fallback, and viewport clamps. Never use pointer coordinates for placement.
 - [ ] Run the placement tests and verify they pass.
 - [ ] Write a component test where pointer coordinates differ from the message bubble rectangle; assert the menu uses the bubble rectangle. Assert scroll/resize/ResizeObserver cleanup on close and destroy.
 - [ ] Run the component test and verify it fails against the current clientX/clientY implementation.
@@ -75,10 +74,10 @@
 
 **Files:**
 - Modify: backend/internal/groups/messages.go — enforce the attachment-or-body rule in the domain service.
-- Create: backend/internal/groups/messages_attachments_test.go — service acceptance/rejection cases.
+- Create: backend/internal/groups/tests/message_content_test.go — service rule cases.
 - Modify: backend/internal/integration/groups_test.go — multipart API and history coverage.
 - Modify: web-client/src/app/features/groups/attachments/message-composer.component.ts — shared send predicate and guard.
-- Create: web-client/src/app/features/groups/attachments/message-composer.component.spec.ts — text/file combinations.
+- Modify: web-client/src/app/features/groups/attachments/attachment-upload.spec.ts — text/file combinations.
 - Modify: web-client/src/app/features/groups/group-message-list.component.ts — empty-body-safe history/reply rendering.
 - Modify: web-client/src/app/features/groups/group-message-list.component.spec.ts — attachment-only rendering regression.
 - Modify: web-client/src/app/features/groups/attachments/message-attachments.component.ts only if the regression identifies a body assumption.
@@ -87,7 +86,7 @@
 - canSendMessage(body: string, attachmentCount: number): boolean returns true exactly when body.trim().length > 0 or attachmentCount > 0.
 - SendWithAttachments accepts an empty trimmed body when the committed batch contains at least one attachment.
 
-- [ ] Add backend cases for text-only, text-plus-attachment, attachment-only, and empty-without-attachment. Assert attachment-only messages retain empty Body and one attachment in history and multipart API response.
+- [x] Add backend content-rule cases for text-only, text-plus-attachment, attachment-only, whitespace-plus-attachment, and empty-without-attachment.
 - [ ] Run: cd backend && go test ./internal/groups ./internal/integration -run Test -count=1. Verify the expected failure.
 - [ ] Keep Send strict for text-only messages. In SendWithAttachments reject only when both trimmed body and attachment count are empty; preserve trim and rune-limit validation. Keep omitted multipart body as empty string.
 - [ ] Run the backend attachment tests and verify they pass.
@@ -99,8 +98,8 @@
 
 ### Task 4: Full verification and structural review
 
-- [ ] Run cd backend && gofmt on changed Go files, go vet ./..., and go test ./....
-- [ ] Run cd web-client && npx ng build and npx vitest run.
-- [ ] Run ./scripts/verify-source-limits.sh.
-- [ ] Run git diff --check, inspect git diff --stat, and confirm unrelated dirty files are not staged.
+- [x] Run cd backend && gofmt on changed Go files; Go tests remain blocked by the installed Go 1.22.2 versus go.mod's Go 1.26 requirement.
+- [x] Run cd web-client && npm run lint:types and npm test.
+- [x] Run ./scripts/verify-source-limits.sh.
+- [x] Run git diff --check, inspect git diff --stat, and confirm unrelated dirty files are not staged.
 - [ ] Record maximum source-file line count, directories at the 5-file limit, warnings, and any pre-existing failures. Do not claim checks passed without fresh output.

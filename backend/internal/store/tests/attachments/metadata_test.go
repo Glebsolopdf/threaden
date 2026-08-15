@@ -21,7 +21,7 @@ func TestMetadataRoundTripAndQuotas(t *testing.T) {
 	if err := sqlite.Migrate(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}
-	if schema.LatestVersion != 21 {
+	if schema.LatestVersion != 23 {
 		t.Fatalf("attachment migration is not latest: %d", schema.LatestVersion)
 	}
 	_, err = db.Exec(`INSERT INTO users(id,email,display_name,avatar,password_hash,token_hash,created_at,last_seen_at) VALUES('u','u@example.com','U','',X'',zeroblob(32),1,1)`)

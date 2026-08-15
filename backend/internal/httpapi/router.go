@@ -14,8 +14,10 @@ import (
 
 	"voice-rooms/internal/abuse"
 	"voice-rooms/internal/app"
+	attachmentaccount "voice-rooms/internal/attachments/account"
 	attachmentstorage "voice-rooms/internal/attachments/storage"
 	appgroups "voice-rooms/internal/groups"
+	accountapi "voice-rooms/internal/httpapi/account"
 	attachmenthttp "voice-rooms/internal/httpapi/attachment"
 	"voice-rooms/internal/httpapi/ban"
 	"voice-rooms/internal/httpapi/groupchat"
@@ -27,6 +29,7 @@ type Options struct {
 	Security            abuse.Config
 	SessionCookieSecure bool
 	Attachments         *attachmentstorage.Service
+	Quotas              *attachmentaccount.Service
 }
 
 func New(service *app.Service, groupService *appgroups.Service, st *store.Store, logger *slog.Logger, origins []string) http.Handler {
@@ -61,7 +64,7 @@ func NewWithOptions(
 	router.Use(cors(options.Origins))
 	router.Use(csrf(options.Origins))
 	router.Use(bodyLimit(10 << 20))
-	router.Use(abuseGuard(enforcer, security, logger))
+	router.Use(abuseGuard(enforcer, service, security, logger))
 	router.Use(rateLimit(limiter, security, logger))
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusNotFound, "not_found", "resource not found")
@@ -93,6 +96,7 @@ func NewWithOptions(
 		WriteGroupError: writeGroupError,
 		Attachments:     options.Attachments,
 	})
+	quotaHandler := accountapi.New(options.Quotas, accountapi.Hooks{WriteJSON: writeJSON, WriteError: writeError, CurrentUser: currentUser})
 	router.Post("/v1/auth/register", users.register)
 	router.Post("/v1/auth/login", users.login)
 	router.Delete("/v1/auth/logout", users.logout)
@@ -107,6 +111,11 @@ func NewWithOptions(
 		protected.Use(authenticate(service))
 		protected.Use(userRateLimit(limiter, security, logger))
 		protected.Get("/v1/me", users.me)
+		if options.Quotas != nil {
+			protected.Get("/v1/account/quotas", quotaHandler.Quotas)
+			protected.Post("/v1/account/attachments/delete-all", quotaHandler.ScheduleDelete)
+			protected.Delete("/v1/account/attachments/delete-all", quotaHandler.CancelDelete)
+		}
 		protected.Get("/v1/welcome", users.welcome)
 		protected.Patch("/v1/me/password", users.changePassword)
 		protected.Get("/v1/me/sessions", users.sessions)
@@ -212,25 +221,43 @@ func writeAppError(w http.ResponseWriter, r *http.Request, err error) {
 }
 func isBodyTooLarge(err error) bool { var maxErr *http.MaxBytesError; return errors.As(err, &maxErr) }
 
-func abuseGuard(enforcer *ban.Enforcer, cfg abuse.Config, logger *slog.Logger) func(http.Handler) http.Handler {
+func abuseGuard(enforcer *ban.Enforcer, service *app.Service, cfg abuse.Config, logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := clientIP(r, cfg.TrustedProxies)
-			banned, until, err := enforcer.Banned(r.Context(), ip)
-			if err != nil {
-				logger.ErrorContext(r.Context(), "ban check failed", "error", err)
-			} else if banned {
-				w.Header().Set("Retry-After", strconv.Itoa(max(1, int(time.Until(until).Seconds()))))
-				writeError(w, r, http.StatusTooManyRequests, "ip_banned", "too many requests")
-				return
+			token := sessionToken(r)
+			if token != "" {
+				if user, authErr := service.Authenticate(r.Context(), token); authErr == nil {
+					blocked, until, blockErr := enforcer.AccountBlocked(r.Context(), user.ID)
+					if blockErr != nil {
+						logger.ErrorContext(r.Context(), "account block check failed", "error", blockErr)
+					} else if blocked {
+						writeRetryAfter(w, until)
+						writeError(w, r, http.StatusTooManyRequests, "account_blocked", "account is temporarily blocked")
+						return
+					}
+				}
+			} else {
+				banned, until, err := enforcer.Banned(r.Context(), ip)
+				if err != nil {
+					logger.ErrorContext(r.Context(), "ban check failed", "error", err)
+				} else if banned {
+					writeRetryAfter(w, until)
+					writeError(w, r, http.StatusTooManyRequests, "ip_banned", "too many requests")
+					return
+				}
 			}
 			sw := &statusWriter{ResponseWriter: w}
 			next.ServeHTTP(sw, r)
 			if sw.status == http.StatusTooManyRequests {
-				if err := enforcer.NoteViolation(r.Context(), sessionToken(r), ip); err != nil {
+				if err := enforcer.NoteViolation(r.Context(), token, ip); err != nil {
 					logger.ErrorContext(r.Context(), "record violation failed", "error", err)
 				}
 			}
 		})
 	}
+}
+
+func writeRetryAfter(w http.ResponseWriter, until time.Time) {
+	w.Header().Set("Retry-After", strconv.Itoa(max(1, int(time.Until(until).Seconds()))))
 }

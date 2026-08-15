@@ -47,8 +47,16 @@ func (l *Limiter) Allow(ctx context.Context, scope, subject string, limit Limit)
 }
 
 func (l *Limiter) NoteViolation(ctx context.Context, ip string) (BanResult, error) {
+	return l.noteViolation(ctx, banKey(ip))
+}
+
+func (l *Limiter) NoteAccountViolation(ctx context.Context, userID string) (BanResult, error) {
+	return l.noteViolation(ctx, "account:"+userID)
+}
+
+func (l *Limiter) noteViolation(ctx context.Context, key string) (BanResult, error) {
 	level, until, err := l.store.NoteViolation(
-		ctx, banKey(ip), l.now().UTC(), l.cfg.IPBanWindow, l.cfg.IPBanThreshold,
+		ctx, key, l.now().UTC(), l.cfg.IPBanWindow, l.cfg.IPBanThreshold,
 		l.cfg.IPBanSteps, l.cfg.IPBanEscalationForget,
 	)
 	if err != nil {
