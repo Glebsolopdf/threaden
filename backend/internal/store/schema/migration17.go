@@ -112,3 +112,31 @@ CREATE TABLE IF NOT EXISTS account_blocks (
 CREATE INDEX IF NOT EXISTS account_blocks_until_idx ON account_blocks(until);
 DELETE FROM ip_bans;
 `
+
+const migration24 = `
+DROP INDEX IF EXISTS attachments_message_idx;
+DROP INDEX IF EXISTS attachments_owner_created_idx;
+DROP INDEX IF EXISTS attachments_expires_idx;
+DROP INDEX IF EXISTS attachments_group_idx;
+ALTER TABLE attachments RENAME TO attachments_legacy;
+CREATE TABLE attachments (
+    id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL REFERENCES group_messages(id) ON DELETE CASCADE,
+    group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL CHECK(kind IN ('image','video','audio','file','archive')),
+    mime TEXT NOT NULL,
+    name TEXT NOT NULL,
+    size INTEGER NOT NULL CHECK(size > 0),
+    path TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+);
+INSERT INTO attachments(id,message_id,group_id,owner_id,kind,mime,name,size,path,created_at,expires_at)
+SELECT id,message_id,group_id,owner_id,kind,mime,name,size,path,created_at,expires_at FROM attachments_legacy;
+DROP TABLE attachments_legacy;
+CREATE INDEX attachments_message_idx ON attachments(message_id, created_at, id);
+CREATE INDEX attachments_owner_created_idx ON attachments(owner_id, created_at);
+CREATE INDEX attachments_expires_idx ON attachments(expires_at, id);
+CREATE INDEX attachments_group_idx ON attachments(group_id);
+`

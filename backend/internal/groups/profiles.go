@@ -34,6 +34,28 @@ func (s *Service) Profile(ctx context.Context, groupID string, user model.User) 
 	return Profile{Group: group, Members: members, SpamWarnings: warnings}, nil
 }
 
+func (s *Service) PublishProfileUpdated(ctx context.Context, user model.User) {
+	groups, err := s.store.UserGroups(ctx, user.ID)
+	if err != nil {
+		return
+	}
+	recipients := map[string]struct{}{user.ID: {}}
+	for _, group := range groups {
+		ids, listErr := s.store.GroupMemberIDs(ctx, group.ID)
+		if listErr != nil {
+			continue
+		}
+		for _, id := range ids {
+			recipients[id] = struct{}{}
+		}
+	}
+	ids := make([]string, 0, len(recipients))
+	for id := range recipients {
+		ids = append(ids, id)
+	}
+	s.hub.Publish(ids, hub.Event{Type: "profile_updated", Data: hub.NewMemberEvent(user)})
+}
+
 func (s *Service) Delete(ctx context.Context, groupID string, user model.User) error {
 	group, err := s.store.Group(ctx, groupID)
 	if err != nil {

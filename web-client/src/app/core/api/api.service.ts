@@ -11,16 +11,14 @@ import type {
   RoomInfo,
   User,
   SecuritySession,
+  AccountQuotas,
+  PendingAttachmentDeletion,
   WelcomeStats,
 } from './models';
+import { isCompletedMessageUpload, messageUploadResult, type MessageUploadResult } from './upload/message-upload';
 
 export interface UploadResult {
   user?: User;
-  progress: number;
-}
-
-export interface MessageUploadResult {
-  message?: GroupMessage;
   progress: number;
 }
 
@@ -71,6 +69,10 @@ export class ApiService {
   securitySessions(): Observable<SecuritySession[]> { return this.http.get<SecuritySession[]>('/v1/me/sessions'); }
   revokeSecuritySession(id: string): Observable<void> { return this.http.delete<void>(`/v1/me/sessions/${encodeURIComponent(id)}`); }
 
+  quotas(): Observable<AccountQuotas> { return this.http.get<AccountQuotas>('/v1/account/quotas'); }
+  scheduleAttachmentDeletion(): Observable<PendingAttachmentDeletion> { return this.http.post<PendingAttachmentDeletion>('/v1/account/attachments/delete-all', {}); }
+  cancelAttachmentDeletion(): Observable<void> { return this.http.delete<void>('/v1/account/attachments/delete-all'); }
+
   createRoom(): Observable<RoomInfo> { return this.http.post<RoomInfo>('/v1/rooms', {}); }
   getRoom(code: string): Observable<RoomInfo> { return this.http.get<RoomInfo>(`/v1/rooms/${encodeURIComponent(code)}`); }
   joinRoom(code: string): Observable<JoinResponse> { return this.http.post<JoinResponse>(`/v1/rooms/${encodeURIComponent(code)}/join`, {}); }
@@ -113,15 +115,8 @@ export class ApiService {
     if (replyToID) form.set('reply_to_id', replyToID);
     for (const file of files) form.append('files[]', file, file.name);
     return this.http.post<GroupMessage>(`/v1/groups/${encodeURIComponent(id)}/messages`, form, { observe: 'events', reportProgress: true }).pipe(
-      map((event: HttpEvent<GroupMessage>): MessageUploadResult => {
-        if (event.type === HttpEventType.UploadProgress) {
-          const total = event.total ?? event.loaded;
-          return { progress: total ? Math.round((event.loaded / total) * 100) : 0 };
-        }
-        if (event.type === HttpEventType.Response) return { progress: 100, message: event.body ?? undefined };
-        return { progress: 0 };
-      }),
-      filter((result) => result.progress > 0 || Boolean(result.message)),
+      map(messageUploadResult),
+      filter(isCompletedMessageUpload),
     );
   }
   deleteMessage(groupID: string, messageID: string): Observable<void> {

@@ -3,11 +3,13 @@ package storage
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"sync"
+	"syscall"
 	"time"
 
 	"voice-rooms/internal/attachments"
@@ -21,6 +23,7 @@ type DiskChecker interface {
 
 type Input struct {
 	Name string
+	Mime string
 	Size int64
 	Open func() (io.ReadCloser, error)
 }
@@ -65,7 +68,7 @@ func (s *Service) Prepare(ctx context.Context, ownerID string, inputs []Input) (
 			batch.Rollback()
 			return nil, fmt.Errorf("open attachment: %w", err)
 		}
-		processed, processErr := s.Processor.Process(ctx, reader, input.Name, input.Size)
+		processed, processErr := s.Processor.Process(ctx, reader, input.Name, input.Size, input.Mime)
 		_ = reader.Close()
 		if processErr != nil {
 			batch.Rollback()
@@ -97,7 +100,7 @@ func (b *Batch) Commit(_ context.Context, messageID, groupID string, now time.Ti
 			return nil, err
 		}
 		destination := filepath.Join(dir, id)
-		if err := os.Rename(file.Path, destination); err != nil {
+		if err := moveFile(file.Path, destination); err != nil {
 			b.Rollback()
 			return nil, fmt.Errorf("store attachment: %w", err)
 		}
@@ -147,7 +150,13 @@ func (s *Service) reserve(ctx context.Context, ownerID string, bytes int64) erro
 	if err != nil {
 		return err
 	}
-	if uint64(owner+s.reserved+bytes) > s.Limits.MaxUserStoredBytes || uint64(daily+bytes) > s.Limits.MaxUserDailyBytes || uint64(total+s.reserved+bytes) > s.Limits.MaxTotalBytes {
+	createdAt, err := attachmentmeta.UserCreatedAt(ctx, s.DB, ownerID)
+	if err != nil {
+		return err
+	}
+	effective := attachments.EffectiveLimits(s.Limits, createdAt, time.Now())
+	dailyExceeded := effective.MaxUserDailyBytes > 0 && uint64(daily+bytes) > effective.MaxUserDailyBytes
+	if uint64(owner+s.reserved+bytes) > effective.MaxUserStoredBytes || dailyExceeded || uint64(total+s.reserved+bytes) > effective.MaxTotalBytes {
 		return attachments.ErrQuotaExceeded
 	}
 	if s.Disk != nil {
@@ -169,4 +178,35 @@ func randomID() (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("att_%x", data), nil
+}
+
+func moveFile(source, destination string) error {
+	if err := os.Rename(source, destination); err == nil {
+		return nil
+	} else if !errors.Is(err, syscall.EXDEV) {
+		return err
+	}
+	info, err := os.Stat(source)
+	if err != nil {
+		return err
+	}
+	input, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+	output, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, info.Mode().Perm())
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(output, input); err != nil {
+		_ = output.Close()
+		_ = os.Remove(destination)
+		return err
+	}
+	if err := output.Close(); err != nil {
+		_ = os.Remove(destination)
+		return err
+	}
+	return os.Remove(source)
 }

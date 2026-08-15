@@ -82,6 +82,14 @@ func SumCreatedSince(ctx context.Context, db DB, ownerID string, since time.Time
 	return total, err
 }
 
+func UserCreatedAt(ctx context.Context, db DB, userID string) (time.Time, error) {
+	var created int64
+	if err := db.QueryRowContext(ctx, `SELECT created_at FROM users WHERE id=?`, userID).Scan(&created); err != nil {
+		return time.Time{}, err
+	}
+	return time.Unix(created, 0).UTC(), nil
+}
+
 func SumAll(ctx context.Context, db DB) (int64, error) {
 	var total int64
 	err := db.QueryRowContext(ctx, `SELECT COALESCE(SUM(size),0) FROM attachments`).Scan(&total)

@@ -21,6 +21,8 @@ describe('attachmentKind', () => {
   it('classifies previews without trusting only the filename', () => {
     expect(attachmentKind(file('photo.unknown', 1, 'image/jpeg'))).toBe('image');
     expect(attachmentKind(file('clip.bin', 1, 'video/mp4'))).toBe('video');
+    expect(attachmentKind(file('voice.bin', 1, 'audio/webm'))).toBe('audio');
+    expect(attachmentKind(file('voice.m4a', 1))).toBe('audio');
     expect(attachmentKind(file('backup.data', 1, 'application/zip'))).toBe('archive');
     expect(attachmentKind(file('notes.txt', 1, 'text/plain'))).toBe('file');
   });

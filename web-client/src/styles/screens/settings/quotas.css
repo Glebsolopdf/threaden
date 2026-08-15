@@ -1,0 +1,19 @@
+.quotas-panel { display: grid; align-content: start; gap: 1rem; }
+.quotas-panel__intro { margin: 0; color: var(--muted); }
+.quota-usage-card, .quota-list, .quota-danger-zone { padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.quota-usage-card { display: grid; gap: .65rem; }
+.quota-usage-card > div:first-child { display: flex; justify-content: space-between; gap: 1rem; }
+.quota-usage-card span, .quota-usage-card small { color: var(--muted); }
+.quota-usage-bar { height: .45rem; overflow: hidden; border-radius: 99px; background: var(--panel-hover); }
+.quota-usage-bar span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease-out; }
+.quota-list h2 { margin: 0 0 .7rem; font-size: 1rem; }
+.quota-list dl { display: grid; gap: .55rem; margin: 0; }
+.quota-list dl div { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--line); padding-bottom: .45rem; }
+.quota-list dl div:last-child { border-bottom: 0; padding-bottom: 0; }
+.quota-list dt { color: var(--muted); }
+.quota-list dd { margin: 0; font-weight: 700; text-align: right; }
+.quota-danger-zone { border-color: var(--danger-border); background: var(--danger-soft); }
+.quota-danger-zone__label { color: var(--danger-text); font-weight: 760; }
+.quota-danger-zone p { margin: .45rem 0 .8rem; color: var(--muted); }
+.quota-danger-zone .button { width: 100%; }
+@media (max-width: 38rem) { .quota-usage-card > div:first-child, .quota-list dl div { align-items: flex-start; flex-direction: column; gap: .2rem; } .quota-list dd { text-align: left; } }

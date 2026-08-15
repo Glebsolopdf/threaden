@@ -4,12 +4,15 @@ export const MAX_ARCHIVE_BYTES = 5 * 1024 * 1024;
 
 const archiveExtensions = /\.(zip|7z|rar|tar|gz|bz2|xz|tgz|tbz2|txz)$/i;
 const archiveMime = /^application\/(zip|x-7z-compressed|x-rar-compressed|x-tar|gzip|x-bzip2|x-xz)$/i;
+const audioExtensions = /\.(webm|ogg|opus|mp3|wav|m4a|m4b|m4p)$/i;
+const audioMime = /^audio\//i;
 
-export type AttachmentKind = 'image' | 'video' | 'archive' | 'file';
+export type AttachmentKind = 'image' | 'video' | 'audio' | 'archive' | 'file';
 
 export function attachmentKind(file: File): AttachmentKind {
   if (file.type.startsWith('image/')) return 'image';
   if (file.type.startsWith('video/')) return 'video';
+  if (audioMime.test(file.type) || audioExtensions.test(file.name)) return 'audio';
   if (archiveExtensions.test(file.name) || archiveMime.test(file.type)) return 'archive';
   return 'file';
 }

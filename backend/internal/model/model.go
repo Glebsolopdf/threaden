@@ -96,6 +96,13 @@ type Attachment struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
+type AttachmentDeleteRequest struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
+	ExecuteAt time.Time `json:"execute_at"`
+}
+
 type MessageReference struct {
 	ID     string `json:"id"`
 	Kind   string `json:"kind,omitempty"`
