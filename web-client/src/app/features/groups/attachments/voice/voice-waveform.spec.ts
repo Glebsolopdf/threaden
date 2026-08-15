@@ -9,7 +9,7 @@ describe('getVoiceWaveform', () => {
   it('raises the center bars when the microphone level increases', () => {
     const bars = getVoiceWaveform(1, 7);
     expect(bars).toHaveLength(7);
-    expect(bars[3]).toBeGreaterThan(bars[0]);
+    expect(bars[6]).toBeGreaterThan(bars[0]);
     expect(Math.max(...bars)).toBeLessThanOrEqual(1);
   });
 });

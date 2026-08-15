@@ -7,11 +7,11 @@
   cursor: pointer;
 }
 
-.composer__recording { position: relative; display: flex; min-width: 0; min-height: 2.35rem; flex: 1 1 auto; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
-.composer__waves { display: flex; width: min(100%, 15rem); height: 1.6rem; align-items: center; justify-content: center; gap: .16rem; }
+.composer__recording { position: relative; display: flex; min-width: 0; min-height: 2.35rem; flex: 1 1 auto; align-items: center; justify-content: flex-end; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
+.composer__waves { display: flex; width: min(100%, 15rem); height: 1.6rem; align-items: center; justify-content: flex-end; gap: .16rem; padding-right: .15rem; }
 .composer__waves span { width: .18rem; min-height: .22rem; border-radius: 999px; background: var(--accent); transition: height 80ms ease; }
-.composer__cancel { position: absolute; z-index: 1; min-height: 1.9rem !important; padding: 0 .7rem !important; border: 1px solid var(--accent-border) !important; border-radius: 999px !important; color: var(--text) !important; background: var(--panel) !important; font-size: .72rem; }
-.composer__cancel:hover, .composer__cancel:focus-visible { color: var(--accent) !important; background: var(--panel-hover) !important; outline: none; }
+.composer__cancel { position: absolute; left: 50%; z-index: 1; min-height: 1.9rem !important; padding: 0 .35rem !important; border: 0 !important; color: var(--text) !important; background: transparent !important; font-size: .72rem; transform: translateX(-50%); }
+.composer__cancel:hover, .composer__cancel:focus-visible { color: var(--accent) !important; background: transparent !important; outline: none; }
 .composer__action { min-width: 2.35rem; }
 .composer__action img { display: block; width: 1.1rem; height: 1.1rem; margin: auto; object-fit: contain; }
 .composer__action--recording { color: var(--accent) !important; }

@@ -118,12 +118,16 @@ export class VoiceRecorder {
   }
 
   private startAudioLevel(stream: MediaStream): void {
-    if (typeof AudioContext === 'undefined') return;
+    const browserWindow = window as Window & { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
+    const AudioContextConstructor = browserWindow.AudioContext ?? browserWindow.webkitAudioContext;
+    if (!AudioContextConstructor) return;
     try {
-      this.audioContext = new AudioContext();
-      this.analyser = this.audioContext.createAnalyser();
+      const context = new AudioContextConstructor();
+      this.audioContext = context;
+      if (context.state === 'suspended') void context.resume();
+      this.analyser = context.createAnalyser();
       this.analyser.fftSize = 64;
-      this.audioContext.createMediaStreamSource(stream).connect(this.analyser);
+      context.createMediaStreamSource(stream).connect(this.analyser);
       const sample = (): void => {
         if (!this.analyser || this.state() !== 'recording') return;
         const data = new Uint8Array(this.analyser.fftSize);

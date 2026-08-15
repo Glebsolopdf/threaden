@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_RECORDING_MS, VoiceRecorder } from './voice-recorder';
 
 class FakeMediaRecorder {
@@ -15,10 +15,40 @@ class FakeMediaRecorder {
   });
 }
 
+class FakeAudioContext {
+  static instance: FakeAudioContext;
+  readonly analyser = { fftSize: 0, getByteTimeDomainData: (data: Uint8Array) => data.fill(255), disconnect: vi.fn() };
+  readonly resume = vi.fn(async () => undefined);
+  readonly close = vi.fn(async () => undefined);
+  readonly state = 'suspended';
+  constructor() { FakeAudioContext.instance = this; }
+  createAnalyser(): AnalyserNode { return this.analyser as unknown as AnalyserNode; }
+  createMediaStreamSource(): { connect: () => void } { return { connect: vi.fn() }; }
+}
+
 describe('VoiceRecorder', () => {
   beforeEach(() => {
     vi.stubGlobal('MediaRecorder', FakeMediaRecorder);
     vi.stubGlobal('navigator', { mediaDevices: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: vi.fn() }] })) } });
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('updates the audio level from analyser samples', async () => {
+    let frame: FrameRequestCallback | undefined;
+    vi.stubGlobal('AudioContext', FakeAudioContext);
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frame = callback; return 1; });
+    vi.stubGlobal('cancelAnimationFrame', vi.fn());
+    const recorder = new VoiceRecorder();
+
+    await recorder.start();
+    const result = recorder.result();
+    frame?.(0);
+
+    expect(FakeAudioContext.instance.resume).toHaveBeenCalled();
+    expect(recorder.audioLevel()).toBeGreaterThan(0);
+    recorder.cancel();
+    await expect(result).rejects.toThrow('отменена');
   });
 
   it('records an audio blob after stop', async () => {
