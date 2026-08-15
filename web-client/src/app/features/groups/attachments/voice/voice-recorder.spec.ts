@@ -24,6 +24,7 @@ describe('VoiceRecorder', () => {
   it('records an audio blob after stop', async () => {
     const recorder = new VoiceRecorder();
     await recorder.start();
+    expect(recorder.audioLevel()).toBeGreaterThanOrEqual(0);
     const result = await recorder.stop();
     expect(result.type).toBe('audio/webm');
     expect(recorder.state()).toBe('ready');
@@ -43,6 +44,7 @@ describe('VoiceRecorder', () => {
     recorder.cancel();
     await expect(result).rejects.toThrow('отменена');
     expect(recorder.state()).toBe('idle');
+    expect(recorder.audioLevel()).toBe(0);
   });
 
   it('automatically stops at the five minute limit', async () => {

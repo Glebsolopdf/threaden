@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, input, OnDestroy, output, signal, viewChild } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { GroupsStore } from '../../../core/events/groups.store';
 import type { GroupMessage } from '../../../core/api/models';
@@ -7,6 +7,7 @@ import { TypingStore } from '../../../core/events/typing.store';
 import { attachmentKind, canSendMessage, formatBytes, validateSelection } from './attachment-upload';
 import { AttachmentIconComponent } from './icons/attachment-icon.component';
 import { VoiceRecorder } from './voice/voice-recorder';
+import { getVoiceWaveform } from './voice/voice-waveform';
 
 @Component({
   selector: 'app-message-composer',
@@ -39,14 +40,26 @@ import { VoiceRecorder } from './voice/voice-recorder';
       <form class="composer" [formGroup]="messageForm" (ngSubmit)="send()" autocomplete="off">
         <input #fileInput type="file" multiple hidden (change)="selectFiles($event)">
         <button class="composer__attach" type="button" aria-label="Прикрепить файл" (click)="fileInput.click()">＋</button>
-        @if (voiceRecorder.state() === 'recording') {
-          <button class="composer__record composer__record--active" type="button" (click)="stopRecording()" aria-label="Остановить запись">■ {{ recordingSeconds() }}с</button>
-          <button class="composer__record" type="button" (click)="cancelRecording()" aria-label="Отменить запись">×</button>
+        @if (recording()) {
+          <div class="composer__recording" role="status" aria-label="Идёт запись голосового сообщения">
+            <div class="composer__waves" aria-hidden="true">
+              @for (bar of waveformBars(); track $index) { <span [style.height.%]="bar * 100"></span> }
+            </div>
+            <button class="composer__cancel" type="button" (click)="cancelRecording()">Отмена</button>
+          </div>
         } @else {
-          <button class="composer__record" type="button" (click)="startRecording()" aria-label="Записать голосовое сообщение">●</button>
+          <input formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true" (input)="typing.notify(groupId(), messageForm.controls.body.value.trim().length > 0)">
         }
-        <input formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true" (input)="typing.notify(groupId(), messageForm.controls.body.value.trim().length > 0)">
-        <button type="submit" [disabled]="!canSend() || sending()">{{ sending() ? 'Отправка…' : 'Отправить' }}</button>
+        <button
+          class="composer__action"
+          [class.composer__action--recording]="recording()"
+          [type]="canSend() && !recording() ? 'submit' : 'button'"
+          [disabled]="sending()"
+          [attr.aria-label]="recording() ? 'Остановить запись' : canSend() ? 'Отправить' : 'Записать голосовое сообщение'"
+          (click)="actionClick()"
+        >
+          @if (canSend() && !recording()) { {{ sending() ? 'Отправка…' : 'Отправить' }} } @else { <img src="/microphone-on.svg" alt=""> }
+        </button>
       </form>
     </div>
   `,
@@ -65,11 +78,20 @@ export class MessageComposerComponent implements OnDestroy {
   protected readonly formatBytes = formatBytes;
   protected readonly attachmentKind = attachmentKind;
   protected readonly voiceRecorder = new VoiceRecorder();
+  protected readonly waveformBars = computed(() => getVoiceWaveform(this.voiceRecorder.audioLevel(), 28));
   private readonly previewUrls = new Map<File, string>();
 
   protected canSend(): boolean { return canSendMessage(this.messageForm.controls.body.value, this.files().length); }
 
-  protected recordingSeconds(): number { return Math.ceil(this.voiceRecorder.elapsedMs() / 1000); }
+  protected recording(): boolean { return this.voiceRecorder.state() === 'recording'; }
+
+  protected async actionClick(): Promise<void> {
+    if (this.recording()) {
+      await this.stopRecording();
+      return;
+    }
+    if (!this.canSend()) await this.startRecording();
+  }
 
   protected selectFiles(event: Event): void {
     const input = event.target as HTMLInputElement;

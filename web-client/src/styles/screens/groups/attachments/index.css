@@ -7,8 +7,14 @@
   cursor: pointer;
 }
 
-.composer__record { flex: 0 0 2.25rem; padding: 0; border: 0; border-radius: .45rem; color: var(--text-muted); background: transparent; cursor: pointer; font-size: .75rem; }
-.composer__record:hover, .composer__record:focus-visible, .composer__record--active { color: var(--accent); background: var(--surface-sunken); outline: none; }
+.composer__recording { position: relative; display: flex; min-width: 0; min-height: 2.35rem; flex: 1 1 auto; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-soft); }
+.composer__waves { display: flex; width: min(100%, 15rem); height: 1.6rem; align-items: center; justify-content: center; gap: .16rem; }
+.composer__waves span { width: .18rem; min-height: .22rem; border-radius: 999px; background: var(--accent); transition: height 80ms ease; }
+.composer__cancel { position: absolute; z-index: 1; min-height: 1.9rem !important; padding: 0 .7rem !important; border: 1px solid var(--accent-border) !important; border-radius: 999px !important; color: var(--text) !important; background: var(--panel) !important; font-size: .72rem; }
+.composer__cancel:hover, .composer__cancel:focus-visible { color: var(--accent) !important; background: var(--panel-hover) !important; outline: none; }
+.composer__action { min-width: 2.35rem; }
+.composer__action img { display: block; width: 1.1rem; height: 1.1rem; margin: auto; object-fit: contain; }
+.composer__action--recording { color: var(--accent) !important; }
 
 .composer-files {
   display: flex;
@@ -45,6 +51,7 @@
 .attachment-icon__accent { fill: var(--accent); }
 @keyframes composer-upload-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .composer-file__loading span { animation-duration: 1.4s; } }
+@media (prefers-reduced-motion: reduce) { .composer__waves span { transition: none; } }
 
 .message-attachments { display: grid; gap: .45rem; margin-top: .45rem; }
 .message-attachment { display: grid; gap: .25rem; max-width: min(22rem, 100%); color: inherit; text-decoration: none; }
