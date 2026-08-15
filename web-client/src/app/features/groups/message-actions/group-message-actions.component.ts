@@ -44,7 +44,9 @@ export class GroupMessageActionsComponent implements OnDestroy {
   private readonly menu = viewChild<ElementRef<HTMLElement>>('menu');
   private static active?: GroupMessageActionsComponent;
 
-  protected showMenu(event: MouseEvent): void { event.preventDefault(); this.openMenu(); }
+  public openContextMenu(event: MouseEvent): void { event.preventDefault(); event.stopPropagation(); this.openMenu(); }
+
+  protected showMenu(event: MouseEvent): void { this.openContextMenu(event); }
 
   @HostListener('pointerdown', ['$event'])
   protected startLongPress(event: PointerEvent): void {

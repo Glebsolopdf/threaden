@@ -174,6 +174,7 @@ html[data-theme="light"] .message-actions__menu img[src="/reply.svg"], html[data
 .message-swipe-indicator { position: absolute; z-index: 4; top: 50%; right: -2.45rem; display: grid; width: 1.85rem; height: 1.85rem; place-items: center; border: 1px solid var(--accent-border); border-radius: 50%; color: var(--accent); background: var(--accent-soft); pointer-events: none; transition: opacity 120ms ease, transform 120ms ease; }
 .message-swipe-indicator img { width: 0.95rem; height: 0.95rem; object-fit: contain; }
 @media (pointer: fine) { .message-swipe-indicator { display: none; } }
+@media (pointer: fine) { app-group-message-actions { pointer-events: none; } }
 .message-reply-preview, .reply-banner { display: grid; gap: 0.12rem; border-left: 3px solid var(--accent); color: inherit; }
 .message-reply-preview { margin: 0.1rem 0 0.35rem; padding: 0.2rem 0.45rem; opacity: 0.78; font-size: 0.75rem; }
 .message-reply-preview span, .reply-banner small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

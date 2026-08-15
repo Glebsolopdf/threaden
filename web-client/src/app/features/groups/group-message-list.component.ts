@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, ElementRef, effect, input, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, effect, input, output, viewChild, viewChildren } from '@angular/core';
 import type { GroupMessage } from '../../core/api/models';
 import { chatMessage, isSystemMessage, systemMessageText, type MessageView } from '../../core/events/groups.store';
 import { AvatarComponent } from '../../shared/avatar/avatar.component';
@@ -33,7 +33,7 @@ import { MessageAttachmentsComponent } from './attachments/message-attachments.c
               @if (!isOwn(chat)) {
                 <app-avatar class="chat-message__avatar" [src]="isCompact(index) ? '' : (chat.message.author.avatar || '')" [label]="chat.message.author.display_name" />
               }
-              <div class="chat-message__bubble">
+              <div class="chat-message__bubble" (contextmenu)="openContextMenu($event, chat.message)">
                 @if (!isOwn(chat) && !isCompact(index)) { <strong class="chat-message__author">{{ chat.message.author.display_name }}</strong> }
                 @if (chat.message.reply_to; as reply) { <div class="message-reply-preview">@if (reply.kind === 'system') { <strong>Системное уведомление</strong> } @else { <strong>В ответ {{ reply.author.display_name }}</strong> }<span>{{ reply.body || 'Вложение' }}</span></div> }
                 @if (chat.message.body) { <p>{{ chat.message.body }}</p> }
@@ -63,6 +63,7 @@ export class GroupMessageListComponent {
   readonly reply = output<GroupMessage>();
   readonly remove = output<GroupMessage>();
   private readonly messageList = viewChild<ElementRef<HTMLElement>>('messageList');
+  private readonly messageActions = viewChildren(GroupMessageActionsComponent);
   protected readonly skeletons = Array.from({ length: 7 }, (_, index) => index);
   protected readonly chatMessage = chatMessage;
   protected readonly systemMessageText = systemMessageText;
@@ -77,6 +78,9 @@ export class GroupMessageListComponent {
     });
   }
   protected messageId(item: MessageView): string { return isSystemMessage(item) ? item.id : item.viewID ?? item.message.id; }
+  protected openContextMenu(event: MouseEvent, message: GroupMessage): void {
+    this.messageActions().find((actions) => actions.message().id === message.id)?.openContextMenu(event);
+  }
   protected isOwn(item: MessageView): boolean { return !isSystemMessage(item) && item.message.author.id === this.currentUserId(); }
   protected isCompact(index: number): boolean {
     const items = this.messages();
