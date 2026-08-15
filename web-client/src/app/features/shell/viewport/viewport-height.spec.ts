@@ -9,4 +9,8 @@ describe('getViewportHeight', () => {
   it('falls back to the layout viewport when visual viewport is unavailable', () => {
     expect(getViewportHeight({ innerHeight: 800 })).toBe(800);
   });
+
+  it('never returns a zero-height app while the visual viewport is settling', () => {
+    expect(getViewportHeight({ innerHeight: 800, visualHeight: 0.4 })).toBe(1);
+  });
 });
