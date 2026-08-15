@@ -12,11 +12,13 @@ import (
 	"voice-rooms/internal/antispam"
 	avatarutil "voice-rooms/internal/avatar"
 	groupcleanup "voice-rooms/internal/groups/cleanup"
+	groupevents "voice-rooms/internal/groups/events"
 	"voice-rooms/internal/groups/hub"
 	"voice-rooms/internal/model"
 	"voice-rooms/internal/publicview"
 	"voice-rooms/internal/store"
 )
+
 var (
 	ErrNotFound   = errors.New("not found")
 	ErrForbidden  = errors.New("forbidden")
@@ -232,26 +234,8 @@ func publicEventData(data any) any {
 		return data
 	}
 }
-func (s *Service) PublishProfileUpdated(ctx context.Context, user model.User) {
-	groups, err := s.store.UserGroups(ctx, user.ID)
-	if err != nil {
-		return
-	}
-	recipients := map[string]struct{}{user.ID: {}}
-	for _, group := range groups {
-		ids, listErr := s.store.GroupMemberIDs(ctx, group.ID)
-		if listErr != nil {
-			continue
-		}
-		for _, id := range ids {
-			recipients[id] = struct{}{}
-		}
-	}
-	ids := make([]string, 0, len(recipients))
-	for id := range recipients {
-		ids = append(ids, id)
-	}
-	s.hub.Publish(ids, hub.Event{Type: "profile_updated", Data: hub.NewMemberEvent(user)})
+func (s *Service) PublishMessageDeleted(ctx context.Context, groupID, messageID string) error {
+	return groupevents.PublishMessageDeleted(ctx, s.store, s.hub, groupID, messageID)
 }
 
 func (s *Service) Subscribe(userID string) (<-chan hub.Event, func()) {

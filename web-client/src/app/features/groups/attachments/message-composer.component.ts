@@ -6,6 +6,7 @@ import { NotificationStore } from '../../../core/notifications/notification.stor
 import { TypingStore } from '../../../core/events/typing.store';
 import { attachmentKind, canSendMessage, formatBytes, validateSelection } from './attachment-upload';
 import { AttachmentIconComponent } from './icons/attachment-icon.component';
+import { VoiceRecorder } from './voice/voice-recorder';
 
 @Component({
   selector: 'app-message-composer',
@@ -22,6 +23,8 @@ import { AttachmentIconComponent } from './icons/attachment-icon.component';
             <article class="composer-file" [attr.title]="file.name">
               @if (attachmentKind(file) === 'image') {
                 <img class="composer-file__preview" [src]="previewUrl(file)" [alt]="file.name">
+              } @else if (attachmentKind(file) === 'audio') {
+                <audio class="composer-file__preview" [src]="previewUrl(file)" controls preload="metadata"></audio>
               } @else {
                 <span class="composer-file__preview"><app-attachment-icon [kind]="attachmentKind(file)" /></span>
               }
@@ -36,6 +39,12 @@ import { AttachmentIconComponent } from './icons/attachment-icon.component';
       <form class="composer" [formGroup]="messageForm" (ngSubmit)="send()" autocomplete="off">
         <input #fileInput type="file" multiple hidden (change)="selectFiles($event)">
         <button class="composer__attach" type="button" aria-label="Прикрепить файл" (click)="fileInput.click()">＋</button>
+        @if (voiceRecorder.state() === 'recording') {
+          <button class="composer__record composer__record--active" type="button" (click)="stopRecording()" aria-label="Остановить запись">■ {{ recordingSeconds() }}с</button>
+          <button class="composer__record" type="button" (click)="cancelRecording()" aria-label="Отменить запись">×</button>
+        } @else {
+          <button class="composer__record" type="button" (click)="startRecording()" aria-label="Записать голосовое сообщение">●</button>
+        }
         <input formControlName="body" maxlength="2000" placeholder="Сообщение" autocomplete="off" spellcheck="true" (input)="typing.notify(groupId(), messageForm.controls.body.value.trim().length > 0)">
         <button type="submit" [disabled]="!canSend() || sending()">{{ sending() ? 'Отправка…' : 'Отправить' }}</button>
       </form>
@@ -55,9 +64,12 @@ export class MessageComposerComponent implements OnDestroy {
   private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileInput');
   protected readonly formatBytes = formatBytes;
   protected readonly attachmentKind = attachmentKind;
+  protected readonly voiceRecorder = new VoiceRecorder();
   private readonly previewUrls = new Map<File, string>();
 
   protected canSend(): boolean { return canSendMessage(this.messageForm.controls.body.value, this.files().length); }
+
+  protected recordingSeconds(): number { return Math.ceil(this.voiceRecorder.elapsedMs() / 1000); }
 
   protected selectFiles(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -81,6 +93,32 @@ export class MessageComposerComponent implements OnDestroy {
     this.files.update((items) => items.filter((item) => item !== file));
   }
 
+  protected async startRecording(): Promise<void> {
+    try {
+      await this.voiceRecorder.start();
+    } catch (error) {
+      this.notifications.error(error, 'Не удалось включить микрофон');
+    }
+  }
+
+  protected async stopRecording(): Promise<void> {
+    try {
+      const blob = await this.voiceRecorder.stop();
+      const file = new File([blob], recordingName(blob.type), { type: blob.type });
+      const selection = [...this.files(), file];
+      const error = validateSelection(selection);
+      if (error) {
+        this.notifications.error(error);
+        return;
+      }
+      this.files.set(selection);
+    } catch (error) {
+      this.notifications.error(error, 'Не удалось сохранить запись');
+    }
+  }
+
+  protected cancelRecording(): void { this.voiceRecorder.cancel(); }
+
   protected previewUrl(file: File): string {
     const existing = this.previewUrls.get(file);
     if (existing) return existing;
@@ -90,6 +128,7 @@ export class MessageComposerComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.voiceRecorder.cancel();
     this.releasePreviewUrls();
   }
 
@@ -127,4 +166,11 @@ export class MessageComposerComponent implements OnDestroy {
     for (const url of this.previewUrls.values()) URL.revokeObjectURL(url);
     this.previewUrls.clear();
   }
+}
+
+function recordingName(mime: string): string {
+  if (mime.includes('ogg')) return 'voice.ogg';
+  if (mime.includes('mp4')) return 'voice.m4a';
+  if (mime.includes('wav')) return 'voice.wav';
+  return 'voice.webm';
 }

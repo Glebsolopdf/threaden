@@ -21,7 +21,7 @@ func TestMetadataRoundTripAndQuotas(t *testing.T) {
 	if err := sqlite.Migrate(context.Background(), db); err != nil {
 		t.Fatal(err)
 	}
-	if schema.LatestVersion != 23 {
+	if schema.LatestVersion != 24 {
 		t.Fatalf("attachment migration is not latest: %d", schema.LatestVersion)
 	}
 	_, err = db.Exec(`INSERT INTO users(id,email,display_name,avatar,password_hash,token_hash,created_at,last_seen_at) VALUES('u','u@example.com','U','',X'',zeroblob(32),1,1)`)
@@ -41,7 +41,7 @@ func TestMetadataRoundTripAndQuotas(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Unix(100, 0).UTC()
-	item := model.Attachment{ID: "a", MessageID: "m", GroupID: "g", OwnerID: "u", Kind: "archive", Mime: "application/zip", Name: "backup.any", Size: 7, Path: "a/1", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
+	item := model.Attachment{ID: "a", MessageID: "m", GroupID: "g", OwnerID: "u", Kind: "audio", Mime: "audio/wav", Name: "voice.wav", Size: 7, Path: "a/1", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
 	if err := attachmentstore.Add(context.Background(), db, item); err != nil {
 		t.Fatal(err)
 	}

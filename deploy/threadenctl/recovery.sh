@@ -69,7 +69,7 @@ install_os_dependencies() {
   if command_exists apt-get; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
-    apt-get install -y ca-certificates curl rsync nginx util-linux procps iproute2
+    apt-get install -y ca-certificates curl rsync nginx util-linux procps iproute2 ffmpeg
     command_exists docker || apt-get install -y docker.io
   elif command_exists dnf; then
     dnf install -y ca-certificates curl rsync nginx util-linux procps-ng iproute

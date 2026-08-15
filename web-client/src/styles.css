@@ -10,7 +10,7 @@ button, input, select { font: inherit; }
 app-root, app-shell, app-home, app-group, app-discover, app-settings, app-profile, app-voice, app-login, app-register { display: block; min-width: 0; min-height: 0; }
 app-root, app-shell { width: 100%; min-height: 100%; }
 .messenger { min-height: var(--app-height, 100dvh); height: var(--app-height, 100dvh); background: #090a0d; overflow: hidden; }
-@media (max-width: 56rem) { .messenger { min-height: 100svh; height: 100svh; } }
+@media (max-width: 56rem) { .messenger { min-height: var(--app-height, 100dvh); height: var(--app-height, 100dvh); } }
 .rail img, .group-header img, .voice-room img, .room-widget img { display: block; width: 1.25rem; height: 1.25rem; object-fit: contain; }
 .rail-logo img { width: 1.65rem; height: 1.65rem; }
 .workspace > router-outlet + * { display: block; width: 100%; min-width: 0; min-height: 0; height: 100%; }

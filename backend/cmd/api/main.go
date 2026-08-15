@@ -14,6 +14,7 @@ import (
 	"voice-rooms/internal/antispam"
 	"voice-rooms/internal/app"
 	"voice-rooms/internal/attachments"
+	attachmentaccount "voice-rooms/internal/attachments/account"
 	attachmentcleanup "voice-rooms/internal/attachments/cleanup"
 	attachmentstorage "voice-rooms/internal/attachments/storage"
 	"voice-rooms/internal/config"
@@ -84,12 +85,13 @@ func main() {
 		},
 		DB: st, Disk: disk.NewChecker(cfg.DatabasePath),
 	}
-	attachmentCleanup := attachmentcleanup.Service{DB: st, Root: cfg.AttachmentStorageDir, BatchSize: cfg.LowDiskCleanupBatch}
+	attachmentAccount := &attachmentaccount.Service{DB: st, Limits: attachmentService.Limits, Root: cfg.AttachmentStorageDir, Logger: logger, Publisher: groupService}
+	attachmentCleanup := attachmentcleanup.Service{DB: st, Root: cfg.AttachmentStorageDir, BatchSize: cfg.LowDiskCleanupBatch, DeleteRequests: attachmentAccount}
 	service.WithAttachmentCleanup(attachmentCleanup)
 	server := &http.Server{
 		Addr: cfg.HTTPAddr,
 		Handler: httpapi.NewWithOptions(service, groupService, st, logger, httpapi.Options{
-			Origins: cfg.CORSAllowedOrigins, Security: security, SessionCookieSecure: cfg.SessionCookieSecure, Attachments: attachmentService,
+			Origins: cfg.CORSAllowedOrigins, Security: security, SessionCookieSecure: cfg.SessionCookieSecure, Attachments: attachmentService, Quotas: attachmentAccount,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

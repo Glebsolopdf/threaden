@@ -1,0 +1,25 @@
+.app-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+
+.app-loading__logo {
+  width: clamp(4.5rem, 18vw, 7rem);
+  height: auto;
+  opacity: 0.78;
+  filter: drop-shadow(0 0 1.25rem rgb(255 255 255 / 12%));
+  animation: app-loading-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes app-loading-shimmer {
+  0%, 100% { opacity: 0.62; filter: drop-shadow(0 0 0.7rem rgb(255 255 255 / 8%)) brightness(0.94); }
+  50% { opacity: 1; filter: drop-shadow(0 0 1.35rem rgb(255 255 255 / 20%)) brightness(1.1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading__logo { animation: none; }
+}

@@ -20,6 +20,28 @@ export interface SecuritySession {
   current: boolean;
 }
 
+export interface AccountQuotas {
+  usage: { stored_bytes: number; daily_bytes: number };
+  limits: {
+    max_input_media_bytes: number;
+    max_archive_bytes: number;
+    max_output_media_bytes: number;
+    max_files_per_message: number;
+    max_user_stored_bytes: number;
+    max_user_daily_bytes: number;
+    max_total_bytes: number;
+    min_free_bytes: number;
+    retention_seconds: number;
+  };
+  pending_delete?: { id: string; created_at: string; execute_at: string };
+}
+
+export interface PendingAttachmentDeletion {
+  id: string;
+  created_at: string;
+  execute_at: string;
+}
+
 export interface Member {
   id: string;
   display_name: string;
@@ -63,7 +85,7 @@ export interface GroupMessage {
 
 export interface MessageAttachment {
   id: string;
-  kind: 'image' | 'video' | 'file' | 'archive';
+  kind: 'image' | 'video' | 'audio' | 'file' | 'archive';
   mime: string;
   name: string;
   size: number;

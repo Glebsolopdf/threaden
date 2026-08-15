@@ -27,7 +27,7 @@ type Processor struct {
 	FFmpeg         videoProcessor.Runner
 }
 
-func (p Processor) Process(ctx context.Context, src io.Reader, originalName string, inputSize int64) (ProcessedFile, error) {
+func (p Processor) Process(ctx context.Context, src io.Reader, originalName string, inputSize int64, mimeHints ...string) (ProcessedFile, error) {
 	if inputSize <= 0 || inputSize > p.MaxInputMedia && inputSize > p.MaxArchive {
 		return ProcessedFile{}, ErrTooLarge
 	}
@@ -56,7 +56,7 @@ func (p Processor) Process(ctx context.Context, src io.Reader, originalName stri
 	if err != nil {
 		return ProcessedFile{}, err
 	}
-	kind, mimeType, detectErr := Detect(file, originalName)
+	kind, mimeType, detectErr := Detect(file, originalName, mimeHints...)
 	_ = file.Close()
 	if detectErr != nil {
 		return ProcessedFile{}, detectErr
@@ -88,6 +88,23 @@ func (p Processor) Process(ctx context.Context, src io.Reader, originalName stri
 			return ProcessedFile{}, err
 		}
 		return ProcessedFile{Kind: KindImage, Mime: result.Mime, DisplayName: name, Size: result.Size, Path: result.Path}, nil
+	}
+	if kind == string(KindAudio) {
+		output, err := os.CreateTemp("", "threaden-audio-*")
+		if err != nil {
+			return ProcessedFile{}, err
+		}
+		outputPath := output.Name()
+		if err := copyFile(inputPath, output); err != nil {
+			_ = output.Close()
+			_ = os.Remove(outputPath)
+			return ProcessedFile{}, err
+		}
+		if err := output.Close(); err != nil {
+			_ = os.Remove(outputPath)
+			return ProcessedFile{}, err
+		}
+		return ProcessedFile{Kind: KindAudio, Mime: mimeType, DisplayName: name, Size: actualSize, Path: outputPath}, nil
 	}
 	if kind == string(KindVideo) {
 		output, err := videoProcessor.NewTempOutput(filepath.Dir(inputPath))

@@ -3,10 +3,12 @@ package groupchat
 import (
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 
 	"voice-rooms/internal/attachments"
 	"voice-rooms/internal/attachments/storage"
@@ -34,7 +36,7 @@ func (h *Handler) sendMultipart(w http.ResponseWriter, r *http.Request) {
 	inputs := make([]storage.Input, 0, len(files))
 	for _, header := range files {
 		fileHeader := header
-		inputs = append(inputs, storage.Input{Name: fileHeader.Filename, Size: fileHeader.Size, Open: func() (io.ReadCloser, error) { return fileHeader.Open() }})
+		inputs = append(inputs, storage.Input{Name: fileHeader.Filename, Mime: fileHeader.Header.Get("Content-Type"), Size: fileHeader.Size, Open: func() (io.ReadCloser, error) { return fileHeader.Open() }})
 	}
 	batch, err := h.hooks.Attachments.Prepare(r.Context(), h.hooks.CurrentUser(r).ID, inputs)
 	if err != nil {
@@ -60,6 +62,7 @@ func formValue(r *http.Request, key string) string {
 }
 
 func writeAttachmentError(writeError func(http.ResponseWriter, *http.Request, int, string, string), w http.ResponseWriter, r *http.Request, err error) {
+	slog.Default().WarnContext(r.Context(), "attachment rejected", "request_id", middleware.GetReqID(r.Context()), "error", err)
 	status, code, message := http.StatusBadRequest, "attachment_invalid", "attachment could not be processed"
 	switch {
 	case errors.Is(err, attachments.ErrTooLarge):

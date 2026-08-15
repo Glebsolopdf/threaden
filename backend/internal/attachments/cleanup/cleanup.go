@@ -10,12 +10,22 @@ import (
 )
 
 type Service struct {
-	DB        attachmentmeta.DB
-	Root      string
-	BatchSize int
+	DB             attachmentmeta.DB
+	Root           string
+	BatchSize      int
+	DeleteRequests attachmentDeleteRunner
+}
+
+type attachmentDeleteRunner interface {
+	RunDueDeletes(context.Context, time.Time, int) error
 }
 
 func (s Service) RunOnce(ctx context.Context, now time.Time) error {
+	if s.DeleteRequests != nil {
+		if err := s.DeleteRequests.RunDueDeletes(ctx, now, s.BatchSize); err != nil {
+			return err
+		}
+	}
 	items, err := attachmentmeta.DeleteExpired(ctx, s.DB, now, s.BatchSize)
 	if err != nil {
 		return err
