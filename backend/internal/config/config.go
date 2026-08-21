@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/netip"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -198,10 +199,26 @@ func Load() (Config, error) {
 		cfg.LiveKitPublicURL == "" || cfg.LiveKitAPIKey == "" || cfg.LiveKitAPISecret == "" {
 		return Config{}, fmt.Errorf("HTTP, database, and LiveKit settings must not be empty")
 	}
+	if cfg.LiveKitAPIKey == "devkey" && cfg.LiveKitAPISecret == "secret" && !localLiveKitURL(cfg.LiveKitPublicURL) {
+		return Config{}, fmt.Errorf("LIVEKIT_API_KEY and LIVEKIT_API_SECRET must not use development credentials with a non-local LIVEKIT_PUBLIC_URL")
+	}
 	if len(cfg.CORSAllowedOrigins) == 0 {
 		return Config{}, fmt.Errorf("CORS_ALLOWED_ORIGINS must contain at least one origin")
 	}
 	return cfg, nil
+}
+
+func localLiveKitURL(value string) bool {
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+	host := parsed.Hostname()
+	if host == "localhost" {
+		return true
+	}
+	addr, err := netip.ParseAddr(host)
+	return err == nil && addr.IsLoopback()
 }
 
 func duration(name, fallback string) (time.Duration, error) {

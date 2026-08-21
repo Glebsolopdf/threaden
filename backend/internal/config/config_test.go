@@ -54,6 +54,16 @@ func TestLoadUsesIPv4LoopbackForPublicLiveKit(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsDefaultLiveKitCredentialsForPublicURL(t *testing.T) {
+	t.Setenv("LIVEKIT_PUBLIC_URL", "wss://livekit.example.com")
+	t.Setenv("LIVEKIT_API_KEY", "devkey")
+	t.Setenv("LIVEKIT_API_SECRET", "secret")
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "LIVEKIT_API_KEY") {
+		t.Fatalf("expected default LiveKit credential error, got %v", err)
+	}
+}
+
 func TestLoadEnablesInactiveGroupDeletionByDefault(t *testing.T) {
 	previous, existed := os.LookupEnv("GROUP_CLEANUP_DRY_RUN")
 	if err := os.Unsetenv("GROUP_CLEANUP_DRY_RUN"); err != nil {
